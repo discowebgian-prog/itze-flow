@@ -1,0 +1,17 @@
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+
+// Tu archivo original está "apagado" gracias a las dos barras //
+// import App from './App.jsx' 
+
+// Aquí traemos tu nueva versión mejorada
+import AppMejorada from './appmejorada.jsx' 
+
+import './index.css'
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    {/* <App /> */}         {/* Tu original está guardado a salvo */}
+    <AppMejorada />         {/* ¡Encendemos la versión nueva! */}
+  </React.StrictMode>,
+)
