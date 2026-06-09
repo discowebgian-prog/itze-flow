@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createRoot } from "react-dom/client";
 
 // Font
 if(typeof document!=="undefined"&&!document.getElementById("gf")){
@@ -100,7 +101,7 @@ const Badge=({status})=>{const s=RS[status]||RS.confirmada;return<span style={{b
 const Avatar=({name,size=36})=>{const ini=name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();const cols=["#3B82F6","#8B5CF6","#10B981","#F59E0B","#EF4444","#E06C4F"];const c=cols[name.charCodeAt(0)%cols.length];return<div style={{width:size,height:size,borderRadius:"50%",background:c,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:size*0.36,flexShrink:0}}>{ini}</div>;};
 
 function Inp({label,...p}){return<div style={{marginBottom:12}}>{label&&<label style={{display:"block",fontSize:11,fontWeight:700,color:"#888",marginBottom:4,textTransform:"uppercase",letterSpacing:.4}}>{label}</label>}<input {...p} style={{width:"100%",padding:"9px 12px",border:"1.5px solid #E5E7EB",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box",...(p.style||{})}}/></div>;}
-function Sel({label,options,...p}){return<div style={{marginBottom:12}}>{label&&<label style={{display:"block",fontSize:11,fontWeight:700,color:"#888",marginBottom:4,textTransform:"uppercase",letterSpacing:.4}}>{label}</label>}<select {...p} style={{width:"100%",padding:"9px 12px",border:"1.5px solid #E5E7EB",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none",background:"#fff",boxSizing:"border-box"}}>{options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></div>;}
+function Sel({label,options,...p}){return<div style={{marginBottom:12}}>{label&&<label style={{display:"block",fontSize:11,fontWeight:700,color:"#888",marginBottom:4,textTransform:"uppercase",letterSpacing:.4}}>{label}</label>}<select {...p} style={{width:"100%",padding:"9px 12px",border:"1.5px solid #E5E7EB",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none",background:"#fff",boxSizing:"border-box" }}>{options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></div>;}
 
 // ── COUNTRY SELECTOR ──────────────────────────────────────────────────────────
 function CountrySelector({value,onChange}){
@@ -164,10 +165,10 @@ function DocScanner({onResult}){
         const resp=await fetch("https://api.anthropic.com/v1/messages",{
           method:"POST",headers:{"Content-Type":"application/json"},
           body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:400,
-            messages:[{role:"user",content:[
-              {type:"image",source:{type:"base64",media_type:mt,data:base64}},
-              {type:"text",text:'Extract identity document data. Return ONLY valid JSON:\n{"firstName":"","lastName":"","fullName":"","docNumber":"","docType":"INE","nationality":"MX"}\ndocType=INE|Pasaporte|Otro. nationality=2-letter ISO code. Leave empty if unclear.'}
-            ]}]})
+          messages:[{role:"user",content:[
+            {type:"image",source:{type:"base64",media_type:mt,data:base64}},
+            {type:"text",text:'Extract identity document data. Return ONLY valid JSON:\n{"firstName":"","lastName":"","fullName":"","docNumber":"","docType":"INE","nationality":"MX"}\ndocType=INE|Pasaporte|Otro. nationality=2-letter ISO code. Leave empty if unclear.'}
+          ]}]})
         });
         if(!resp.ok)throw new Error("API "+resp.status);
         const data=await resp.json();
@@ -1291,7 +1292,7 @@ const Icon = ({ name, size = 20, color = "currentColor" }) => {
   );
 };
 // ── APP ───────────────────────────────────────────────────────────────────────
-export default function appmejorada() {
+export default function AppMejorada() {
   const [user, setUser] = useState(null);
   const [res, setRes] = useState(INIT_RES);
   const [tab, setTab] = useState("dashboard");
@@ -1466,4 +1467,10 @@ export default function appmejorada() {
       {coModal&&<COModal res={coModal} onConfirm={confCO} onCancel={()=>setCoModal(null)}/>}
     </div>
   );
+}
+
+// --- MOTOR DE ARRANQUE ---
+const rootElement = document.getElementById('root');
+if (rootElement) {
+  createRoot(rootElement).render(<AppMejorada />);
 }
