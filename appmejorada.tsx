@@ -6195,19 +6195,34 @@ export default function AppMejorada() {
   };
   const updateRes = (id, changes) =>
     setRes(res.map((r) => (r.id === id ? { ...r, ...changes } : r)));
-  const delRes = (id) => {
-    setRes(
-      res.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              deleted: true,
-              deletedAt: new Date().toISOString(),
-              deletedBy: user.name,
-            }
-          : r
-      )
-    );
+  const delRes = async (id) => {
+    // Capturamos la fecha y hora exacta con la zona horaria de Progreso, Yucatán
+    const momentoExacto = new Date().toLocaleString('es-MX', {
+      timeZone: 'America/Merida',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    });
+
+    const responsable = user?.name || 'Usuario desconocido';
+
+    // 1. Borrado Lógico en Supabase
+    const { error } = await supabase
+      .from('reservas')
+      .update({ 
+        estado: 'eliminada',
+        fecha_eliminacion: momentoExacto,
+        usuario_eliminacion: responsable
+      })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error al archivar en Supabase:', error);
+      alert('Hubo un problema al intentar borrar la reserva.');
+      return;
+    }
+
+    // 2. La sacamos de la vista inmediatamente
+    setRes(res.filter((r) => r.id !== id));
     setDrawer(null);
   };
   const restoreRes = (id) =>
