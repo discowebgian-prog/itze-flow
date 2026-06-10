@@ -5146,8 +5146,17 @@ function GuestsPage({ reservations, properties, onView }) {
 }
 
 // ── EXPORT EXCEL ──────────────────────────────────────────────────────────────
-function exportToExcel(reservations, properties) {
-  // Carga SheetJS dinámicamente si no está disponible
+async function exportToExcel(reservations, properties) {
+  // 1. Traemos el historial de eliminadas directo desde Supabase para la segunda pestaña
+  const { data: eliminadasDB, error } = await supabase
+    .from('reservas')
+    .select('*')
+    .eq('estado', 'eliminada');
+
+  if (error) {
+    console.error('Error al traer eliminadas para Excel:', error);
+  }
+
   const doExport = (XLSX) => {
     const pmLabel = {
       efectivo: 'Efectivo',
@@ -5156,7 +5165,9 @@ function exportToExcel(reservations, properties) {
       credito: 'Crédito',
       otro: 'Otro',
     };
-    const rows = reservations.map((r) => {
+
+    // --- PESTAÑA 1: ACTIVAS (Mantiene tu formato original + las nuevas columnas) ---
+    const rowsActivas = reservations.map((r) => {
       const prop = properties.find((p) => p.id === r.propertyId);
       const nights = diffDays(r.checkIn, r.checkOut);
       return {
@@ -5182,16 +5193,49 @@ function exportToExcel(reservations, properties) {
         'CI real': r.checkInAt ? fmtDT(r.checkInAt) : '—',
         'CO real': r.checkOutAt ? fmtDT(r.checkOutAt) : '—',
         Notas: r.notes || '',
+        // Auditoría de Carga
+        'Fecha de Carga': r.fecha_carga || '—',
+        'Cargado por': r.usuario_carga || '—',
       };
     });
-    const ws = XLSX.utils.json_to_sheet(rows);
-    // Ancho de columnas automático
-    const colWidths = Object.keys(rows[0] || {}).map((k) => ({
+
+    // --- PESTAÑA 2: ELIMINADAS (Historial desde Supabase) ---
+    const rowsEliminadas = (eliminadasDB || []).map((db) => {
+      return {
+        ID: db.id,
+        Huésped: db.Huesped || db.huesped || '—',
+        Habitación: db.habitacion || '—',
+        'Check-in': db.fecha_ingreso || '—',
+        'Check-out': db.fecha_salida || '—',
+        'Total $': Number(db.monto) || 0,
+        Estado: db.estado || '—',
+        'Fecha de Carga': db.fecha_carga || '—',
+        'Cargado por': db.usuario_carga || '—',
+        'Fecha de Eliminación': db.fecha_eliminacion || '—',
+        'Eliminado por': db.usuario_eliminacion || '—',
+      };
+    });
+
+    const wb = XLSX.utils.book_new();
+
+    // Generar Hoja 1 (Activas)
+    const wsActivas = XLSX.utils.json_to_sheet(rowsActivas);
+    const colWidthsActivas = Object.keys(rowsActivas[0] || {}).map((k) => ({
       wch: Math.max(k.length, 14),
     }));
-    ws['!cols'] = colWidths;
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Reservas');
+    wsActivas['!cols'] = colWidthsActivas;
+    XLSX.utils.book_append_sheet(wb, wsActivas, 'Activas');
+
+    // Generar Hoja 2 (Eliminadas)
+    // Usamos un fallback por si el array viene vacío para que la librería no de error
+    const datosEliminadas = rowsEliminadas.length > 0 ? rowsEliminadas : [{ Mensaje: 'No hay reservas eliminadas' }];
+    const wsEliminadas = XLSX.utils.json_to_sheet(datosEliminadas);
+    const colWidthsElim = Object.keys(datosEliminadas[0] || {}).map((k) => ({
+      wch: Math.max(k.length, 14),
+    }));
+    wsEliminadas['!cols'] = colWidthsElim;
+    XLSX.utils.book_append_sheet(wb, wsEliminadas, 'Historial Eliminadas');
+
     const today = fmt(new Date());
     XLSX.writeFile(wb, `itze_reservas_${today}.xlsx`);
   };
@@ -5201,8 +5245,7 @@ function exportToExcel(reservations, properties) {
     return;
   }
   const script = document.createElement('script');
-  script.src =
-    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
   script.onload = () => doExport(window.XLSX);
   document.head.appendChild(script);
 }
