@@ -6100,6 +6100,8 @@ export default function AppMejorada() {
           paid: 0, // Dato por defecto para que no falle
           source: 'Directo', // Dato por defecto para que no falle
           room: String(item.habitacion).trim(),
+          fecha_carga: item.fecha_carga || '—', // Mapea la fecha de creación desde Supabase
+          usuario_carga: item.usuario_carga || '—', // Mapea el usuario creador desde Supabase
         }));
 
         setRes(reservasCargadas);
