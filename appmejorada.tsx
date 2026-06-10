@@ -6063,7 +6063,27 @@ export default function AppMejorada() {
       }
     };
 
+    // 1. Carga inicial
     fetchReservas();
+
+    // 2. Suscripción a la señal de Supabase en tiempo real
+    const canalReservas = supabase
+      .channel('cambios-en-vivo')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'reservas' },
+        (payload) => {
+          console.log('Sincronizando cambio detectado...', payload);
+          // Al detectar un cambio (nueva reserva, edición o borrado), forzamos la actualización
+          fetchReservas(); 
+        }
+      )
+      .subscribe();
+
+    // 3. Apagar el canal cuando se cierra la app para no consumir recursos
+    return () => {
+      supabase.removeChannel(canalReservas);
+    };
   }, []);
 
   // Estados restaurados: Las "memorias" que controlan tu interfaz
