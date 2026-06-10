@@ -6066,7 +6066,7 @@ export default function AppMejorada() {
     // 1. Carga inicial
     fetchReservas();
 
-    // 2. Suscripción a la señal de Supabase en tiempo real
+    // 2. Suscripción a la señal de Supabase en tiempo real (CON EL FRENO DE 500ms)
     const canalReservas = supabase
       .channel('cambios-en-vivo')
       .on(
@@ -6074,8 +6074,12 @@ export default function AppMejorada() {
         { event: '*', schema: 'public', table: 'reservas' },
         (payload) => {
           console.log('Sincronizando cambio detectado...', payload);
-          // Al detectar un cambio (nueva reserva, edición o borrado), forzamos la actualización
-          fetchReservas(); 
+          
+          // Le damos a la base de datos medio segundo (500 ms) para asentarse antes de buscar los datos nuevos
+          setTimeout(() => {
+            fetchReservas(); 
+          }, 500);
+          
         }
       )
       .subscribe();
