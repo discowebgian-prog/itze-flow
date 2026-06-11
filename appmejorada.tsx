@@ -3000,10 +3000,11 @@ function Timeline({
   calView,
   setCalView,
 }) {
-  const NCOLS = 21,
+  // Si es celular dibujamos 21 días, si es PC dibujamos 45 para llenar la pantalla
+  const NCOLS = isMobile ? 21 : 45,
     COL = 44,
     ROW = 52,
-    LABEL = 90, // <--- Reducido
+    LABEL = 90,
     SH = 4;
   const [offset, setOffset] = useState(-2);
   const [drag, setDrag] = useState(null);
