@@ -3003,7 +3003,7 @@ function Timeline({
   const NCOLS = 21,
     COL = 44,
     ROW = 52,
-    LABEL = 168,
+    LABEL = 110, // <--- Reducido un 35%
     SH = 4;
   const [offset, setOffset] = useState(-2);
   const [drag, setDrag] = useState(null);
@@ -3431,15 +3431,19 @@ function Timeline({
                 width: LABEL,
                 flexShrink: 0,
                 padding: '8px 14px',
-                fontSize: 11,
-                fontWeight: 700,
-                color: '#9CA3AF',
+                fontSize: 13,
+                fontWeight: 800,
+                color: '#374151',
                 borderRight: '1px solid #E5E7EB',
                 cursor: 'default',
+                position: 'sticky', // <--- LA FIJA A LA IZQUIERDA
+                left: 0,
+                background: '#F9FAFB',
+                zIndex: 30, // <--- Evita que la tapen otras cosas al scrollear
               }}
               onMouseDown={(e) => e.stopPropagation()}
             >
-              PROPIEDAD / HAB.
+              Itzé
             </div>
             {days.map((d, i) => {
               const it = fmt(d) === fmt(TODAY),
@@ -3518,7 +3522,7 @@ function Timeline({
                   height: ROW,
                 }}
               >
-                <div
+               <div
                   style={{
                     width: LABEL,
                     flexShrink: 0,
@@ -3527,26 +3531,14 @@ function Timeline({
                     padding: '0 12px',
                     borderRight: '1px solid #E5E7EB',
                     background: row.type === 'room' ? '#FAFAFA' : '#F3F4F6',
-                    zIndex: 5,
+                    zIndex: 25, // <--- Elevado para que las reservas pasen por debajo
+                    position: 'sticky', // <--- LA FIJA A LA IZQUIERDA
+                    left: 0,
                     borderLeft: `3px solid ${row.prop.color}`,
                   }}
                 >
                   {row.type === 'room' ? (
                     <div style={{ width: '100%' }}>
-                      {ilp && (
-                        <div
-                          style={{
-                            fontSize: 9,
-                            color: '#9CA3AF',
-                            fontWeight: 700,
-                            textTransform: 'uppercase',
-                            letterSpacing: 0.4,
-                            marginBottom: 1,
-                          }}
-                        >
-                          {row.prop.name}
-                        </div>
-                      )}
                       <div
                         style={{
                           display: 'flex',
