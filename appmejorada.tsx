@@ -252,7 +252,9 @@ function findConflicts(all, propId, room, ci, co, excludeId) {
 
 // ── SMALL COMPONENTS ──────────────────────────────────────────────────────────
 const Badge = ({ status }) => {
-  const s = RS[status] || RS.confirmada;
+  // EL SALVAVIDAS: Si el estado no existe en la lista, le pone un color gris por defecto y muestra el nombre en lugar de explotar.
+  const s = RS[status] || { bg: '#F3F4F6', txt: '#6B7280', label: status || 'Desconocido' };
+  
   return (
     <span
       style={{
