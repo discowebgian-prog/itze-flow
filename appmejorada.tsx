@@ -3113,11 +3113,11 @@ function Timeline({
     // 1. Hoy siempre es azul
     if (fmt(d) === fmt(TODAY)) return '#EFF6FF'; 
     
-    // 2. El pasado es gris (prioridad sobre el finde)
+    // 2. El pasado es gris
     if (isPast) return '#F3F4F6'; 
     
-    // 3. Fines de semana futuros en naranja suave
-    if (dow === 0 || dow === 6) return '#FFF7ED'; // Naranja muy suave
+    // 3. Fines de semana futuros en VIOLETA SUAVE
+    if (dow === 0 || dow === 6) return '#F5F3FF'; // Violeta clarito (lavanda)
     
     // 4. Días normales futuros
     return '#fff';
