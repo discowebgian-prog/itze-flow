@@ -6453,7 +6453,7 @@ export default function AppMejorada() {
               fontSize: 18,
             }}
           >
-        <Icon name="gecko" size={24} color="#2563EB" />
+        <img src="/gecko.png" alt="Itzé" style={{ width: 24, height: 24, objectFit: 'contain' }} />
           </div>
           <div>
             <span style={{ fontWeight: 800, fontSize: 15, color: '#111' }}>
