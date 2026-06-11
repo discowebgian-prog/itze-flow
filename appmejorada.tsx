@@ -5150,8 +5150,8 @@ function GuestsPage({ reservations, properties, onView }) {
 }
 
 // ── EXPORT EXCEL ──────────────────────────────────────────────────────────────
-async function exportToExcel(reservations, properties) {
-  // 1. Traemos el historial de eliminadas directo desde Supabase para la segunda pestaña
+async function async function exportToExcel(reservations, properties) {
+  // 1. Traemos el historial de eliminadas directo desde Supabase
   const { data: eliminadasDB, error } = await supabase
     .from('reservas')
     .select('*')
@@ -5170,8 +5170,11 @@ async function exportToExcel(reservations, properties) {
       otro: 'Otro',
     };
 
-    // --- PESTAÑA 1: ACTIVAS (Mantiene tu formato original + las nuevas columnas) ---
-    const rowsActivas = reservations.map((r) => {
+    // ORDENAMOS CRONOLÓGICAMENTE POR CHECK-IN ANTES DE CREAR LAS FILAS
+    const reservasOrdenadas = [...reservations].sort((a, b) => new Date(a.checkIn) - new Date(b.checkIn));
+
+    // --- PESTAÑA 1: ACTIVAS ---
+    const rowsActivas = reservasOrdenadas.map((r) => {
       const prop = properties.find((p) => p.id === r.propertyId);
       const nights = diffDays(r.checkIn, r.checkOut);
       return {
@@ -5197,14 +5200,16 @@ async function exportToExcel(reservations, properties) {
         'CI real': r.checkInAt ? fmtDT(r.checkInAt) : '—',
         'CO real': r.checkOutAt ? fmtDT(r.checkOutAt) : '—',
         Notas: r.notes || '',
-        // Auditoría de Carga
         'Fecha de Carga': r.fecha_carga || '—',
         'Cargado por': r.usuario_carga || '—',
       };
     });
 
-    // --- PESTAÑA 2: ELIMINADAS (Historial desde Supabase) ---
-    const rowsEliminadas = (eliminadasDB || []).map((db) => {
+    // ORDENAMOS TAMBIÉN EL HISTORIAL DE ELIMINADAS
+    const eliminadasOrdenadas = [...(eliminadasDB || [])].sort((a, b) => new Date(a.fecha_ingreso || 0) - new Date(b.fecha_ingreso || 0));
+
+    // --- PESTAÑA 2: ELIMINADAS ---
+    const rowsEliminadas = eliminadasOrdenadas.map((db) => {
       return {
         ID: db.id,
         Huésped: db.Huesped || db.huesped || '—',
@@ -5222,7 +5227,6 @@ async function exportToExcel(reservations, properties) {
 
     const wb = XLSX.utils.book_new();
 
-    // Generar Hoja 1 (Activas)
     const wsActivas = XLSX.utils.json_to_sheet(rowsActivas);
     const colWidthsActivas = Object.keys(rowsActivas[0] || {}).map((k) => ({
       wch: Math.max(k.length, 14),
@@ -5230,8 +5234,6 @@ async function exportToExcel(reservations, properties) {
     wsActivas['!cols'] = colWidthsActivas;
     XLSX.utils.book_append_sheet(wb, wsActivas, 'Activas');
 
-    // Generar Hoja 2 (Eliminadas)
-    // Usamos un fallback por si el array viene vacío para que la librería no de error
     const datosEliminadas = rowsEliminadas.length > 0 ? rowsEliminadas : [{ Mensaje: 'No hay reservas eliminadas' }];
     const wsEliminadas = XLSX.utils.json_to_sheet(datosEliminadas);
     const colWidthsElim = Object.keys(datosEliminadas[0] || {}).map((k) => ({
@@ -6193,7 +6195,7 @@ export default function AppMejorada() {
   const saveRes = async (newRes) => {
     try {
       if (newRes.id) {
-        // 1. Si ya tiene ID, es una edición: actualizamos en la nube
+        // 1. EDICIÓN: Solo actualizamos los datos básicos
         const { error } = await supabase
           .from('reservas')
           .update({
@@ -6207,11 +6209,17 @@ export default function AppMejorada() {
           .eq('id', newRes.id);
 
         if (error) throw error;
-
-        // Actualizamos la pantalla
         setRes(res.map((r) => (r.id === newRes.id ? newRes : r)));
+
       } else {
-        // 2. Si NO tiene ID, es nueva: la insertamos en la nube
+        // 2. NUEVA RESERVA: Activamos el reloj y registramos al responsable
+        const momentoExacto = new Date().toLocaleString('es-MX', {
+          timeZone: 'America/Merida',
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit'
+        });
+        const responsable = user?.name || 'Usuario desconocido';
+
         const { data, error } = await supabase
           .from('reservas')
           .insert([
@@ -6222,17 +6230,25 @@ export default function AppMejorada() {
               fecha_salida: newRes.checkOut,
               estado: newRes.status || 'Pendiente',
               monto: String(newRes.totalAmount || ''),
+              fecha_carga: momentoExacto,
+              usuario_carga: responsable
             },
           ])
           .select();
 
         if (error) throw error;
 
-        // Actualizamos la pantalla con el ID definitivo de Supabase
+        // Actualizamos la pantalla incluyendo los datos de auditoría
+        const reservaConAuditoria = {
+          ...newRes,
+          fecha_carga: momentoExacto,
+          usuario_carga: responsable
+        };
+
         if (data && data.length > 0) {
-          setRes([...res, { ...newRes, id: data[0].id }]);
+          setRes([...res, { ...reservaConAuditoria, id: data[0].id }]);
         } else {
-          setRes([...res, { ...newRes, id: 'r' + Date.now() }]);
+          setRes([...res, { ...reservaConAuditoria, id: 'r' + Date.now() }]);
         }
       }
 
@@ -6240,9 +6256,7 @@ export default function AppMejorada() {
       setModal(null);
     } catch (err) {
       console.error('Error al conectar con la base de datos:', err);
-      alert(
-        'Hubo un problema al guardar la reserva en la nube. Revisa la consola.'
-      );
+      alert('Hubo un problema al guardar la reserva en la nube. Revisa la consola.');
     }
   };
   const updateRes = (id, changes) =>
