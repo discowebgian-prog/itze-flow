@@ -3003,7 +3003,7 @@ function Timeline({
   const NCOLS = 21,
     COL = 44,
     ROW = 52,
-    LABEL = 110, // <--- Reducido un 35%
+    LABEL = 90, // <--- Reducido
     SH = 4;
   const [offset, setOffset] = useState(-2);
   const [drag, setDrag] = useState(null);
