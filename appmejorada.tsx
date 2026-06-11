@@ -6104,6 +6104,9 @@ export default function AppMejorada() {
           room: String(item.habitacion).trim(),
           fecha_carga: item.fecha_carga || '—', // Mapea la fecha de creación desde Supabase
           usuario_carga: item.usuario_carga || '—', // Mapea el usuario creador desde Supabase
+          deleted: item.estado === 'eliminada', // ¡LA LLAVE PARA QUE DESAPAREZCA DEL CALENDARIO!
+          deletedAt: item.fecha_eliminacion,
+          deletedBy: item.usuario_eliminacion,
         }));
 
         setRes(reservasCargadas);
@@ -6272,14 +6275,32 @@ export default function AppMejorada() {
     setRes(res.filter((r) => r.id !== id));
     setDrawer(null);
   };
-  const restoreRes = (id) =>
+  const restoreRes = async (id) => {
+    // 1. Le avisamos a Supabase que la reserva vuelve a la vida
+    const { error } = await supabase
+      .from('reservas')
+      .update({ 
+        estado: 'por_llegar', 
+        fecha_eliminacion: null, 
+        usuario_eliminacion: null 
+      })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error al restaurar:', error);
+      alert('Hubo un problema al restaurar la reserva.');
+      return;
+    }
+
+    // 2. La revivimos en la pantalla
     setRes(
       res.map((r) =>
         r.id === id
-          ? { ...r, deleted: false, deletedAt: null, deletedBy: null }
+          ? { ...r, deleted: false, status: 'por_llegar', deletedAt: null, deletedBy: null }
           : r
       )
     );
+  };
   const handleCI = (r) => {
     setDrawer(null);
     setCiModal(r);
