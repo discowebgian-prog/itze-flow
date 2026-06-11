@@ -3108,12 +3108,19 @@ function Timeline({
   );
   const getCellBg = (d) => {
     const dow = new Date(d).getDay();
-    const isPast = parseD(fmt(d)) < parseD(fmt(TODAY)); // Detectamos el pasado
+    const isPast = parseD(fmt(d)) < parseD(fmt(TODAY));
     
-    if (fmt(d) === fmt(TODAY)) return '#EFF6FF'; // Hoy brilla en azul
-    if (isPast) return '#F3F4F6'; // El pasado se tiñe de gris
-    if (dow === 0 || dow === 6) return '#F9FAFB'; // Fin de semana futuro
-    return '#fff'; // Futuro normal
+    // 1. Hoy siempre es azul
+    if (fmt(d) === fmt(TODAY)) return '#EFF6FF'; 
+    
+    // 2. El pasado es gris (prioridad sobre el finde)
+    if (isPast) return '#F3F4F6'; 
+    
+    // 3. Fines de semana futuros en naranja suave
+    if (dow === 0 || dow === 6) return '#FFF7ED'; // Naranja muy suave
+    
+    // 4. Días normales futuros
+    return '#fff';
   };
   const rows = [];
   properties.forEach((p) => {
