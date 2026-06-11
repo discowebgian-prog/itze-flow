@@ -3108,9 +3108,12 @@ function Timeline({
   );
   const getCellBg = (d) => {
     const dow = new Date(d).getDay();
-    if (fmt(d) === fmt(TODAY)) return '#EFF6FF';
-    if (dow === 0 || dow === 6) return '#F9FAFB';
-    return '#fff';
+    const isPast = parseD(fmt(d)) < parseD(fmt(TODAY)); // Detectamos el pasado
+    
+    if (fmt(d) === fmt(TODAY)) return '#EFF6FF'; // Hoy brilla en azul
+    if (isPast) return '#F3F4F6'; // El pasado se tiñe de gris
+    if (dow === 0 || dow === 6) return '#F9FAFB'; // Fin de semana futuro
+    return '#fff'; // Futuro normal
   };
   const rows = [];
   properties.forEach((p) => {
@@ -3207,7 +3210,8 @@ function Timeline({
     if (hdrDrag) {
       const cx = e.touches ? e.touches[0].clientX : e.clientX;
       const dd = -Math.round((cx - hdrDrag.startX) / COL);
-      setOffset(Math.max(-60, Math.min(60, hdrDrag.startOffset + dd)));
+      // Permitimos navegar 2 años (730 días) hacia el pasado y el futuro sin trabas
+setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
     }
   };
 
@@ -3449,6 +3453,8 @@ function Timeline({
             {days.map((d, i) => {
               const it = fmt(d) === fmt(TODAY),
                 dow = d.getDay();
+              const isPast = parseD(fmt(d)) < parseD(fmt(TODAY)); // Saber si es pasado
+              
               return (
                 <div
                   key={i}
@@ -3465,7 +3471,7 @@ function Timeline({
                   <div
                     style={{
                       fontSize: 9,
-                      color: it ? '#1E40AF' : '#9CA3AF',
+                      color: it ? '#1E40AF' : isPast ? '#D1D5DB' : '#9CA3AF',
                       fontWeight: 700,
                       textTransform: 'uppercase',
                     }}
@@ -3478,6 +3484,8 @@ function Timeline({
                       fontWeight: it ? 800 : 500,
                       color: it
                         ? '#1E40AF'
+                        : isPast
+                        ? '#9CA3AF'
                         : dow === 0 || dow === 6
                         ? '#D1D5DB'
                         : '#374151',
@@ -3485,11 +3493,10 @@ function Timeline({
                   >
                     {d.getDate()}
                   </div>
-                  {/* Ahora el mes se muestra siempre y se pinta de azul si es el día de hoy */}
                   <div
                     style={{
                       fontSize: 9,
-                      color: it ? '#1E40AF' : '#9CA3AF',
+                      color: it ? '#1E40AF' : isPast ? '#D1D5DB' : '#9CA3AF',
                       fontWeight: 700,
                       textTransform: 'uppercase',
                     }}
