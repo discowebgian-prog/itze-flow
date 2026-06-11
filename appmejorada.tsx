@@ -6710,7 +6710,7 @@ export default function AppMejorada() {
         </div>
       </div>
 
-      {/* Menú inferior Mobile */}
+      {/* Menú inferior Mobile DESLIZABLE con filtro de seguridad */}
       <div
         className="bn"
         style={{
@@ -6722,14 +6722,17 @@ export default function AppMejorada() {
           borderTop: '1px solid #F0F0F0',
           zIndex: 99,
           paddingBottom: 'env(safe-area-inset-bottom,8px)',
+          display: 'flex',
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
         }}
       >
-        {TABS.slice(0, 5).map((t) => (
+        {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             style={{
-              flex: 1,
+              flex: '0 0 20%', // Esto hace que los iconos se distribuyan bien
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
