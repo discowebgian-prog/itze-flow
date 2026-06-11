@@ -5150,7 +5150,7 @@ function GuestsPage({ reservations, properties, onView }) {
 }
 
 // ── EXPORT EXCEL ──────────────────────────────────────────────────────────────
-async function async function exportToExcel(reservations, properties) {
+async function exportToExcel(reservations, properties) {
   // 1. Traemos el historial de eliminadas directo desde Supabase
   const { data: eliminadasDB, error } = await supabase
     .from('reservas')
