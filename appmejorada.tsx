@@ -3490,12 +3490,12 @@ setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
                       fontSize: 13,
                       fontWeight: it ? 800 : 500,
                       color: it
-                        ? '#1E40AF'
-                        : isPast
-                        ? '#9CA3AF'
-                        : dow === 0 || dow === 6
-                        ? '#D1D5DB'
-                        : '#374151',
+                    ? '#1E40AF'
+                    : isPast
+                    ? '#9CA3AF'
+                    : dow === 0 || dow === 6
+                    ? '#8B5CF6' // Violeta para el texto de fin de semana
+                    : '#374151',
                     }}
                   >
                     {d.getDate()}
