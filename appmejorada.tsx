@@ -5836,7 +5836,7 @@ function Login({ onLogin }) {
               margin: '0 auto 14px',
             }}
           >
-            <img src="https://i.postimg.cc/VkxkhhGJ/gecko2.png" alt="Itzé" style={{ width: 80, height: 80, objectFit: 'contain' }} />
+            <img src="https://i.postimg.cc/3NDCCVdT/gecko2.png" alt="Itzé" style={{ width: 80, height: 80, objectFit: 'contain' }} />
           </div>
           <h1
             style={{
@@ -6430,7 +6430,7 @@ export default function AppMejorada() {
               flexShrink: 0,
             }}
           >
-            <img src="https://i.postimg.cc/VkxkhhGJ/gecko2.png" alt="Itzé" style={{ width: 36, height: 36, objectFit: 'contain' }} />
+            <img src="https://i.postimg.cc/3NDCCVdT/gecko2.png" alt="Itzé" style={{ width: 36, height: 36, objectFit: 'contain' }} />
           </div>
           <div>
             <span style={{ fontWeight: 800, fontSize: 15, color: '#111' }}>
