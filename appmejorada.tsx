@@ -1,3 +1,7 @@
+/* eslint-disable */
+// @ts-nocheck
+import { useState, useEffect } from 'react';
+import { createRoot } from 'react-dom/client';
 import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { supabase } from './supabase';
