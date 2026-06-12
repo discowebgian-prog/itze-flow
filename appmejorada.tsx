@@ -6468,6 +6468,7 @@ export default function AppMejorada() {
     return () => {
       supabase.removeChannel(canalReservas);
       document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   // Estados restaurados: Las "memorias" que controlan tu interfaz
