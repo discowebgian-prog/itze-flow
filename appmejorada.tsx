@@ -5282,6 +5282,30 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes }) {
   );
   const deleted = (allRes || []).filter((r) => r.deleted);
 
+  // --- NUEVA LÓGICA: AGRUPACIÓN MENSUAL ---
+  const monthlyStats = reservations.reduce((acc, r) => {
+    // Ignoramos las canceladas para la contabilidad real
+    if (r.status === 'cancelada') return acc;
+    
+    // Extraemos Año y Mes del Check-in (ej: "2026-06-12" -> y:"2026", m:"06")
+    const [y, m] = r.checkIn.split('-');
+    const key = `${y}-${m}`;
+    
+    if (!acc[key]) {
+      const mName = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][parseInt(m, 10) - 1];
+      acc[key] = { key, label: `${mName} ${y}`, total: 0, paid: 0, count: 0 };
+    }
+    acc[key].total += (r.totalAmount || 0);
+    acc[key].paid += (r.paid || 0);
+    acc[key].count += 1;
+    
+    return acc;
+  }, {});
+
+  // Convertimos a array y ordenamos (del mes más reciente al más antiguo)
+  const monthlyArray = Object.values(monthlyStats).sort((a, b) => b.key.localeCompare(a.key));
+  // ----------------------------------------
+
   return (
     <div>
       <div
@@ -5354,7 +5378,6 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes }) {
         </div>
       </div>
 
-      {/* PAPELERA — solo visible para admin cuando hay eliminadas */}
       {showTrash && user?.role === 'admin' && (
         <div
           style={{
@@ -5451,6 +5474,163 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes }) {
         </div>
       )}
 
+      {/* SECCIÓN 1: DESGLOSE MENSUAL */}
+      <h3
+        style={{
+          margin: '0 0 12px',
+          fontSize: 15,
+          fontWeight: 700,
+          color: '#374151',
+        }}
+      >
+        Reporte Mensual
+      </h3>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))',
+          gap: 12,
+          marginBottom: 28,
+        }}
+      >
+        {monthlyArray.map((m) => {
+          const saldo = m.total - m.paid;
+          const pct = m.total > 0 ? Math.round((m.paid / m.total) * 100) : 0;
+          return (
+            <div
+              key={m.key}
+              style={{
+                background: '#fff',
+                borderRadius: 12,
+                padding: '16px',
+                border: '1px solid #F0F0F0',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 12,
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 800,
+                    fontSize: 15,
+                    color: '#111',
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {m.label}
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: '#9CA3AF',
+                    fontWeight: 600,
+                  }}
+                >
+                  {m.count} reservas
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: 6,
+                  fontSize: 13,
+                }}
+              >
+                <span style={{ color: '#6B7280' }}>Facturado:</span>
+                <span style={{ fontWeight: 700, color: '#111' }}>
+                  {currency(m.total)}
+                </span>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: 10,
+                  fontSize: 13,
+                }}
+              >
+                <span style={{ color: '#6B7280' }}>Cobrado:</span>
+                <span style={{ fontWeight: 700, color: '#10B981' }}>
+                  {currency(m.paid)}
+                </span>
+              </div>
+
+              <div
+                style={{
+                  height: 4,
+                  background: '#F3F4F6',
+                  borderRadius: 4,
+                  marginBottom: 10,
+                }}
+              >
+                <div
+                  style={{
+                    height: '100%',
+                    background: '#10B981',
+                    borderRadius: 4,
+                    width: `${pct}%`,
+                    transition: 'width .3s',
+                  }}
+                />
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  paddingTop: 8,
+                  borderTop: '1px dashed #E5E7EB',
+                  fontSize: 13,
+                }}
+              >
+                <span style={{ color: '#6B7280', fontWeight: 600 }}>
+                  Por cobrar:
+                </span>
+                <span
+                  style={{
+                    fontWeight: 800,
+                    color: saldo > 0 ? '#EF4444' : '#9CA3AF',
+                  }}
+                >
+                  {currency(saldo)}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+        {monthlyArray.length === 0 && (
+          <div
+            style={{
+              gridColumn: '1 / -1',
+              textAlign: 'center',
+              color: '#D1D5DB',
+              padding: 20,
+              fontSize: 13,
+            }}
+          >
+            No hay reservas registradas.
+          </div>
+        )}
+      </div>
+
+      {/* SECCIÓN 2: DESGLOSE POR PROPIEDAD */}
+      <h3
+        style={{
+          margin: '0 0 12px',
+          fontSize: 15,
+          fontWeight: 700,
+          color: '#374151',
+        }}
+      >
+        Totales por Propiedad
+      </h3>
       <div
         style={{
           display: 'flex',
@@ -5492,7 +5672,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes }) {
                       {prop.name}
                     </div>
                     <div style={{ fontSize: 11, color: '#9CA3AF' }}>
-                      {pRes.length} reservas
+                      {pRes.length} reservas históricas
                     </div>
                   </div>
                 </div>
@@ -5531,12 +5711,14 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes }) {
                   textAlign: 'right',
                 }}
               >
-                {pct}% cobrado
+                {pct}% cobrado general
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* SECCIÓN 3: SALDOS PENDIENTES */}
       <h3
         style={{
           margin: '0 0 12px',
@@ -5545,7 +5727,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes }) {
           color: '#374151',
         }}
       >
-        Saldos pendientes
+        Huéspedes con saldos pendientes
       </h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {pending.map((r) => {
