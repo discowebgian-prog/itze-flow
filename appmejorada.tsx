@@ -6457,12 +6457,15 @@ export default function AppMejorada() {
     // Fuerza una actualización de datos apenas volvés a mirar la pantalla
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
+        useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
         console.log('Pantalla activa: Forzando actualización...');
         fetchReservas();
       }
     };
+    
     document.addEventListener('visibilitychange', handleVisibility);
-    // ------------------------------------------
 
     // 3. Limpieza al cerrar la app
     return () => {
