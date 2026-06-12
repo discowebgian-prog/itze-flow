@@ -6321,18 +6321,18 @@ export default function AppMejorada() {
       } else if (data) {
         const reservasCargadas = data.map((item) => ({
           id: item.id,
-          propertyId: 'hostel', // ¡LA LLAVE MAESTRA! Le dice al calendario dónde dibujarlo
+          propertyId: 'hostel', 
           guestName: item.Huesped || item.huesped || 'Sin nombre',
           checkIn: item.fecha_ingreso,
           checkOut: item.fecha_salida,
           status: item.estado || 'por_llegar',
           totalAmount: Number(item.monto) || 0,
-          paid: 0, // Dato por defecto para que no falle
-          source: 'Directo', // Dato por defecto para que no falle
+          paid: 0, 
+          source: 'Directo', 
           room: String(item.habitacion).trim(),
-          fecha_carga: item.fecha_carga || '—', // Mapea la fecha de creación desde Supabase
-          usuario_carga: item.usuario_carga || '—', // Mapea el usuario creador desde Supabase
-          deleted: item.estado === 'eliminada', // ¡LA LLAVE PARA QUE DESAPAREZCA DEL CALENDARIO!
+          fecha_carga: item.fecha_carga || '—', 
+          usuario_carga: item.usuario_carga || '—', 
+          deleted: item.estado === 'eliminada', 
           deletedAt: item.fecha_eliminacion,
           deletedBy: item.usuario_eliminacion,
         }));
@@ -6352,19 +6352,28 @@ export default function AppMejorada() {
         { event: '*', schema: 'public', table: 'reservas' },
         (payload) => {
           console.log('Sincronizando cambio detectado...', payload);
-          
-          // Le damos a la base de datos medio segundo (500 ms) para asentarse antes de buscar los datos nuevos
           setTimeout(() => {
             fetchReservas(); 
           }, 500);
-          
         }
       )
       .subscribe();
 
-    // 3. Apagar el canal cuando se cierra la app para no consumir recursos
+    // --- NUEVO: DESPERTADOR PARA CELULARES ---
+    // Fuerza una actualización de datos apenas volvés a mirar la pantalla
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('Pantalla activa: Forzando actualización...');
+        fetchReservas();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    // ------------------------------------------
+
+    // 3. Limpieza al cerrar la app
     return () => {
       supabase.removeChannel(canalReservas);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 
