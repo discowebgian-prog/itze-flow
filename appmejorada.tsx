@@ -1122,17 +1122,7 @@ function ResForm({
 
   return (
     <div>
-      <Sel
-        label="Propiedad"
-        value={f.propertyId}
-        onChange={(e) => {
-          sv('propertyId', e.target.value);
-          sv('room', '');
-          sv('companions', []);
-          sv('totalGuests', 1);
-        }}
-        options={visibleProps.map((p) => ({ value: p.id, label: p.name }))}
-      />
+      {/* El selector de propiedad está oculto por ahora. Por defecto siempre es Itzé Hostel */}
       {isHostel && (
         <Sel
           label="Habitación"
