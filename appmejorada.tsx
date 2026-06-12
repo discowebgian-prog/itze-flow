@@ -3168,7 +3168,8 @@ function Timeline({
   };
 
   const startDrag = (e, r, row) => {
-    e.stopPropagation();
+    if (e && e.stopPropagation) e.stopPropagation();
+    setHdrDrag(null); // Frena el scroll del fondo del calendario
     const cx = e.touches ? e.touches[0].clientX : e.clientX,
       cy = e.touches ? e.touches[0].clientY : e.clientY;
     const gt = gridEl ? gridEl.getBoundingClientRect().top : 0;
@@ -3699,7 +3700,27 @@ setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
                         setTooltip(null);
                         startDrag(e, r, row);
                       }}
-                      onTouchStart={(e) => startDrag(e, r, row)}
+                      onTouchStart={(e) => {
+                        const touch = e.touches[0];
+                        const fakeEvent = { touches: [touch] };
+                        
+                        // Iniciamos el "Long Press" (400 milisegundos)
+                        const timer = setTimeout(() => {
+                          startDrag(fakeEvent, r, row);
+                          // Si el celular soporta vibración, hace un "tactito" al despegarse
+                          if (window.navigator && window.navigator.vibrate) {
+                            window.navigator.vibrate(40);
+                          }
+                        }, 400); 
+                        lpt[1](timer);
+                      }}
+                      onTouchMove={() => {
+                        // Si el usuario desliza el dedo antes de los 400ms, cancelamos el timer (es un scroll normal del calendario)
+                        if (lpt[0]) {
+                          clearTimeout(lpt[0]);
+                          lpt[1](null);
+                        }
+                      }}
                       onClick={(e) => {
                         if (!drag) {
                           e.stopPropagation();
