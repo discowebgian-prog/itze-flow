@@ -811,6 +811,7 @@ function ConflictWarn({ conflicts, properties }) {
   );
 }
 // ── RANGE CALENDAR ────────────────────────────────────────────────────────────
+// ── RANGE CALENDAR ────────────────────────────────────────────────────────────
 function RangeCalendar({ checkIn, checkOut, onChange }) {
   const [base, setBase] = useState(checkIn ? parseD(checkIn) : TODAY);
   const [hover, setHover] = useState(null);
@@ -846,7 +847,7 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
         background: '#fff',
         border: '1.5px solid #E5E7EB',
         borderRadius: 10,
-        padding: 14,
+        padding: '10px 14px', // Reducido de 14 para ganar espacio
         marginBottom: 12,
         userSelect: 'none',
       }}
@@ -856,7 +857,7 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 16,
+          marginBottom: 10, // Reducido de 16
         }}
       >
         <button
@@ -866,11 +867,11 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
             border: 'none',
             background: '#F3F4F6',
             borderRadius: 8,
-            width: 34,
-            height: 34,
+            width: 30, // Reducido de 34
+            height: 30, // Reducido de 34
             cursor: 'pointer',
             fontWeight: 700,
-            fontSize: 16,
+            fontSize: 14,
             color: '#555',
           }}
         >
@@ -879,7 +880,7 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
         <div
           style={{
             fontWeight: 900,
-            fontSize: 18,
+            fontSize: 16, // Reducido de 18
             color: '#1E40AF',
             textTransform: 'capitalize',
             letterSpacing: 0.5,
@@ -894,11 +895,11 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
             border: 'none',
             background: '#F3F4F6',
             borderRadius: 8,
-            width: 34,
-            height: 34,
+            width: 30, // Reducido de 34
+            height: 30, // Reducido de 34
             cursor: 'pointer',
             fontWeight: 700,
-            fontSize: 16,
+            fontSize: 14,
             color: '#555',
           }}
         >
@@ -911,7 +912,7 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
           gridTemplateColumns: 'repeat(7, 1fr)',
           gap: 2,
           textAlign: 'center',
-          marginBottom: 6,
+          marginBottom: 4, // Reducido de 6
         }}
       >
         {DAYS.map((d) => (
@@ -967,7 +968,7 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 13,
+                fontSize: 12, // Reducido de 13
                 fontWeight: isEnd ? 800 : 600,
                 background: bg,
                 color: col,
@@ -984,12 +985,12 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
         style={{
           display: 'flex',
           justifyContent: 'space-between',
-          marginTop: 14,
-          fontSize: 12,
+          marginTop: 10, // Reducido de 14
+          fontSize: 11, // Reducido de 12
           fontWeight: 700,
           color: '#6B7280',
           background: '#F8FAFC',
-          padding: '8px 12px',
+          padding: '6px 12px', // Reducido de 8px
           borderRadius: 8,
         }}
       >
@@ -1122,7 +1123,36 @@ function ResForm({
 
   return (
     <div>
-      {/* El selector de propiedad está oculto por ahora. Por defecto siempre es Itzé Hostel */}
+      {/* 1. CALENDARIO EN PRIMER LUGAR */}
+      <label
+        style={{
+          display: 'block',
+          fontSize: 11,
+          fontWeight: 700,
+          color: '#888',
+          marginBottom: 6,
+          textTransform: 'uppercase',
+          letterSpacing: 0.4,
+        }}
+      >
+        Fechas de estadía
+      </label>
+      <RangeCalendar
+        checkIn={f.checkIn}
+        checkOut={f.checkOut}
+        onChange={(ci, co) => {
+          sv('checkIn', ci);
+          sv('checkOut', co);
+        }}
+      />
+
+      {nights > 0 && (
+        <p style={{ margin: '-4px 0 12px', fontSize: 12, color: '#6B7280' }}>
+          {nights} noche{nights !== 1 ? 's' : ''}
+        </p>
+      )}
+
+      {/* 2. HABITACIÓN */}
       {isHostel && (
         <Sel
           label="Habitación"
@@ -1141,6 +1171,8 @@ function ResForm({
           ]}
         />
       )}
+
+      {/* 3. NACIONALIDAD Y SCANNER */}
       <CountrySelector
         value={f.guestNationality}
         onChange={(c) => {
@@ -1174,6 +1206,8 @@ function ResForm({
           }
         }}
       />
+
+      {/* 4. DATOS DEL HUÉSPED */}
       <Inp
         label="Nombre completo"
         value={f.guestName}
@@ -1252,35 +1286,8 @@ function ResForm({
         onChange={(e) => sv('guestEmail', e.target.value)}
       />
 
-      {/* AQUÍ ESTÁ EL NUEVO CALENDARIO CONECTADO */}
-      <label
-        style={{
-          display: 'block',
-          fontSize: 11,
-          fontWeight: 700,
-          color: '#888',
-          marginBottom: 6,
-          textTransform: 'uppercase',
-          letterSpacing: 0.4,
-        }}
-      >
-        Fechas de estadía
-      </label>
-      <RangeCalendar
-        checkIn={f.checkIn}
-        checkOut={f.checkOut}
-        onChange={(ci, co) => {
-          sv('checkIn', ci);
-          sv('checkOut', co);
-        }}
-      />
-
-      {nights > 0 && (
-        <p style={{ margin: '-4px 0 12px', fontSize: 12, color: '#6B7280' }}>
-          {nights} noche{nights !== 1 ? 's' : ''}
-        </p>
-      )}
       <ConflictWarn conflicts={conflicts} properties={visibleProps} />
+      
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <Sel
           label="Estado"
@@ -1297,6 +1304,7 @@ function ResForm({
           options={SOURCES.map((s) => ({ value: s.value, label: s.label }))}
         />
       </div>
+
       {(!isHostel || selRoom) && maxG > 1 && (
         <div style={{ marginBottom: 14 }}>
           <label
@@ -1339,6 +1347,7 @@ function ResForm({
           </div>
         </div>
       )}
+
       {f.companions.length > 0 && (
         <div style={{ marginBottom: 14 }}>
           <label
@@ -1748,6 +1757,7 @@ function ResForm({
           </div>
         </div>
       </div>
+
       <div style={{ marginBottom: 20 }}>
         <label
           style={{
@@ -1779,6 +1789,7 @@ function ResForm({
           }}
         />
       </div>
+
       <div style={{ display: 'flex', gap: 10 }}>
         <button
           onClick={onClose}
@@ -1820,6 +1831,8 @@ function ResForm({
           {conflicts.length > 0 ? ` (${conflicts.length} conflicto)` : ''}
         </button>
       </div>
+
+      {/* --- MODAL DE CONFLICTOS INTACTO --- */}
       {confModal && (
         <div
           style={{
