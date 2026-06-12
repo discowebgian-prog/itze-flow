@@ -5792,15 +5792,26 @@ function ResList({ reservations, properties, onView, onAdd }) {
 }
 
 // ── LOGIN ─────────────────────────────────────────────────────────────────────
+// ── LOGIN ─────────────────────────────────────────────────────────────────────
 function Login({ onLogin }) {
   const [uid, setUid] = useState('');
   const [pw, setPw] = useState('');
   const [err, setErr] = useState('');
+  const [recoverySent, setRecoverySent] = useState(false);
+
   const go = () => {
     const u = USERS.find((x) => x.id === uid && x.password === pw);
     if (u) onLogin(u);
     else setErr('Usuario o contraseña incorrectos');
   };
+
+  const handleRecovery = () => {
+    // Aquí a futuro se conecta la API para mandar el mail real
+    setRecoverySent(true);
+    // Vuelve a su estado normal después de 5 segundos
+    setTimeout(() => setRecoverySent(false), 5000); 
+  };
+
   const si = {
     width: '100%',
     padding: '11px 14px',
@@ -5814,6 +5825,7 @@ function Login({ onLogin }) {
     boxSizing: 'border-box',
     marginBottom: 12,
   };
+
   return (
     <div
       style={{
@@ -5879,7 +5891,7 @@ function Login({ onLogin }) {
           <input
             value={uid}
             onChange={(e) => setUid(e.target.value)}
-            placeholder="admin"
+            placeholder="Usuario"
             style={si}
           />
           <label
@@ -5933,38 +5945,42 @@ function Login({ onLogin }) {
           >
             Ingresar
           </button>
-          <div
-            style={{
-              marginTop: 20,
-              background: 'rgba(255,255,255,.04)',
-              borderRadius: 10,
-              padding: '12px 14px',
-              fontSize: 12,
-              color: 'rgba(255,255,255,.35)',
-            }}
-          >
-            <div
-              style={{
-                fontWeight: 700,
-                color: 'rgba(255,255,255,.4)',
-                marginBottom: 5,
-              }}
-            >
-              Accesos demo
-            </div>
-            <div>
-              Admin:{' '}
-              <span style={{ color: 'rgba(255,255,255,.6)' }}>
-                admin / admin123
-              </span>
-            </div>
-            <div>
-              Staff:{' '}
-              <span style={{ color: 'rgba(255,255,255,.6)' }}>
-                staff / staff123
-              </span>
-            </div>
+          
+          {/* SECCIÓN: RECUPERACIÓN DE DATOS */}
+          <div style={{ marginTop: 24, textAlign: 'center', height: 40 }}>
+            {recoverySent ? (
+              <div
+                style={{
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  color: '#34D399',
+                  padding: '10px',
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                ✓ Los datos fueron enviados a itzehostel@gmail.com
+              </div>
+            ) : (
+              <button
+                onClick={handleRecovery}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'rgba(255,255,255,.4)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  fontFamily: 'inherit',
+                }}
+              >
+                Olvidé mis datos de ingreso
+              </button>
+            )}
           </div>
+
         </div>
       </div>
     </div>
