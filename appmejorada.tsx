@@ -1017,6 +1017,82 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
   );
 }
 // ── RESERVATION FORM ──────────────────────────────────────────────────────────
+// ── CARGADOR DE INE COMPRIMIDO ───────────────────────────────────────────────
+function IneUploader({ f, onUploadFrente, onUploadDorso }) {
+  const [loadingF, setLoadingF] = useState(false);
+  const [loadingD, setLoadingD] = useState(false);
+
+  const processFile = async (e, side) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    side === 'frente' ? setLoadingF(true) : setLoadingD(true);
+
+    try {
+      // 1. Cargamos la imagen en memoria
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      await new Promise((res) => (img.onload = res));
+
+      // 2. Compresión con Canvas (Max 1200px de ancho)
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 1200;
+      let scaleSize = 1;
+      if (img.width > MAX_WIDTH) {
+        scaleSize = MAX_WIDTH / img.width;
+      }
+      canvas.width = img.width * scaleSize;
+      canvas.height = img.height * scaleSize;
+
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      // 3. Convertimos a JPG web optimizado (70% calidad)
+      canvas.toBlob(async (blob) => {
+        const fileName = `ine_${side}_${Date.now()}.jpg`;
+        
+        // 4. Subimos a Supabase Storage
+        const { error } = await supabase.storage
+          .from('documentos')
+          .upload(fileName, blob, { contentType: 'image/jpeg' });
+
+        if (error) throw error;
+
+        // 5. Obtenemos el link público
+        const { data: { publicUrl } } = supabase.storage
+          .from('documentos')
+          .getPublicUrl(fileName);
+
+        // 6. Guardamos el link en el formulario
+        side === 'frente' ? onUploadFrente(publicUrl) : onUploadDorso(publicUrl);
+        side === 'frente' ? setLoadingF(false) : setLoadingD(false);
+      }, 'image/jpeg', 0.7);
+
+    } catch (err) {
+      console.error(err);
+      alert(`Hubo un error al subir el ${side}. Reintentá.`);
+      side === 'frente' ? setLoadingF(false) : setLoadingD(false);
+    }
+  };
+
+  return (
+    <div style={{ padding: 16, background: '#F0F9FF', borderRadius: 10, border: '1px solid #BAE6FD', marginBottom: 16 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#0369A1', textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5 }}>
+        Fotografías del INE
+      </div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <label style={{ flex: 1, padding: '12px 10px', background: f.url_ine_frente ? '#10B981' : '#0284C7', color: '#fff', borderRadius: 8, textAlign: 'center', cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s' }}>
+          {loadingF ? 'Subiendo...' : f.url_ine_frente ? '✓ Frente OK' : '📸 Foto Frente'}
+          <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => processFile(e, 'frente')} />
+        </label>
+        <label style={{ flex: 1, padding: '12px 10px', background: f.url_ine_dorso ? '#10B981' : '#0284C7', color: '#fff', borderRadius: 8, textAlign: 'center', cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s' }}>
+          {loadingD ? 'Subiendo...' : f.url_ine_dorso ? '✓ Dorso OK' : '📸 Foto Dorso'}
+          <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => processFile(e, 'dorso')} />
+        </label>
+      </div>
+    </div>
+  );
+}
 function ResForm({
   initial,
   visibleProps,
@@ -1193,31 +1269,10 @@ function ResForm({
           sv('guestPhonePrefix', c.prefix);
         }}
       />
-      <DocScanner
-        onResult={(ocr) => {
-          if (ocr.fullName || ocr.firstName)
-            sv(
-              'guestName',
-              ocr.fullName || (ocr.firstName + ' ' + ocr.lastName).trim()
-            );
-          if (ocr.docNumber) sv('guestDoc', ocr.docNumber);
-          if (ocr.docType)
-            sv(
-              'guestDocType',
-              ocr.docType === 'Pasaporte'
-                ? 'Pasaporte'
-                : ocr.docType === 'Otro'
-                ? 'Otro'
-                : 'INE'
-            );
-          if (ocr.nationality && ocr.nationality !== 'MX') {
-            const c = COUNTRIES.find((x) => x.code === ocr.nationality);
-            if (c) {
-              sv('guestNationality', c.code);
-              sv('guestPhonePrefix', c.prefix);
-            }
-          }
-        }}
+      <IneUploader 
+        f={f} 
+        onUploadFrente={(url) => sv('url_ine_frente', url)}
+        onUploadDorso={(url) => sv('url_ine_dorso', url)}
       />
 
       {/* 5. RESTO DE DATOS DEL HUÉSPED */}
@@ -6448,6 +6503,9 @@ export default function AppMejorada() {
             fecha_salida: newRes.checkOut,
             estado: newRes.status || 'Pendiente',
             monto: String(newRes.totalAmount || ''),
+            // AGREGAMOS LAS FOTOS TAMBIÉN EN LA EDICIÓN
+            url_ine_frente: newRes.url_ine_frente || null,
+            url_ine_dorso: newRes.url_ine_dorso || null
           })
           .eq('id', newRes.id);
 
@@ -6474,18 +6532,23 @@ export default function AppMejorada() {
               estado: newRes.status || 'Pendiente',
               monto: String(newRes.totalAmount || ''),
               fecha_carga: momentoExacto,
-              usuario_carga: responsable
+              usuario_carga: responsable,
+              // ENVIAMOS LAS URLS DE LAS FOTOS A SUPABASE (Ya lo tenías bien)
+              url_ine_frente: newRes.url_ine_frente || null,
+              url_ine_dorso: newRes.url_ine_dorso || null
             },
           ])
           .select();
 
         if (error) throw error;
 
-        // Actualizamos la pantalla incluyendo los datos de auditoría
+        // Actualizamos la pantalla incluyendo los datos de auditoría y las fotos
         const reservaConAuditoria = {
           ...newRes,
           fecha_carga: momentoExacto,
-          usuario_carga: responsable
+          usuario_carga: responsable,
+          url_ine_frente: newRes.url_ine_frente || null,
+          url_ine_dorso: newRes.url_ine_dorso || null
         };
 
         if (data && data.length > 0) {
