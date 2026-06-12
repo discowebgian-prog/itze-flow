@@ -6423,6 +6423,7 @@ export default function AppMejorada() {
       `}</style>
 
       {/* Navbar Superior */}
+      {/* Navbar Superior */}
       <div
         style={{
           background: '#fff',
@@ -6448,10 +6449,6 @@ export default function AppMejorada() {
             }}
           >
             <img src="https://i.postimg.cc/VkxkhhGJ/gecko2.png" alt="Itzé" style={{ width: 36, height: 36, objectFit: 'contain' }} />
-          </div>
-          <div>
-            <span style={{ fontWeight: 800, fontSize: 15, color: '#111' }}>
-        <img src="https://i.postimg.cc/VkxkhhGJ/gecko2.png" alt="Itzé" style={{ width: 24, height: 24, objectFit: 'contain' }} />
           </div>
           <div>
             <span style={{ fontWeight: 800, fontSize: 15, color: '#111' }}>
