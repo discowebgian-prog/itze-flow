@@ -1178,7 +1178,14 @@ function ResForm({
         />
       )}
 
-      {/* 3. NACIONALIDAD Y SCANNER */}
+      {/* 3. NOMBRE COMPLETO (Movido arriba) */}
+      <Inp
+        label="Nombre completo"
+        value={f.guestName}
+        onChange={(e) => sv('guestName', e.target.value)}
+      />
+
+      {/* 4. NACIONALIDAD Y SCANNER */}
       <CountrySelector
         value={f.guestNationality}
         onChange={(c) => {
@@ -1213,12 +1220,7 @@ function ResForm({
         }}
       />
 
-      {/* 4. DATOS DEL HUÉSPED */}
-      <Inp
-        label="Nombre completo"
-        value={f.guestName}
-        onChange={(e) => sv('guestName', e.target.value)}
-      />
+      {/* 5. RESTO DE DATOS DEL HUÉSPED */}
       <div
         style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 10 }}
       >
@@ -1291,7 +1293,6 @@ function ResForm({
         value={f.guestEmail}
         onChange={(e) => sv('guestEmail', e.target.value)}
       />
-
       <ConflictWarn conflicts={conflicts} properties={visibleProps} />
       
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
