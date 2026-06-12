@@ -4334,10 +4334,12 @@ function Dashboard({
           },
           {
             label: 'Ocupación',
-            val:
-              properties.length > 0
-                ? Math.round((active.length / properties.length) * 100) + '%'
-                : '0%',
+            val: (() => {
+              const totalRooms = properties.reduce((s, p) => s + (p.rooms || 1), 0);
+              return totalRooms > 0 
+                ? Math.round((active.length / totalRooms) * 100) + '%' 
+                : '0%';
+            })(),
             icon: '📊',
             col: '#8B5CF6',
             bg: '#EDE9FE',
@@ -5280,8 +5282,8 @@ async function exportToExcel(reservations, properties) {
       otro: 'Otro',
     };
 
-    // ORDENAMOS CRONOLÓGICAMENTE POR CHECK-IN ANTES DE CREAR LAS FILAS
-    const reservasOrdenadas = [...reservations].sort((a, b) => new Date(a.checkIn) - new Date(b.checkIn));
+    // ORDENAMOS CRONOLÓGICAMENTE POR CHECK-IN (Comparación de Strings ISO para evitar bugs UTC)
+    const reservasOrdenadas = [...reservations].sort((a, b) => a.checkIn.localeCompare(b.checkIn));
 
     // --- PESTAÑA 1: ACTIVAS ---
     const rowsActivas = reservasOrdenadas.map((r) => {
@@ -5315,8 +5317,8 @@ async function exportToExcel(reservations, properties) {
       };
     });
 
-    // ORDENAMOS TAMBIÉN EL HISTORIAL DE ELIMINADAS
-    const eliminadasOrdenadas = [...(eliminadasDB || [])].sort((a, b) => new Date(a.fecha_ingreso || 0) - new Date(b.fecha_ingreso || 0));
+    // ORDENAMOS TAMBIÉN EL HISTORIAL DE ELIMINADAS (Comparación de Strings ISO para evitar bugs UTC)
+    const eliminadasOrdenadas = [...(eliminadasDB || [])].sort((a, b) => (a.fecha_ingreso || '').localeCompare(b.fecha_ingreso || ''));
 
     // --- PESTAÑA 2: ELIMINADAS ---
     const rowsEliminadas = eliminadasOrdenadas.map((db) => {
@@ -5376,8 +5378,8 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes }) {
 
   // --- NUEVA LÓGICA: AGRUPACIÓN MENSUAL ---
   const monthlyStats = reservations.reduce((acc, r) => {
-    // Ignoramos las canceladas para la contabilidad real
-    if (r.status === 'cancelada') return acc;
+    // Ignoramos las canceladas para la contabilidad real (y prevenimos pantalla blanca si no hay fecha)
+    if (r.status === 'cancelada' || !r.checkIn) return acc;
     
     // Extraemos Año y Mes del Check-in (ej: "2026-06-12" -> y:"2026", m:"06")
     const [y, m] = r.checkIn.split('-');
@@ -6392,7 +6394,7 @@ export default function AppMejorada() {
       } else if (data) {
         const reservasCargadas = data.map((item) => ({
           id: item.id,
-          propertyId: 'hostel', 
+          propertyId: item.propiedad || item.propertyId || 'hostel', 
           guestName: item.huesped || item.Huesped || 'Sin nombre',
           checkIn: item.fecha_ingreso,
           checkOut: item.fecha_salida,
@@ -6538,10 +6540,11 @@ export default function AppMejorada() {
             notas: newRes.notes || '',
             url_ine_frente: newRes.url_ine_frente || null,
             url_ine_dorso: newRes.url_ine_dorso || null,
-            // --- SOLUCIÓN A LOS 3 DETALLES ---
-            tarifa_base: String(newRes.baseRate || ''),
-            descuento: String(newRes.discount || ''),
-            solicita_factura: newRes.invoice || false
+            // --- SOLUCIÓN A LOS 3 DETALLES (CORREGIDO) ---
+            propiedad: newRes.propertyId || 'hostel',
+            tarifa_base: String(newRes.pricing?.ratePerNight || ''),
+            descuento: String(newRes.pricing?.discountValue || ''),
+            solicita_factura: newRes.requiresInvoice || false
           })
           .eq('id', newRes.id);
 
@@ -6616,14 +6619,15 @@ export default function AppMejorada() {
     setRes(res.map((r) => (r.id === id ? { ...r, ...changes } : r)));
 
     // 2. Le mandamos los datos a la nube para que las demás pantallas se enteren
-    const { error } = await supabase
-      .from('reservas')
-      .update({
-        fecha_ingreso: changes.checkIn,
-        fecha_salida: changes.checkOut,
-        habitacion: changes.room
-      })
-      .eq('id', id);
+      const { error } = await supabase
+        .from('reservas')
+        .update({
+          fecha_ingreso: changes.checkIn,
+          fecha_salida: changes.checkOut,
+          habitacion: changes.room,
+          propiedad: changes.propertyId
+        })
+        .eq('id', id);
 
     if (error) {
       console.error('Error al sincronizar el movimiento:', error);
