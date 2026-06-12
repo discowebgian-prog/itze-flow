@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { supabase } from './supabase';
-import geckoImg from './gecko.png';
 
 // Font y Candado Anti-Zoom para Celulares
 if (typeof document !== 'undefined') {
@@ -6454,7 +6453,7 @@ export default function AppMejorada() {
               fontSize: 18,
             }}
           >
-        <img src={geckoImg} alt="Itzé" style={{ width: 24, height: 24, objectFit: 'contain' }} />
+        <img src="https://raw.githubusercontent.com/GiancarloPadula/itze-flow-2/main/gecko.png" alt="Itzé" style={{ width: 24, height: 24, objectFit: 'contain' }} />
           </div>
           <div>
             <span style={{ fontWeight: 800, fontSize: 15, color: '#111' }}>
