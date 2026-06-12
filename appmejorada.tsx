@@ -6406,7 +6406,6 @@ export default function AppMejorada() {
           deleted: item.estado === 'eliminada', 
           deletedAt: item.fecha_eliminacion,
           deletedBy: item.usuario_eliminacion,
-          // Nuevos campos para que el formulario no quede en blanco
           guestNationality: item.nacionalidad || 'MX',
           guestDocType: item.tipo_doc || 'INE',
           guestDoc: item.num_doc || '',
@@ -6416,7 +6415,11 @@ export default function AppMejorada() {
           paymentMethod: item.forma_pago || 'Efectivo',
           notes: item.notas || '',
           url_ine_frente: item.url_ine_frente || null,
-          url_ine_dorso: item.url_ine_dorso || null
+          url_ine_dorso: item.url_ine_dorso || null,
+          // --- SOLUCIÓN A LOS 3 DETALLES ---
+          baseRate: Number(item.tarifa_base) || 0,
+          discount: Number(item.descuento) || 0,
+          invoice: item.solicita_factura || false
         }));
 
         setRes(reservasCargadas);
@@ -6510,7 +6513,7 @@ export default function AppMejorada() {
   const saveRes = async (newRes) => {
     try {
       if (newRes.id) {
-        // 1. EDICIÓN: Guardamos TODOS los campos (fotos + datos nuevos)
+        // 1. EDICIÓN
         const { error } = await supabase
           .from('reservas')
           .update({
@@ -6520,7 +6523,6 @@ export default function AppMejorada() {
             fecha_salida: newRes.checkOut,
             estado: newRes.status || 'Pendiente',
             monto: String(newRes.totalAmount || ''),
-            // --- NUEVOS CAMPOS DETECTADOS ---
             monto_pagado: String(newRes.paid || ''),
             canal: newRes.source || 'Directo — Puerta',
             nacionalidad: newRes.guestNationality || '',
@@ -6532,7 +6534,11 @@ export default function AppMejorada() {
             forma_pago: newRes.paymentMethod || 'Efectivo',
             notas: newRes.notes || '',
             url_ine_frente: newRes.url_ine_frente || null,
-            url_ine_dorso: newRes.url_ine_dorso || null
+            url_ine_dorso: newRes.url_ine_dorso || null,
+            // --- SOLUCIÓN A LOS 3 DETALLES ---
+            tarifa_base: String(newRes.baseRate || ''),
+            descuento: String(newRes.discount || ''),
+            solicita_factura: newRes.invoice || false
           })
           .eq('id', newRes.id);
 
@@ -6560,7 +6566,6 @@ export default function AppMejorada() {
               monto: String(newRes.totalAmount || ''),
               fecha_carga: momentoExacto,
               usuario_carga: responsable,
-              // --- NUEVOS CAMPOS DETECTADOS ---
               monto_pagado: String(newRes.paid || ''),
               canal: newRes.source || 'Directo — Puerta',
               nacionalidad: newRes.guestNationality || '',
@@ -6570,9 +6575,13 @@ export default function AppMejorada() {
               email: newRes.guestEmail || '',
               cantidad_huespedes: String(newRes.totalGuests || 1),
               forma_pago: newRes.paymentMethod || 'Efectivo',
-              notas: newRes.notes || '',
+              notas: newRes.notas || '',
               url_ine_frente: newRes.url_ine_frente || null,
-              url_ine_dorso: newRes.url_ine_dorso || null
+              url_ine_dorso: newRes.url_ine_dorso || null,
+              // --- SOLUCIÓN A LOS 3 DETALLES ---
+              tarifa_base: String(newRes.baseRate || ''),
+              descuento: String(newRes.discount || ''),
+              solicita_factura: newRes.invoice || false
             },
           ])
           .select();
