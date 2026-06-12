@@ -5830,31 +5830,13 @@ function Login({ onLogin }) {
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <div
             style={{
-              width: 60,
-              height: 60,
-              borderRadius: 16,
-              background: 'linear-gradient(135deg,#3B82F6,#6366F1)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 14px',
-              boxShadow: '0 8px 24px rgba(99,102,241,.4)',
             }}
           >
-            <svg
-              width="30"
-              height="30"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              <path d="M22 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="11" r="3" />
-            </svg>
+            <img src="https://i.postimg.cc/VkxkhhGJ/gecko2.png" alt="Itzé" style={{ width: 80, height: 80, objectFit: 'contain' }} />
           </div>
           <h1
             style={{
