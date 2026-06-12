@@ -1017,7 +1017,7 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
   );
 }
 // ── RESERVATION FORM ──────────────────────────────────────────────────────────
-// ── CARGADOR DE INE COMPRIMIDO ───────────────────────────────────────────────
+// ── CARGADOR DE INE COMPRIMIDO (CORREGIDO) ───────────────────────────────────
 function IneUploader({ f, onUploadFrente, onUploadDorso }) {
   const [loadingF, setLoadingF] = useState(false);
   const [loadingD, setLoadingD] = useState(false);
@@ -1029,12 +1029,13 @@ function IneUploader({ f, onUploadFrente, onUploadDorso }) {
     side === 'frente' ? setLoadingF(true) : setLoadingD(true);
 
     try {
-      // 1. Cargamos la imagen en memoria
       const img = new Image();
       img.src = URL.createObjectURL(file);
-      await new Promise((res) => (img.onload = res));
+      await new Promise((res, rej) => {
+        img.onload = res;
+        img.onerror = () => rej(new Error("Error al leer la imagen del celular."));
+      });
 
-      // 2. Compresión con Canvas (Max 1200px de ancho)
       const canvas = document.createElement('canvas');
       const MAX_WIDTH = 1200;
       let scaleSize = 1;
@@ -1047,30 +1048,35 @@ function IneUploader({ f, onUploadFrente, onUploadDorso }) {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-      // 3. Convertimos a JPG web optimizado (70% calidad)
       canvas.toBlob(async (blob) => {
-        const fileName = `ine_${side}_${Date.now()}.jpg`;
-        
-        // 4. Subimos a Supabase Storage
-        const { error } = await supabase.storage
-          .from('documentos')
-          .upload(fileName, blob, { contentType: 'image/jpeg' });
+        try {
+          const fileName = `ine_${side}_${Date.now()}.jpg`;
+          
+          const { error } = await supabase.storage
+            .from('documentos')
+            .upload(fileName, blob, { contentType: 'image/jpeg' });
 
-        if (error) throw error;
+          if (error) {
+            console.error("Error de Supabase:", error);
+            throw new Error("Supabase rechazó el archivo. ¿Revisaste las Políticas de Storage?");
+          }
 
-        // 5. Obtenemos el link público
-        const { data: { publicUrl } } = supabase.storage
-          .from('documentos')
-          .getPublicUrl(fileName);
+          const { data: { publicUrl } } = supabase.storage
+            .from('documentos')
+            .getPublicUrl(fileName);
 
-        // 6. Guardamos el link en el formulario
-        side === 'frente' ? onUploadFrente(publicUrl) : onUploadDorso(publicUrl);
-        side === 'frente' ? setLoadingF(false) : setLoadingD(false);
+          side === 'frente' ? onUploadFrente(publicUrl) : onUploadDorso(publicUrl);
+        } catch (err) {
+          console.error(err);
+          alert(err.message);
+        } finally {
+          side === 'frente' ? setLoadingF(false) : setLoadingD(false);
+        }
       }, 'image/jpeg', 0.7);
 
     } catch (err) {
       console.error(err);
-      alert(`Hubo un error al subir el ${side}. Reintentá.`);
+      alert(err.message);
       side === 'frente' ? setLoadingF(false) : setLoadingD(false);
     }
   };
@@ -6387,19 +6393,30 @@ export default function AppMejorada() {
         const reservasCargadas = data.map((item) => ({
           id: item.id,
           propertyId: 'hostel', 
-          guestName: item.Huesped || item.huesped || 'Sin nombre',
+          guestName: item.huesped || item.Huesped || 'Sin nombre',
           checkIn: item.fecha_ingreso,
           checkOut: item.fecha_salida,
           status: item.estado || 'por_llegar',
           totalAmount: Number(item.monto) || 0,
-          paid: 0, 
-          source: 'Directo', 
+          paid: Number(item.monto_pagado) || 0, 
+          source: item.canal || 'Directo — Puerta', 
           room: String(item.habitacion).trim(),
           fecha_carga: item.fecha_carga || '—', 
           usuario_carga: item.usuario_carga || '—', 
           deleted: item.estado === 'eliminada', 
           deletedAt: item.fecha_eliminacion,
           deletedBy: item.usuario_eliminacion,
+          // Nuevos campos para que el formulario no quede en blanco
+          guestNationality: item.nacionalidad || 'MX',
+          guestDocType: item.tipo_doc || 'INE',
+          guestDoc: item.num_doc || '',
+          guestPhone: item.telefono || '',
+          guestEmail: item.email || '',
+          totalGuests: Number(item.cantidad_huespedes) || 1,
+          paymentMethod: item.forma_pago || 'Efectivo',
+          notes: item.notas || '',
+          url_ine_frente: item.url_ine_frente || null,
+          url_ine_dorso: item.url_ine_dorso || null
         }));
 
         setRes(reservasCargadas);
@@ -6493,7 +6510,7 @@ export default function AppMejorada() {
   const saveRes = async (newRes) => {
     try {
       if (newRes.id) {
-        // 1. EDICIÓN: Solo actualizamos los datos básicos
+        // 1. EDICIÓN: Guardamos TODOS los campos (fotos + datos nuevos)
         const { error } = await supabase
           .from('reservas')
           .update({
@@ -6503,7 +6520,17 @@ export default function AppMejorada() {
             fecha_salida: newRes.checkOut,
             estado: newRes.status || 'Pendiente',
             monto: String(newRes.totalAmount || ''),
-            // AGREGAMOS LAS FOTOS TAMBIÉN EN LA EDICIÓN
+            // --- NUEVOS CAMPOS DETECTADOS ---
+            monto_pagado: String(newRes.paid || ''),
+            canal: newRes.source || 'Directo — Puerta',
+            nacionalidad: newRes.guestNationality || '',
+            tipo_doc: newRes.guestDocType || '',
+            num_doc: newRes.guestDoc || '',
+            telefono: newRes.guestPhonePrefix ? `${newRes.guestPhonePrefix} ${newRes.guestPhone}` : newRes.guestPhone || '',
+            email: newRes.guestEmail || '',
+            cantidad_huespedes: String(newRes.totalGuests || 1),
+            forma_pago: newRes.paymentMethod || 'Efectivo',
+            notas: newRes.notes || '',
             url_ine_frente: newRes.url_ine_frente || null,
             url_ine_dorso: newRes.url_ine_dorso || null
           })
@@ -6513,7 +6540,7 @@ export default function AppMejorada() {
         setRes(res.map((r) => (r.id === newRes.id ? newRes : r)));
 
       } else {
-        // 2. NUEVA RESERVA: Activamos el reloj y registramos al responsable
+        // 2. NUEVA RESERVA
         const momentoExacto = new Date().toLocaleString('es-MX', {
           timeZone: 'America/Merida',
           year: 'numeric', month: '2-digit', day: '2-digit',
@@ -6533,7 +6560,17 @@ export default function AppMejorada() {
               monto: String(newRes.totalAmount || ''),
               fecha_carga: momentoExacto,
               usuario_carga: responsable,
-              // ENVIAMOS LAS URLS DE LAS FOTOS A SUPABASE (Ya lo tenías bien)
+              // --- NUEVOS CAMPOS DETECTADOS ---
+              monto_pagado: String(newRes.paid || ''),
+              canal: newRes.source || 'Directo — Puerta',
+              nacionalidad: newRes.guestNationality || '',
+              tipo_doc: newRes.guestDocType || '',
+              num_doc: newRes.guestDoc || '',
+              telefono: newRes.guestPhonePrefix ? `${newRes.guestPhonePrefix} ${newRes.guestPhone}` : newRes.guestPhone || '',
+              email: newRes.guestEmail || '',
+              cantidad_huespedes: String(newRes.totalGuests || 1),
+              forma_pago: newRes.paymentMethod || 'Efectivo',
+              notas: newRes.notes || '',
               url_ine_frente: newRes.url_ine_frente || null,
               url_ine_dorso: newRes.url_ine_dorso || null
             },
@@ -6542,13 +6579,10 @@ export default function AppMejorada() {
 
         if (error) throw error;
 
-        // Actualizamos la pantalla incluyendo los datos de auditoría y las fotos
         const reservaConAuditoria = {
           ...newRes,
           fecha_carga: momentoExacto,
-          usuario_carga: responsable,
-          url_ine_frente: newRes.url_ine_frente || null,
-          url_ine_dorso: newRes.url_ine_dorso || null
+          usuario_carga: responsable
         };
 
         if (data && data.length > 0) {
@@ -6558,11 +6592,11 @@ export default function AppMejorada() {
         }
       }
 
-      // 3. Cerramos el formulario
       setModal(null);
+      alert('Reserva guardada con éxito.');
     } catch (err) {
       console.error('Error al conectar con la base de datos:', err);
-      alert('Hubo un problema al guardar la reserva en la nube. Revisa la consola.');
+      alert('Hubo un problema al guardar la reserva en la nube: ' + err.message);
     }
   };
   const updateRes = async (id, changes) => {
