@@ -6483,8 +6483,25 @@ export default function AppMejorada() {
       alert('Hubo un problema al guardar la reserva en la nube. Revisa la consola.');
     }
   };
-  const updateRes = (id, changes) =>
+  const updateRes = async (id, changes) => {
+    // 1. Movemos la reserva visualmente al instante para que la app se sienta rápida
     setRes(res.map((r) => (r.id === id ? { ...r, ...changes } : r)));
+
+    // 2. Le mandamos los datos a la nube para que las demás pantallas se enteren
+    const { error } = await supabase
+      .from('reservas')
+      .update({
+        fecha_ingreso: changes.checkIn,
+        fecha_salida: changes.checkOut,
+        habitacion: changes.room
+      })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error al sincronizar el movimiento:', error);
+      alert('Hubo un error al guardar el movimiento en la nube. Revisá tu conexión.');
+    }
+  };
   const delRes = async (id) => {
     // Capturamos la fecha y hora exacta con la zona horaria de Progreso, Yucatán
     const momentoExacto = new Date().toLocaleString('es-MX', {
