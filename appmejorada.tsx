@@ -841,13 +841,19 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
     }
   };
 
+  // Calculamos las noches aquí adentro para mostrarlas en la misma barra
+  let nights = 0;
+  if (checkIn && checkOut) {
+    nights = Math.round((parseD(checkOut) - parseD(checkIn)) / 86400000);
+  }
+
   return (
     <div
       style={{
         background: '#fff',
         border: '1.5px solid #E5E7EB',
         borderRadius: 10,
-        padding: '10px 14px', // Reducido de 14 para ganar espacio
+        padding: '10px 14px',
         marginBottom: 12,
         userSelect: 'none',
       }}
@@ -857,7 +863,7 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 10, // Reducido de 16
+          marginBottom: 10,
         }}
       >
         <button
@@ -867,8 +873,8 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
             border: 'none',
             background: '#F3F4F6',
             borderRadius: 8,
-            width: 30, // Reducido de 34
-            height: 30, // Reducido de 34
+            width: 30,
+            height: 30,
             cursor: 'pointer',
             fontWeight: 700,
             fontSize: 14,
@@ -880,7 +886,7 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
         <div
           style={{
             fontWeight: 900,
-            fontSize: 16, // Reducido de 18
+            fontSize: 16,
             color: '#1E40AF',
             textTransform: 'capitalize',
             letterSpacing: 0.5,
@@ -895,8 +901,8 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
             border: 'none',
             background: '#F3F4F6',
             borderRadius: 8,
-            width: 30, // Reducido de 34
-            height: 30, // Reducido de 34
+            width: 30,
+            height: 30,
             cursor: 'pointer',
             fontWeight: 700,
             fontSize: 14,
@@ -912,7 +918,7 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
           gridTemplateColumns: 'repeat(7, 1fr)',
           gap: 2,
           textAlign: 'center',
-          marginBottom: 4, // Reducido de 6
+          marginBottom: 4,
         }}
       >
         {DAYS.map((d) => (
@@ -968,7 +974,7 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 12, // Reducido de 13
+                fontSize: 12,
                 fontWeight: isEnd ? 800 : 600,
                 background: bg,
                 color: col,
@@ -985,18 +991,24 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
         style={{
           display: 'flex',
           justifyContent: 'space-between',
-          marginTop: 10, // Reducido de 14
-          fontSize: 11, // Reducido de 12
+          alignItems: 'center',
+          marginTop: 10,
+          fontSize: 13, /* Tamaño de fuente más grande */
           fontWeight: 700,
           color: '#6B7280',
           background: '#F8FAFC',
-          padding: '6px 12px', // Reducido de 8px
+          padding: '8px 12px', /* Un toque más de margen para que respire */
           borderRadius: 8,
         }}
       >
         <div>
           CI: <span style={{ color: '#111' }}>{fmtD(checkIn)}</span>
         </div>
+        {nights > 0 && (
+          <div style={{ color: '#3B82F6', fontSize: 12, fontWeight: 800 }}>
+            {nights} noche{nights !== 1 ? 's' : ''}
+          </div>
+        )}
         <div>
           CO: <span style={{ color: '#111' }}>{fmtD(checkOut)}</span>
         </div>
@@ -1145,12 +1157,6 @@ function ResForm({
           sv('checkOut', co);
         }}
       />
-
-      {nights > 0 && (
-        <p style={{ margin: '-4px 0 12px', fontSize: 12, color: '#6B7280' }}>
-          {nights} noche{nights !== 1 ? 's' : ''}
-        </p>
-      )}
 
       {/* 2. HABITACIÓN */}
       {isHostel && (
