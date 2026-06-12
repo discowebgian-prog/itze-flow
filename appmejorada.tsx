@@ -6409,22 +6409,25 @@ export default function AppMejorada() {
           guestNationality: item.nacionalidad || 'MX',
           guestDocType: item.tipo_doc || 'INE',
           guestDoc: item.num_doc || '',
-          guestPhone: item.telefono || '',
+          // Acá solucionamos el problema de que se duplique el +52
+          guestPhone: item.telefono || '', 
           guestEmail: item.email || '',
           totalGuests: Number(item.cantidad_huespedes) || 1,
-          paymentMethod: item.forma_pago || 'Efectivo',
+          companions: item.acompanantes || [],
+          paymentMethod: item.forma_pago || 'efectivo',
           notes: item.notas || '',
           url_ine_frente: item.url_ine_frente || null,
           url_ine_dorso: item.url_ine_dorso || null,
-          // --- SOLUCIÓN A LOS 3 DETALLES ---
-          baseRate: Number(item.tarifa_base) || 0,
-          discount: Number(item.descuento) || 0,
-          invoice: item.solicita_factura || false
+          requiresInvoice: item.solicita_factura || false,
+          pricing: {
+            ratePerNight: Number(item.tarifa_base) || 0,
+            discountType: Number(item.descuento) > 0 ? 'monto_fijo' : 'ninguno',
+            discountValue: Number(item.descuento) || 0,
+            rateLabel: '',
+            discountReason: '',
+            additionals: []
+          }
         }));
-
-        setRes(reservasCargadas);
-      }
-    };
 
     // 1. Carga inicial
     fetchReservas();
