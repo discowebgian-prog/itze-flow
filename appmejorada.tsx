@@ -6441,18 +6441,16 @@ export default function AppMejorada() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div
             style={{
-              width: 34,
-              height: 34,
-              borderRadius: 9,
-              background: 'linear-gradient(135deg,#3B82F6,#6366F1)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#fff',
               flexShrink: 0,
-              fontSize: 18,
             }}
           >
+            <img src="https://i.postimg.cc/VkxkhhGJ/gecko2.png" alt="Itzé" style={{ width: 36, height: 36, objectFit: 'contain' }} />
+          </div>
+          <div>
+            <span style={{ fontWeight: 800, fontSize: 15, color: '#111' }}>
         <img src="https://i.postimg.cc/VkxkhhGJ/gecko2.png" alt="Itzé" style={{ width: 24, height: 24, objectFit: 'contain' }} />
           </div>
           <div>
