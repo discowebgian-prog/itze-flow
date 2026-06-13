@@ -2709,11 +2709,6 @@ function CIModal({ res, onConfirm, onCancel }) {
 function COModal({ res, onConfirm, onCancel }) {
   const saldo = res.totalAmount - res.paid;
   const now = new Date();
-  const isEarly = fmt(now) < res.checkOut;
-  const newCO = fmt(now);
-  const nights = isEarly
-    ? diffDays(res.checkIn, newCO)
-    : diffDays(res.checkIn, res.checkOut);
   return (
     <div
       style={{
@@ -2759,25 +2754,6 @@ function COModal({ res, onConfirm, onCancel }) {
           </div>
         </div>
         <div style={{ padding: '20px 22px' }}>
-          {isEarly && (
-            <div
-              style={{
-                background: '#FFFBEB',
-                border: '1px solid #FDE68A',
-                borderRadius: 8,
-                padding: '10px 12px',
-                fontSize: 12,
-                color: '#92400E',
-                marginBottom: 12,
-              }}
-            >
-              <b>⚠️ Salida anticipada</b>
-              <br />
-              Check-out reservado: {fmtD(res.checkOut)}
-              <br />
-              Se acortará a {nights} noche{nights !== 1 ? 's' : ''} (hasta hoy)
-            </div>
-          )}
           {saldo > 0 && (
             <div
               style={{
@@ -2838,12 +2814,7 @@ function COModal({ res, onConfirm, onCancel }) {
               Cancelar
             </button>
             <button
-              onClick={() =>
-                onConfirm(
-                  new Date().toISOString(),
-                  isEarly ? newCO : res.checkOut
-                )
-              }
+              onClick={() => onConfirm(now.toISOString())}
               style={{
                 flex: 2,
                 padding: '11px',
@@ -6722,15 +6693,18 @@ fetchReservas();
     setDrawer(null);
     setCoModal(r);
   };
-  const confCI = (time) => {
+  const confCI = async (time) => {
     setRes(
       res.map((x) =>
         x.id === ciModal.id ? { ...x, status: 'hospedado', checkInAt: time } : x
       )
     );
     setCiModal(null);
+    // Impactar el estado en la base de datos
+    await supabase.from('reservas').update({ estado: 'hospedado' }).eq('id', ciModal.id);
   };
-  const confCO = (time, newCO) => {
+
+  const confCO = async (time) => {
     setRes(
       res.map((x) =>
         x.id === coModal.id
@@ -6738,12 +6712,13 @@ fetchReservas();
               ...x,
               status: 'finalizada',
               checkOutAt: time,
-              checkOut: newCO || x.checkOut,
             }
           : x
       )
     );
     setCoModal(null);
+    // Impactar el estado en la base de datos
+    await supabase.from('reservas').update({ estado: 'finalizada' }).eq('id', coModal.id);
   };
 
   // 4. EL DISEÑO VISUAL (Ahora sí, adentro de la función principal)
