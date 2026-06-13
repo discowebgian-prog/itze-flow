@@ -6525,7 +6525,7 @@ fetchReservas();
   };
   const saveRes = async (newRes) => {
     try {
-      // Forzamos a que todo viaje como TEXTO (String) para que tu Supabase lo acepte sin chistar
+      // Armamos el paquete SOLO con las columnas que existen en tu base de datos
       const datosLimpios = {
         huesped: newRes.guestName || 'Sin nombre',
         habitacion: newRes.room || null,
@@ -6541,15 +6541,12 @@ fetchReservas();
         telefono: newRes.guestPhonePrefix ? `${newRes.guestPhonePrefix} ${newRes.guestPhone}` : newRes.guestPhone || '',
         email: newRes.guestEmail || '',
         cantidad_huespedes: String(newRes.totalGuests || 1),
-        acompanantes: newRes.companions || [], // Este lo dejamos como lista porque tu columna ya acepta JSON
+        acompanantes: newRes.companions || [], // Tu columna es JSONB, acepta listas
         forma_pago: newRes.paymentMethod || 'Efectivo',
-        notas: String(newRes.notes || ''), // Notas como texto
+        notas: String(newRes.notes || ''), // Ya va a coincidir con tu columna "notas"
         url_ine_frente: newRes.url_ine_frente || null,
         url_ine_dorso: newRes.url_ine_dorso || null,
-        propiedad: newRes.propertyId || 'hostel',
-        tarifa_base: String(newRes.pricing?.ratePerNight || ''), // Tarifa como texto
-        descuento: String(newRes.pricing?.discountValue || ''), // Descuento como texto
-        solicita_factura: newRes.requiresInvoice || false
+        tarifa_base: String(newRes.pricing?.ratePerNight || '') // Ahora se guarda
       };
 
       if (newRes.id) {
@@ -6594,7 +6591,6 @@ fetchReservas();
         }
       }
 
-      // Al no haber errores, cerramos el formulario visualmente
       setModal(null);
       alert('Reserva guardada con éxito.');
 
