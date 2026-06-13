@@ -6398,6 +6398,7 @@ export default function AppMejorada() {
       } else if (data) {
         const reservasCargadas = data.map((item) => ({
       id: item.id,
+      propertyId: item.propiedad || 'hostel', // <-- ESTA LÍNEA FALTABA Y HACÍA DESAPARECER TODO
       guestName: item.huesped || '',
       room: item.habitacion || '',
       checkIn: item.fecha_ingreso || '',
@@ -6424,7 +6425,6 @@ export default function AppMejorada() {
         discountReason: '',
         additionals: []
       },
-      // --- NORMALIZACIÓN TOTAL PARA LA INTERFAZ ---
       notes: item.notas || '',
       notas: item.notas || '', 
       requiresInvoice: item.solicita_factura === 'true' || item.solicita_factura === true,
