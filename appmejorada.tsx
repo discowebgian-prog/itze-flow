@@ -6435,8 +6435,12 @@ export default function AppMejorada() {
           }
         }));
 
-    // 1. Carga inicial
-    fetchReservas();
+    setRes(reservasCargadas);
+  }
+};
+
+// 1. Carga inicial
+fetchReservas();
 
     // 2. Suscripción a la señal de Supabase en tiempo real (CON EL FRENO DE 500ms)
     const canalReservas = supabase
