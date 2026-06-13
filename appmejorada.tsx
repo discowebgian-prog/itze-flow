@@ -6525,35 +6525,35 @@ fetchReservas();
   };
   const saveRes = async (newRes) => {
     try {
-      // 1. Limpiamos y aseguramos que los números sean números y no textos vacíos
+      // Forzamos a que todo viaje como TEXTO (String) para que tu Supabase lo acepte sin chistar
       const datosLimpios = {
         huesped: newRes.guestName || 'Sin nombre',
         habitacion: newRes.room || null,
         fecha_ingreso: newRes.checkIn,
         fecha_salida: newRes.checkOut,
-        estado: newRes.status || 'Pendiente',
-        monto: newRes.totalAmount ? Number(newRes.totalAmount) : 0,
-        monto_pagado: newRes.paid ? Number(newRes.paid) : 0,
+        estado: newRes.status || 'por_llegar',
+        monto: String(newRes.totalAmount || ''),
+        monto_pagado: String(newRes.paid || ''),
         canal: newRes.source || 'Directo — Puerta',
         nacionalidad: newRes.guestNationality || '',
         tipo_doc: newRes.guestDocType || '',
         num_doc: newRes.guestDoc || '',
         telefono: newRes.guestPhonePrefix ? `${newRes.guestPhonePrefix} ${newRes.guestPhone}` : newRes.guestPhone || '',
         email: newRes.guestEmail || '',
-        cantidad_huespedes: newRes.totalGuests ? Number(newRes.totalGuests) : 1,
-        acompanantes: newRes.companions || [],
+        cantidad_huespedes: String(newRes.totalGuests || 1),
+        acompanantes: newRes.companions || [], // Este lo dejamos como lista porque tu columna ya acepta JSON
         forma_pago: newRes.paymentMethod || 'Efectivo',
-        notas: newRes.notes || '',
+        notas: String(newRes.notes || ''), // Notas como texto
         url_ine_frente: newRes.url_ine_frente || null,
         url_ine_dorso: newRes.url_ine_dorso || null,
         propiedad: newRes.propertyId || 'hostel',
-        tarifa_base: newRes.pricing?.ratePerNight ? Number(newRes.pricing.ratePerNight) : null,
-        descuento: newRes.pricing?.discountValue ? Number(newRes.pricing.discountValue) : null,
+        tarifa_base: String(newRes.pricing?.ratePerNight || ''), // Tarifa como texto
+        descuento: String(newRes.pricing?.discountValue || ''), // Descuento como texto
         solicita_factura: newRes.requiresInvoice || false
       };
 
       if (newRes.id) {
-        // 2. EDICIÓN
+        // 1. EDICIÓN
         const { error } = await supabase
           .from('reservas')
           .update(datosLimpios)
@@ -6563,7 +6563,7 @@ fetchReservas();
         setRes(res.map((r) => (r.id === newRes.id ? newRes : r)));
 
       } else {
-        // 3. NUEVA RESERVA
+        // 2. NUEVA RESERVA
         const momentoExacto = new Date().toLocaleString('es-MX', {
           timeZone: 'America/Merida',
           year: 'numeric', month: '2-digit', day: '2-digit',
@@ -6594,9 +6594,9 @@ fetchReservas();
         }
       }
 
-      // 4. Cerramos el modal primero y luego avisamos del éxito
+      // Al no haber errores, cerramos el formulario visualmente
       setModal(null);
-      setTimeout(() => alert('Reserva guardada con éxito.'), 150);
+      alert('Reserva guardada con éxito.');
 
     } catch (err) {
       console.error('Error al conectar con la base de datos:', err);
