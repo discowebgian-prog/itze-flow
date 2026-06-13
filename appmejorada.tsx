@@ -2236,22 +2236,44 @@ function ResDrawer({
               )}
             </div>
           </div>
-          {res.requiresInvoice && (
-            <div
-              style={{
-                marginBottom: 10,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: 12,
-                color: '#7C3AED',
-                fontWeight: 700,
-                padding: '6px 12px',
-                background: '#EDE9FE',
-                borderRadius: 8,
-              }}
-            >
-              <Icon name="invoice" size={16} /> Solicita factura
+          {/* LÍNEA DELGADA: FACTURA Y NOTAS */}
+          {(res.requiresInvoice || res.notes) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 12px', borderBottom: '1px solid #F0F0F0', borderTop: '1px solid #F0F0F0', marginBottom: 14, background: '#FAFAFA' }}>
+              {res.requiresInvoice && (
+                <span style={{ fontSize: 12, color: '#7C3AED', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="invoice" size={14} /> Solicita factura fiscal
+                </span>
+              )}
+              {res.notes && (
+                <span style={{ fontSize: 12, color: '#D97706', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="edit" size={14} /> Notas: {res.notes}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* FOTOS INE */}
+          {(res.url_ine_frente || res.url_ine_dorso) && (
+            <div style={{ background: '#F0F9FF', borderRadius: 10, padding: '12px 16px', marginBottom: 14, border: '1px solid #BAE6FD' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#0369A1', textTransform: 'uppercase', marginBottom: 8 }}>
+                Documentos adjuntos
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                {res.url_ine_frente && (
+                  <a href={res.url_ine_frente} target="_blank" rel="noreferrer" style={{ flex: 1, textDecoration: 'none' }}>
+                    <div style={{ background: '#0284C7', color: '#fff', padding: '8px', borderRadius: 8, textAlign: 'center', fontSize: 12, fontWeight: 700 }}>
+                      📷 Ver Frente
+                    </div>
+                  </a>
+                )}
+                {res.url_ine_dorso && (
+                  <a href={res.url_ine_dorso} target="_blank" rel="noreferrer" style={{ flex: 1, textDecoration: 'none' }}>
+                    <div style={{ background: '#0284C7', color: '#fff', padding: '8px', borderRadius: 8, textAlign: 'center', fontSize: 12, fontWeight: 700 }}>
+                      📷 Ver Dorso
+                    </div>
+                  </a>
+                )}
+              </div>
             </div>
           )}
           <div
@@ -2384,23 +2406,7 @@ function ResDrawer({
               ))}
             </div>
           )}
-          {res.notes && (
-            <div
-              style={{
-                background: '#FFFBEB',
-                borderRadius: 10,
-                padding: '10px 14px',
-                marginBottom: 14,
-                border: '1px solid #FDE68A',
-                fontSize: 13,
-                color: '#78350F',
-                display: 'flex',
-                gap: 6,
-              }}
-            >
-              <Icon name="edit" size={16} /> {res.notes}
-            </div>
-          )}
+          
           {(res.checkInAt || res.checkOutAt) && (
             <div
               style={{
@@ -3012,9 +3018,10 @@ function TimelineMobile({ reservations, properties, onClickRes, onAddRes }) {
                       >
                         {r.guestName}
                       </div>
-                      <div style={{ fontSize: 11, color: '#9CA3AF' }}>
-                        {p?.name}
-                        {r.room ? ` · Hab.${r.room}` : ''}
+                      <div style={{ fontSize: 11, color: '#9CA3AF', display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                        <span>{p?.name}{r.room ? ` · Hab.${r.room}` : ''}</span>
+                        {r.requiresInvoice && <span style={{ color: '#7C3AED', fontWeight: 700 }}>· 🧾 Factura</span>}
+                        {r.notes && <span style={{ color: '#D97706', fontWeight: 700 }}>· 📝 Notas</span>}
                       </div>
                       {r.checkIn === fmt(d) && (
                         <div
@@ -3060,6 +3067,22 @@ function TimelineMobile({ reservations, properties, onClickRes, onAddRes }) {
           );
         })}
       </div>
+      
+      {/* LEYENDA DE ESTADOS EN MOBILE */}
+      <div style={{ marginTop: 20, padding: '12px 14px', background: '#fff', borderRadius: 12, border: '1px solid #E5E7EB' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.4 }}>
+          Leyenda de Estados
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {Object.entries(BLOCK_COLORS).map(([k, v]) => (
+            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#374151', fontWeight: 600 }}>
+              <div style={{ width: 12, height: 12, borderRadius: 3, background: v.bg }} />
+              <span style={{ textTransform: 'capitalize' }}>{k.replace('_', ' ')}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
     </div>
   );
 }
@@ -6410,8 +6433,8 @@ export default function AppMejorada() {
     checkIn: item.fecha_ingreso || '',
     checkOut: item.fecha_salida || '',
     status: item.estado || 'por_llegar',
-    totalAmount: item.monto || '',
-    paid: item.monto_pagado || '',
+    totalAmount: Number(item.monto) || 0,
+    paid: Number(item.monto_pagado) || 0,
     source: item.canal || 'Directo — Puerta',
     guestNationality: item.nacionalidad || '',
     guestDocType: item.tipo_doc || '',
