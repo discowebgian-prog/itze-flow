@@ -6397,43 +6397,39 @@ export default function AppMejorada() {
         console.error('Error rojo en Supabase:', error);
       } else if (data) {
         const reservasCargadas = data.map((item) => ({
-          id: item.id,
-          propertyId: item.propiedad || item.propertyId || 'hostel', 
-          guestName: item.huesped || item.Huesped || 'Sin nombre',
-          checkIn: item.fecha_ingreso,
-          checkOut: item.fecha_salida,
-          status: item.estado || 'por_llegar',
-          totalAmount: Number(item.monto) || 0,
-          paid: Number(item.monto_pagado) || 0, 
-          source: item.canal || 'Directo — Puerta', 
-          room: String(item.habitacion).trim(),
-          fecha_carga: item.fecha_carga || '—', 
-          usuario_carga: item.usuario_carga || '—', 
-          deleted: item.estado === 'eliminada', 
-          deletedAt: item.fecha_eliminacion,
-          deletedBy: item.usuario_eliminacion,
-          guestNationality: item.nacionalidad || 'MX',
-          guestDocType: item.tipo_doc || 'INE',
-          guestDoc: item.num_doc || '',
-          // Acá solucionamos el problema de que se duplique el +52
-          guestPhone: item.telefono || '', 
-          guestEmail: item.email || '',
-          totalGuests: Number(item.cantidad_huespedes) || 1,
-          companions: item.acompanantes || [],
-          paymentMethod: item.forma_pago || 'efectivo',
-          notes: item.notas || '',
-          url_ine_frente: item.url_ine_frente || null,
-          url_ine_dorso: item.url_ine_dorso || null,
-          requiresInvoice: item.solicita_factura || false,
-          pricing: {
-            ratePerNight: Number(item.tarifa_base) || 0,
-            discountType: Number(item.descuento) > 0 ? 'monto_fijo' : 'ninguno',
-            discountValue: Number(item.descuento) || 0,
-            rateLabel: '',
-            discountReason: '',
-            additionals: []
-          }
-        }));
+      id: item.id,
+      guestName: item.huesped || '',
+      room: item.habitacion || '',
+      checkIn: item.fecha_ingreso || '',
+      checkOut: item.fecha_salida || '',
+      status: item.estado || 'por_llegar',
+      totalAmount: item.monto || '',
+      paid: item.monto_pagado || '',
+      source: item.canal || 'Directo — Puerta',
+      guestNationality: item.nacionalidad || '',
+      guestDocType: item.tipo_doc || '',
+      guestDoc: item.num_doc || '',
+      guestPhone: item.telefono || '',
+      guestEmail: item.email || '',
+      totalGuests: Number(item.cantidad_huespedes) || 1,
+      companions: item.acompanantes || [],
+      paymentMethod: item.forma_pago || 'Efectivo',
+      url_ine_frente: item.url_ine_frente || null,
+      url_ine_dorso: item.url_ine_dorso || null,
+      pricing: {
+        ratePerNight: Number(item.tarifa_base) || 0,
+        discountType: Number(item.descuento) > 0 ? 'monto_fijo' : 'ninguno',
+        discountValue: Number(item.descuento) || 0,
+        rateLabel: '',
+        discountReason: '',
+        additionals: []
+      },
+      // --- NORMALIZACIÓN TOTAL PARA LA INTERFAZ ---
+      notes: item.notas || '',
+      notas: item.notas || '', 
+      requiresInvoice: item.solicita_factura === 'true' || item.solicita_factura === true,
+      solicita_factura: item.solicita_factura === 'true' || item.solicita_factura === true
+    }));
 
     setRes(reservasCargadas);
   }
@@ -6525,6 +6521,9 @@ fetchReservas();
   };
   const saveRes = async (newRes) => {
     try {
+      // Evaluamos si el tilde está activo en cualquiera de sus variantes
+      const tieneFactura = newRes.requiresInvoice === true || newRes.requiresInvoice === 'true' || newRes.solicita_factura === true || newRes.solicita_factura === 'true';
+      
       const datosLimpios = {
         huesped: newRes.guestName || 'Sin nombre',
         habitacion: newRes.room || null,
@@ -6542,13 +6541,20 @@ fetchReservas();
         cantidad_huespedes: String(newRes.totalGuests || 1),
         acompanantes: newRes.companions || [],
         forma_pago: newRes.paymentMethod || 'Efectivo',
-        notas: String(newRes.notes || ''),
+        notas: String(newRes.notes || newRes.notas || ''),
         url_ine_frente: newRes.url_ine_frente || null,
         url_ine_dorso: newRes.url_ine_dorso || null,
         tarifa_base: String(newRes.pricing?.ratePerNight || ''),
-        
-        // --- ACÁ ESTÁ EL ARREGLO: Convertimos el tilde a TEXTO ---
-        solicita_factura: newRes.requiresInvoice ? 'true' : 'false'
+        solicita_factura: tieneFactura ? 'true' : 'false' // Texto para la base de datos
+      };
+
+      // Mantenemos duplicados los formatos en el estado de React para no romper las vistas
+      const reservaParaEstado = {
+        ...newRes,
+        notes: newRes.notes || newRes.notas || '',
+        notas: newRes.notes || newRes.notas || '',
+        requiresInvoice: tieneFactura,
+        solicita_factura: tieneFactura
       };
 
       if (newRes.id) {
@@ -6559,7 +6565,7 @@ fetchReservas();
           .eq('id', newRes.id);
 
         if (error) throw error;
-        setRes(res.map((r) => (r.id === newRes.id ? newRes : r)));
+        setRes(res.map((r) => (r.id === newRes.id ? reservaParaEstado : r)));
 
       } else {
         // 2. NUEVA RESERVA
@@ -6580,16 +6586,13 @@ fetchReservas();
 
         if (error) throw error;
 
-        const reservaConAuditoria = {
-          ...newRes,
-          fecha_carga: momentoExacto,
-          usuario_carga: responsable
-        };
+        reservaParaEstado.fecha_carga = momentoExacto;
+        reservaParaEstado.usuario_carga = responsable;
 
         if (data && data.length > 0) {
-          setRes([...res, { ...reservaConAuditoria, id: data[0].id }]);
+          setRes([...res, { ...reservaParaEstado, id: data[0].id }]);
         } else {
-          setRes([...res, { ...reservaConAuditoria, id: 'r' + Date.now() }]);
+          setRes([...res, { ...reservaParaEstado, id: 'r' + Date.now() }]);
         }
       }
 
