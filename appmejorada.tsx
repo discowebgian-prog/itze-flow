@@ -6391,48 +6391,53 @@ export default function AppMejorada() {
 
   useEffect(() => {
     const fetchReservas = async () => {
-      const { data, error } = await supabase.from('reservas').select('*');
+  const { data, error } = await supabase
+    .from('reservas')
+    .select('*')
+    .is('fecha_eliminacion', null); // Esto filtra y trae solo las que NO tienen fecha de eliminación
 
-      if (error) {
-        console.error('Error rojo en Supabase:', error);
-      } else if (data) {
-        const reservasCargadas = data.map((item) => ({
-      id: item.id,
-      propertyId: item.propiedad || 'hostel', // <-- ESTA LÍNEA FALTABA Y HACÍA DESAPARECER TODO
-      guestName: item.huesped || '',
-      room: item.habitacion || '',
-      checkIn: item.fecha_ingreso || '',
-      checkOut: item.fecha_salida || '',
-      status: item.estado || 'por_llegar',
-      totalAmount: item.monto || '',
-      paid: item.monto_pagado || '',
-      source: item.canal || 'Directo — Puerta',
-      guestNationality: item.nacionalidad || '',
-      guestDocType: item.tipo_doc || '',
-      guestDoc: item.num_doc || '',
-      guestPhone: item.telefono || '',
-      guestEmail: item.email || '',
-      totalGuests: Number(item.cantidad_huespedes) || 1,
-      companions: item.acompanantes || [],
-      paymentMethod: item.forma_pago || 'Efectivo',
-      url_ine_frente: item.url_ine_frente || null,
-      url_ine_dorso: item.url_ine_dorso || null,
-      pricing: {
-        ratePerNight: Number(item.tarifa_base) || 0,
-        discountType: Number(item.descuento) > 0 ? 'monto_fijo' : 'ninguno',
-        discountValue: Number(item.descuento) || 0,
-        rateLabel: '',
-        discountReason: '',
-        additionals: []
-      },
-      notes: item.notas || '',
-      notas: item.notas || '', 
-      requiresInvoice: item.solicita_factura === 'true' || item.solicita_factura === true,
-      solicita_factura: item.solicita_factura === 'true' || item.solicita_factura === true
-    }));
-
-    setRes(reservasCargadas);
+  if (error) {
+    console.error('Error al cargar reservas:', error);
+    return;
   }
+
+  // Ahora procesamos solo los datos filtrados
+  const reservasCargadas = data.map((item) => ({
+    id: item.id,
+    propertyId: item.propiedad || 'hostel',
+    guestName: item.huesped || '',
+    room: item.habitacion || '',
+    checkIn: item.fecha_ingreso || '',
+    checkOut: item.fecha_salida || '',
+    status: item.estado || 'por_llegar',
+    totalAmount: item.monto || '',
+    paid: item.monto_pagado || '',
+    source: item.canal || 'Directo — Puerta',
+    guestNationality: item.nacionalidad || '',
+    guestDocType: item.tipo_doc || '',
+    guestDoc: item.num_doc || '',
+    guestPhone: item.telefono || '',
+    guestEmail: item.email || '',
+    totalGuests: Number(item.cantidad_huespedes) || 1,
+    companions: item.acompanantes || [],
+    paymentMethod: item.forma_pago || 'Efectivo',
+    url_ine_frente: item.url_ine_frente || null,
+    url_ine_dorso: item.url_ine_dorso || null,
+    pricing: {
+      ratePerNight: Number(item.tarifa_base) || 0,
+      discountType: Number(item.descuento) > 0 ? 'monto_fijo' : 'ninguno',
+      discountValue: Number(item.descuento) || 0,
+      rateLabel: '',
+      discountReason: '',
+      additionals: []
+    },
+    notes: item.notas || '',
+    notas: item.notas || '',
+    requiresInvoice: item.solicita_factura === 'true' || item.solicita_factura === true,
+    solicita_factura: item.solicita_factura === 'true' || item.solicita_factura === true
+  }));
+
+  setRes(reservasCargadas);
 };
 
 // 1. Carga inicial
