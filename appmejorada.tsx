@@ -6788,7 +6788,7 @@ fetchReservas();
 
         /* Mobile (<768px) */
         @media (max-width: 768px) {
-          body { overflow: auto; }
+          html, body, #root { overflow-y: auto !important; overflow-x: hidden !important; }
           .app-layout { height: auto; min-height: calc(100vh - 54px); }
           .sidebar { display: none !important; }
           .main-content { padding: 16px 12px 100px !important; overflow-y: visible; }
