@@ -162,10 +162,16 @@ const BLOCK_COLORS = {
 };
 const ALERTS = [
   {
+    key: 'notes',
+    color: '#8B5CF6', // Color Violeta para identificar las Notas
+    label: 'Nota',
+    check: (r) => r.notes && r.notes.trim() !== '' && r.status !== 'cancelada',
+  },
+  {
     key: 'saldo',
-    color: '#F59E0B',
+    color: '#F59E0B', // Color Naranja para el Saldo Pendiente
     label: 'Saldo',
-    check: (r) => r.paid < r.totalAmount && r.status !== 'cancelada',
+    check: (r) => Number(r.paid) < Number(r.totalAmount) && r.status !== 'cancelada',
   },
 ];
 const getAlerts = (r) => ALERTS.filter((a) => a.check(r));
@@ -3757,7 +3763,7 @@ setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
                 {blocks.map((r) => {
                   const bc = BLOCK_COLORS[r.status] || BLOCK_COLORS.por_llegar;
                   const alerts = getAlerts(r);
-                  const H = ROW - 12 - alerts.length * SH;
+                  const H = ROW - 12; // Altura fija para el texto, evitando desplazamientos
                   const W = Math.max(4, r.pxR - r.pxL - 4);
                   const isDrag = drag && drag.id === r.id;
                   const cid = `c${r.id}`;
