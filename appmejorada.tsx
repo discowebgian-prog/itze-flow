@@ -6544,14 +6544,14 @@ fetchReservas();
             telefono: newRes.guestPhonePrefix ? `${newRes.guestPhonePrefix} ${newRes.guestPhone}` : newRes.guestPhone || '',
             email: newRes.guestEmail || '',
             cantidad_huespedes: String(newRes.totalGuests || 1),
+            acompanantes: newRes.companions || [], // ¡CORREGIDO! Ahora sí viajan los acompañantes
             forma_pago: newRes.paymentMethod || 'Efectivo',
-            notas: newRes.notes || '',
+            notas: newRes.notes || '', // ¡CORREGIDO! Antes decía newRes.notas
             url_ine_frente: newRes.url_ine_frente || null,
             url_ine_dorso: newRes.url_ine_dorso || null,
-            // --- SOLUCIÓN A LOS 3 DETALLES (CORREGIDO) ---
             propiedad: newRes.propertyId || 'hostel',
-            tarifa_base: String(newRes.pricing?.ratePerNight || ''),
-            descuento: String(newRes.pricing?.discountValue || ''),
+            tarifa_base: String(newRes.pricing?.ratePerNight || ''), // ¡CORREGIDO! Tarifa asegurada
+            descuento: String(newRes.pricing?.discountValue || ''), // ¡CORREGIDO! Descuento asegurado
             solicita_factura: newRes.requiresInvoice || false
           })
           .eq('id', newRes.id);
@@ -6588,15 +6588,16 @@ fetchReservas();
               telefono: newRes.guestPhonePrefix ? `${newRes.guestPhonePrefix} ${newRes.guestPhone}` : newRes.guestPhone || '',
               email: newRes.guestEmail || '',
               cantidad_huespedes: String(newRes.totalGuests || 1),
+              acompanantes: newRes.companions || [], // ¡CORREGIDO!
               forma_pago: newRes.paymentMethod || 'Efectivo',
-              notas: newRes.notas || '',
+              notas: newRes.notes || '', // ¡CORREGIDO!
               url_ine_frente: newRes.url_ine_frente || null,
               url_ine_dorso: newRes.url_ine_dorso || null,
-              // --- SOLUCIÓN A LOS 3 DETALLES ---
-              tarifa_base: String(newRes.baseRate || ''),
-              descuento: String(newRes.discount || ''),
-              solicita_factura: newRes.invoice || false
-            },
+              propiedad: newRes.propertyId || 'hostel',
+              tarifa_base: String(newRes.pricing?.ratePerNight || ''), // ¡CORREGIDO!
+              descuento: String(newRes.pricing?.discountValue || ''), // ¡CORREGIDO!
+              solicita_factura: newRes.requiresInvoice || false
+            }
           ])
           .select();
 
