@@ -6525,7 +6525,6 @@ fetchReservas();
   };
   const saveRes = async (newRes) => {
     try {
-      // Armamos el paquete SOLO con las columnas que existen en tu base de datos
       const datosLimpios = {
         huesped: newRes.guestName || 'Sin nombre',
         habitacion: newRes.room || null,
@@ -6541,12 +6540,15 @@ fetchReservas();
         telefono: newRes.guestPhonePrefix ? `${newRes.guestPhonePrefix} ${newRes.guestPhone}` : newRes.guestPhone || '',
         email: newRes.guestEmail || '',
         cantidad_huespedes: String(newRes.totalGuests || 1),
-        acompanantes: newRes.companions || [], // Tu columna es JSONB, acepta listas
+        acompanantes: newRes.companions || [],
         forma_pago: newRes.paymentMethod || 'Efectivo',
-        notas: String(newRes.notes || ''), // Ya va a coincidir con tu columna "notas"
+        notas: String(newRes.notes || ''),
         url_ine_frente: newRes.url_ine_frente || null,
         url_ine_dorso: newRes.url_ine_dorso || null,
-        tarifa_base: String(newRes.pricing?.ratePerNight || '') // Ahora se guarda
+        tarifa_base: String(newRes.pricing?.ratePerNight || ''),
+        
+        // --- ACÁ ESTÁ EL ARREGLO: Convertimos el tilde a TEXTO ---
+        solicita_factura: newRes.requiresInvoice ? 'true' : 'false'
       };
 
       if (newRes.id) {
