@@ -6525,42 +6525,45 @@ fetchReservas();
   };
   const saveRes = async (newRes) => {
     try {
+      // 1. Limpiamos y aseguramos que los números sean números y no textos vacíos
+      const datosLimpios = {
+        huesped: newRes.guestName || 'Sin nombre',
+        habitacion: newRes.room || null,
+        fecha_ingreso: newRes.checkIn,
+        fecha_salida: newRes.checkOut,
+        estado: newRes.status || 'Pendiente',
+        monto: newRes.totalAmount ? Number(newRes.totalAmount) : 0,
+        monto_pagado: newRes.paid ? Number(newRes.paid) : 0,
+        canal: newRes.source || 'Directo — Puerta',
+        nacionalidad: newRes.guestNationality || '',
+        tipo_doc: newRes.guestDocType || '',
+        num_doc: newRes.guestDoc || '',
+        telefono: newRes.guestPhonePrefix ? `${newRes.guestPhonePrefix} ${newRes.guestPhone}` : newRes.guestPhone || '',
+        email: newRes.guestEmail || '',
+        cantidad_huespedes: newRes.totalGuests ? Number(newRes.totalGuests) : 1,
+        acompanantes: newRes.companions || [],
+        forma_pago: newRes.paymentMethod || 'Efectivo',
+        notas: newRes.notes || '',
+        url_ine_frente: newRes.url_ine_frente || null,
+        url_ine_dorso: newRes.url_ine_dorso || null,
+        propiedad: newRes.propertyId || 'hostel',
+        tarifa_base: newRes.pricing?.ratePerNight ? Number(newRes.pricing.ratePerNight) : null,
+        descuento: newRes.pricing?.discountValue ? Number(newRes.pricing.discountValue) : null,
+        solicita_factura: newRes.requiresInvoice || false
+      };
+
       if (newRes.id) {
-        // 1. EDICIÓN
+        // 2. EDICIÓN
         const { error } = await supabase
           .from('reservas')
-          .update({
-            huesped: newRes.guestName,
-            habitacion: newRes.room,
-            fecha_ingreso: newRes.checkIn,
-            fecha_salida: newRes.checkOut,
-            estado: newRes.status || 'Pendiente',
-            monto: String(newRes.totalAmount || ''),
-            monto_pagado: String(newRes.paid || ''),
-            canal: newRes.source || 'Directo — Puerta',
-            nacionalidad: newRes.guestNationality || '',
-            tipo_doc: newRes.guestDocType || '',
-            num_doc: newRes.guestDoc || '',
-            telefono: newRes.guestPhonePrefix ? `${newRes.guestPhonePrefix} ${newRes.guestPhone}` : newRes.guestPhone || '',
-            email: newRes.guestEmail || '',
-            cantidad_huespedes: String(newRes.totalGuests || 1),
-            acompanantes: newRes.companions || [], // ¡CORREGIDO! Ahora sí viajan los acompañantes
-            forma_pago: newRes.paymentMethod || 'Efectivo',
-            notas: newRes.notes || '', // ¡CORREGIDO! Antes decía newRes.notas
-            url_ine_frente: newRes.url_ine_frente || null,
-            url_ine_dorso: newRes.url_ine_dorso || null,
-            propiedad: newRes.propertyId || 'hostel',
-            tarifa_base: String(newRes.pricing?.ratePerNight || ''), // ¡CORREGIDO! Tarifa asegurada
-            descuento: String(newRes.pricing?.discountValue || ''), // ¡CORREGIDO! Descuento asegurado
-            solicita_factura: newRes.requiresInvoice || false
-          })
+          .update(datosLimpios)
           .eq('id', newRes.id);
 
         if (error) throw error;
         setRes(res.map((r) => (r.id === newRes.id ? newRes : r)));
 
       } else {
-        // 2. NUEVA RESERVA
+        // 3. NUEVA RESERVA
         const momentoExacto = new Date().toLocaleString('es-MX', {
           timeZone: 'America/Merida',
           year: 'numeric', month: '2-digit', day: '2-digit',
@@ -6568,37 +6571,12 @@ fetchReservas();
         });
         const responsable = user?.name || 'Usuario desconocido';
 
+        datosLimpios.fecha_carga = momentoExacto;
+        datosLimpios.usuario_carga = responsable;
+
         const { data, error } = await supabase
           .from('reservas')
-          .insert([
-            {
-              huesped: newRes.guestName,
-              habitacion: newRes.room,
-              fecha_ingreso: newRes.checkIn,
-              fecha_salida: newRes.checkOut,
-              estado: newRes.status || 'Pendiente',
-              monto: String(newRes.totalAmount || ''),
-              fecha_carga: momentoExacto,
-              usuario_carga: responsable,
-              monto_pagado: String(newRes.paid || ''),
-              canal: newRes.source || 'Directo — Puerta',
-              nacionalidad: newRes.guestNationality || '',
-              tipo_doc: newRes.guestDocType || '',
-              num_doc: newRes.guestDoc || '',
-              telefono: newRes.guestPhonePrefix ? `${newRes.guestPhonePrefix} ${newRes.guestPhone}` : newRes.guestPhone || '',
-              email: newRes.guestEmail || '',
-              cantidad_huespedes: String(newRes.totalGuests || 1),
-              acompanantes: newRes.companions || [], // ¡CORREGIDO!
-              forma_pago: newRes.paymentMethod || 'Efectivo',
-              notas: newRes.notes || '', // ¡CORREGIDO!
-              url_ine_frente: newRes.url_ine_frente || null,
-              url_ine_dorso: newRes.url_ine_dorso || null,
-              propiedad: newRes.propertyId || 'hostel',
-              tarifa_base: String(newRes.pricing?.ratePerNight || ''), // ¡CORREGIDO!
-              descuento: String(newRes.pricing?.discountValue || ''), // ¡CORREGIDO!
-              solicita_factura: newRes.requiresInvoice || false
-            }
-          ])
+          .insert([datosLimpios])
           .select();
 
         if (error) throw error;
@@ -6616,8 +6594,10 @@ fetchReservas();
         }
       }
 
+      // 4. Cerramos el modal primero y luego avisamos del éxito
       setModal(null);
-      alert('Reserva guardada con éxito.');
+      setTimeout(() => alert('Reserva guardada con éxito.'), 150);
+
     } catch (err) {
       console.error('Error al conectar con la base de datos:', err);
       alert('Hubo un problema al guardar la reserva en la nube: ' + err.message);
