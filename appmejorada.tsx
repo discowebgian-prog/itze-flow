@@ -6391,40 +6391,54 @@ export default function AppMejorada() {
   }
 
   // Ahora procesamos solo los datos filtrados
-  const reservasCargadas = data.map((item) => ({
-    id: item.id,
-    propertyId: item.propiedad || 'hostel',
-    guestName: item.huesped || '',
-    room: item.habitacion || '',
-    checkIn: item.fecha_ingreso || '',
-    checkOut: item.fecha_salida || '',
-    status: item.estado || 'por_llegar',
-    totalAmount: Number(item.monto) || 0,
-    paid: Number(item.monto_pagado) || 0,
-    source: item.canal || 'Directo — Puerta',
-    guestNationality: item.nacionalidad || '',
-    guestDocType: item.tipo_doc || '',
-    guestDoc: item.num_doc || '',
-    guestPhone: item.telefono || '',
-    guestEmail: item.email || '',
-    totalGuests: Number(item.cantidad_huespedes) || 1,
-    companions: item.acompanantes || [],
-    paymentMethod: item.forma_pago || 'Efectivo',
-    url_ine_frente: item.url_ine_frente || null,
-    url_ine_dorso: item.url_ine_dorso || null,
-    pricing: {
-      ratePerNight: Number(item.tarifa_base) || 0,
-      discountType: Number(item.descuento) > 0 ? 'monto_fijo' : 'ninguno',
-      discountValue: Number(item.descuento) || 0,
-      rateLabel: '',
-      discountReason: '',
-      additionals: []
-    },
-    notes: item.notas || '',
-    notas: item.notas || '',
-    requiresInvoice: item.solicita_factura === 'true' || item.solicita_factura === true,
-    solicita_factura: item.solicita_factura === 'true' || item.solicita_factura === true
-  }));
+  const reservasCargadas = data.map((item) => {
+    // 1. Detectar el prefijo correcto según la nacionalidad guardada
+    const nacionalidad = item.nacionalidad || 'MX';
+    const pais = COUNTRIES.find((c) => c.code === nacionalidad);
+    const prefijo = pais ? pais.prefix : '+52';
+
+    // 2. Limpiar el teléfono para que no repita el prefijo en la caja de texto
+    let telefonoLimpio = item.telefono || '';
+    if (telefonoLimpio.startsWith(prefijo)) {
+      telefonoLimpio = telefonoLimpio.replace(prefijo, '').trim();
+    }
+
+    return {
+      id: item.id,
+      propertyId: item.propiedad || 'hostel',
+      guestName: item.huesped || '',
+      room: item.habitacion || '',
+      checkIn: item.fecha_ingreso || '',
+      checkOut: item.fecha_salida || '',
+      status: item.estado || 'por_llegar',
+      totalAmount: Number(item.monto) || 0,
+      paid: Number(item.monto_pagado) || 0,
+      source: item.canal || 'Directo — Puerta',
+      guestNationality: nacionalidad,
+      guestDocType: item.tipo_doc || '',
+      guestDoc: item.num_doc || '',
+      guestPhonePrefix: prefijo,
+      guestPhone: telefonoLimpio,
+      guestEmail: item.email || '',
+      totalGuests: Number(item.cantidad_huespedes) || 1,
+      companions: item.acompanantes || [],
+      paymentMethod: item.forma_pago || 'Efectivo',
+      url_ine_frente: item.url_ine_frente || null,
+      url_ine_dorso: item.url_ine_dorso || null,
+      pricing: {
+        ratePerNight: Number(item.tarifa_base) || 0,
+        discountType: Number(item.descuento) > 0 ? 'monto_fijo' : 'ninguno',
+        discountValue: Number(item.descuento) || 0,
+        rateLabel: '',
+        discountReason: '',
+        additionals: []
+      },
+      notes: item.notas || '',
+      notas: item.notas || '',
+      requiresInvoice: item.solicita_factura === 'true' || item.solicita_factura === true,
+      solicita_factura: item.solicita_factura === 'true' || item.solicita_factura === true
+    };
+  });
 
   setRes(reservasCargadas);
 };
@@ -6518,6 +6532,12 @@ fetchReservas();
       // Evaluamos si el tilde está activo en cualquiera de sus variantes
       const tieneFactura = newRes.requiresInvoice === true || newRes.requiresInvoice === 'true' || newRes.solicita_factura === true || newRes.solicita_factura === 'true';
       
+      // Limpieza preventiva antes de guardar por si el usuario repitió el prefijo a mano
+      let telefonoLimpioGuardar = (newRes.guestPhone || '').trim();
+      if (newRes.guestPhonePrefix && telefonoLimpioGuardar.startsWith(newRes.guestPhonePrefix)) {
+        telefonoLimpioGuardar = telefonoLimpioGuardar.replace(newRes.guestPhonePrefix, '').trim();
+      }
+
       const datosLimpios = {
         huesped: newRes.guestName || 'Sin nombre',
         habitacion: newRes.room || null,
@@ -6530,7 +6550,7 @@ fetchReservas();
         nacionalidad: newRes.guestNationality || '',
         tipo_doc: newRes.guestDocType || '',
         num_doc: newRes.guestDoc || '',
-        telefono: newRes.guestPhonePrefix ? `${newRes.guestPhonePrefix} ${newRes.guestPhone}` : newRes.guestPhone || '',
+        telefono: newRes.guestPhonePrefix ? `${newRes.guestPhonePrefix} ${telefonoLimpioGuardar}` : telefonoLimpioGuardar,
         email: newRes.guestEmail || '',
         cantidad_huespedes: String(newRes.totalGuests || 1),
         acompanantes: newRes.companions || [],
