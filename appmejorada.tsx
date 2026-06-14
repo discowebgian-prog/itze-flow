@@ -975,24 +975,9 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
           }
 
           return (
-            <div
-              key={i}
-              onClick={() => clickD(d)}
-              onMouseEnter={() => !isPast && step === 1 && setHover(s)}
-              style={{
-                aspectRatio: '1/1',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 12,
-                fontWeight: isEnd ? 800 : 600,
-                background: bg,
-                color: col,
-                borderRadius: radius,
-                cursor: isPast ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {d.getDate()}
+            <div key={i} onClick={()=>clickD(d)} onMouseEnter={()=>step===1 && setHover(s)}
+          style={{aspectRatio:"1/1", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:isEnd?800:600, background:bg, color:col, borderRadius:radius, cursor:"pointer"}}
+        >{d.getDate()}
             </div>
           );
         })}
@@ -3913,21 +3898,25 @@ setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
                           </span>
                         </div>
                       )}
-                      {alerts.length > 0 && (
-                        <div
-                          style={{
-                            overflow: 'hidden',
-                            borderRadius: '0 0 4px 4px',
-                          }}
-                        >
-                          {alerts.map((a) => (
+                     {alerts.length > 0 && (
                             <div
-                              key={a.key}
-                              style={{ height: SH, background: a.color }}
-                            />
-                          ))}
-                        </div>
-                      )}
+                              style={{
+                                position: 'absolute',
+                                bottom: 0,
+                                left: 0,
+                                width: '100%',
+                                overflow: 'hidden',
+                                borderRadius: '0 0 4px 4px',
+                              }}
+                            >
+                              {alerts.map((a) => (
+                                <div
+                                  key={a.key}
+                                  style={{ height: SH, background: a.color }}
+                                />
+                              ))}
+                            </div>
+                          )}
                     </div>
                   );
                 })}
@@ -6619,8 +6608,7 @@ fetchReservas();
         .update({
           fecha_ingreso: changes.checkIn,
           fecha_salida: changes.checkOut,
-          habitacion: changes.room,
-          propiedad: changes.propertyId
+          habitacion: changes.room
         })
         .eq('id', id);
 
