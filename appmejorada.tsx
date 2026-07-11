@@ -4260,12 +4260,7 @@ function Dashboard({
   const pending = reservations.filter(
     (r) => r.status !== 'cancelada' && r.paid < r.totalAmount
   );
-  const totalRev = reservations
-    .filter((r) => r.status !== 'cancelada')
-    .reduce((s, r) => s + r.totalAmount, 0);
-  const totalPaid = reservations
-    .filter((r) => r.status !== 'cancelada')
-    .reduce((s, r) => s + r.paid, 0);
+  
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
@@ -4367,43 +4362,7 @@ function Dashboard({
           </div>
         ))}
       </div>
-      {/* Solo mostramos finanzas si no es staff */}
-      {user.role !== 'staff' && (
-        <div
-          style={{
-            background: '#0F172A',
-            borderRadius: 14,
-            padding: '20px 24px',
-            marginBottom: 20,
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr',
-            gap: 20,
-          }}
-        >
-          {[
-            ['FACTURADO', totalRev, '#fff'],
-            ['COBRADO', totalPaid, '#34D399'],
-            ['PENDIENTE', totalRev - totalPaid, '#FCA5A5'],
-          ].map(([l, v, c]) => (
-            <div key={l}>
-              <div
-                style={{
-                  fontSize: 10,
-                  color: 'rgba(255,255,255,.4)',
-                  fontWeight: 700,
-                  letterSpacing: 0.5,
-                  marginBottom: 4,
-                }}
-              >
-                {l}
-              </div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: c }}>
-                {currency(v)}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      
       <h3
         style={{
           margin: '0 0 12px',
