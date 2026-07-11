@@ -6378,82 +6378,91 @@ export default function AppMejorada() {
   const isMobile = winW < 769;
   const isTablet = winW >= 769 && winW < 1280;
 
+  // 1. CARGA DE DATOS Y VIGILANTE DE INICIO
   useEffect(() => {
     const fetchReservas = async () => {
-  const { data, error } = await supabase
-    .from('reservas')
-    .select('*')
-    .is('fecha_eliminacion', null); // Esto filtra y trae solo las que NO tienen fecha de eliminación
+      const { data, error } = await supabase
+        .from('reservas')
+        .select('*')
+        .is('fecha_eliminacion', null);
 
-  if (error) {
-    console.error('Error al cargar reservas:', error);
-    return;
-  }
+      if (error) {
+        console.error('Error al cargar reservas:', error);
+        return;
+      }
 
-  // Ahora procesamos solo los datos filtrados
-  const reservasCargadas = data.map((item) => {
-    // 1. Detectar el prefijo correcto según la nacionalidad guardada
-    const nacionalidad = item.nacionalidad || 'MX';
-    const pais = COUNTRIES.find((c) => c.code === nacionalidad);
-    const prefijo = pais ? pais.prefix : '+52';
+      // Hora actual estricta en Progreso, Yucatán
+      const nowMerida = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Merida" }));
+      const horaActual = nowMerida.getHours();
+      const hoyFmt = fmt(nowMerida);
 
-    // 2. Limpiar el teléfono para que no repita el prefijo en la caja de texto
-    let telefonoLimpio = item.telefono || '';
-    if (telefonoLimpio.startsWith(prefijo)) {
-      telefonoLimpio = telefonoLimpio.replace(prefijo, '').trim();
-    }
+      const reservasCargadas = data.map((item) => {
+        const nacionalidad = item.nacionalidad || 'MX';
+        const pais = COUNTRIES.find((c) => c.code === nacionalidad);
+        const prefijo = pais ? pais.prefix : '+52';
 
-    return {
-      id: item.id,
-      propertyId: item.propiedad || 'hostel',
-      guestName: item.huesped || '',
-      room: item.habitacion || '',
-      checkIn: item.fecha_ingreso || '',
-      checkOut: item.fecha_salida || '',
-      status: item.estado || 'por_llegar',
-      totalAmount: Number(item.monto) || 0,
-      paid: Number(item.monto_pagado) || 0,
-      source: item.canal || 'Directo — Puerta',
-      guestNationality: nacionalidad,
-      guestDocType: item.tipo_doc || '',
-      guestDoc: item.num_doc || '',
-      guestPhonePrefix: prefijo,
-      guestPhone: telefonoLimpio,
-      guestEmail: item.email || '',
-      totalGuests: Number(item.cantidad_huespedes) || 1,
-      companions: item.acompanantes || [],
-      paymentMethod: item.forma_pago || 'Efectivo',
-      url_ine_frente: item.url_ine_frente || null,
-      url_ine_dorso: item.url_ine_dorso || null,
-      pricing: {
-        ratePerNight: Number(item.tarifa_base) || 0,
-        discountType: Number(item.descuento) > 0 ? 'monto_fijo' : 'ninguno',
-        discountValue: Number(item.descuento) || 0,
-        rateLabel: '',
-        discountReason: '',
-        additionals: []
-      },
-      notes: item.notas || '',
-      notas: item.notas || '',
-      requiresInvoice: item.solicita_factura === 'true' || item.solicita_factura === true,
-      solicita_factura: item.solicita_factura === 'true' || item.solicita_factura === true
+        let telefonoLimpio = item.telefono || '';
+        if (telefonoLimpio.startsWith(prefijo)) {
+          telefonoLimpio = telefonoLimpio.replace(prefijo, '').trim();
+        }
+
+        let estado = item.estado || 'por_llegar';
+        let fechaCheckout = item.fecha_salida || '';
+
+        // ── AUTO CHECK-OUT AL CARGAR LA APP (Si ya pasaron las 11:00 AM) ──
+        if (horaActual >= 11 && estado === 'hospedado' && fechaCheckout <= hoyFmt) {
+            estado = 'finalizada';
+            supabase.from('reservas').update({ estado: 'finalizada' }).eq('id', item.id).then();
+        }
+
+        return {
+          id: item.id,
+          propertyId: item.propiedad || 'hostel',
+          guestName: item.huesped || '',
+          room: item.habitacion || '',
+          checkIn: item.fecha_ingreso || '',
+          checkOut: fechaCheckout,
+          status: estado,
+          totalAmount: Number(item.monto) || 0,
+          paid: Number(item.monto_pagado) || 0,
+          source: item.canal || 'Directo — Puerta',
+          guestNationality: nacionalidad,
+          guestDocType: item.tipo_doc || '',
+          guestDoc: item.num_doc || '',
+          guestPhonePrefix: prefijo,
+          guestPhone: telefonoLimpio,
+          guestEmail: item.email || '',
+          totalGuests: Number(item.cantidad_huespedes) || 1,
+          companions: item.acompanantes || [],
+          paymentMethod: item.forma_pago || 'Efectivo',
+          url_ine_frente: item.url_ine_frente || null,
+          url_ine_dorso: item.url_ine_dorso || null,
+          pricing: {
+            ratePerNight: Number(item.tarifa_base) || 0,
+            discountType: Number(item.descuento) > 0 ? 'monto_fijo' : 'ninguno',
+            discountValue: Number(item.descuento) || 0,
+            rateLabel: '',
+            discountReason: '',
+            additionals: []
+          },
+          notes: item.notas || '',
+          notas: item.notas || '',
+          requiresInvoice: item.solicita_factura === 'true' || item.solicita_factura === true,
+          solicita_factura: item.solicita_factura === 'true' || item.solicita_factura === true
+        };
+      });
+
+      setRes(reservasCargadas);
     };
-  });
 
-  setRes(reservasCargadas);
-};
+    fetchReservas();
 
-// 1. Carga inicial
-fetchReservas();
-
-    // 2. Suscripción a la señal de Supabase en tiempo real (CON EL FRENO DE 500ms)
     const canalReservas = supabase
       .channel('cambios-en-vivo')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'reservas' },
         (payload) => {
-          console.log('Sincronizando cambio detectado...', payload);
           setTimeout(() => {
             fetchReservas(); 
           }, 500);
@@ -6461,22 +6470,50 @@ fetchReservas();
       )
       .subscribe();
 
-    // --- NUEVO: DESPERTADOR PARA CELULARES ---
-    // Fuerza una actualización de datos apenas volvés a mirar la pantalla
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        console.log('Pantalla activa: Forzando actualización...');
         fetchReservas();
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
-    // ------------------------------------------
 
-    // 3. Limpieza al cerrar la app
     return () => {
       supabase.removeChannel(canalReservas);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
+  }, []);
+
+  // 2. VIGILANTE SILENCIOSO EN TIEMPO REAL (Por si la App queda abierta)
+  useEffect(() => {
+    const vigilante = setInterval(() => {
+      const nowMerida = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Merida" }));
+      
+      if (nowMerida.getHours() >= 11) {
+        const hoyFmt = fmt(nowMerida);
+        
+        setRes((prevRes) => {
+          const paraHacerCheckout = prevRes.filter(r => r.status === 'hospedado' && r.checkOut <= hoyFmt);
+          
+          if (paraHacerCheckout.length === 0) return prevRes; // Todo en orden
+          
+          console.log(`⏰ 11:00 AM en Mérida: Haciendo check-out automático para ${paraHacerCheckout.length} reservas.`);
+          
+          // Actualiza en Supabase silenciosamente
+          paraHacerCheckout.forEach(r => {
+            supabase.from('reservas').update({ estado: 'finalizada' }).eq('id', r.id).then();
+          });
+
+          // Actualiza visualmente en tiempo real
+          return prevRes.map(r => 
+            paraHacerCheckout.some(pc => pc.id === r.id) 
+              ? { ...r, status: 'finalizada', checkOutAt: nowMerida.toISOString() } 
+              : r
+          );
+        });
+      }
+    }, 60000); // Revisa cada minuto
+
+    return () => clearInterval(vigilante);
   }, []);
 
   // Estados restaurados: Las "memorias" que controlan tu interfaz
