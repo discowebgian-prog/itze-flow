@@ -821,11 +821,13 @@ function ConflictWarn({ conflicts, properties }) {
   );
 }
 // ── RANGE CALENDAR ────────────────────────────────────────────────────────────
-// ── RANGE CALENDAR ────────────────────────────────────────────────────────────
-function RangeCalendar({ checkIn, checkOut, onChange }) {
+function RangeCalendar({ checkIn, checkOut, onChange, minDate }) {
   const [base, setBase] = useState(checkIn ? parseD(checkIn) : TODAY);
   const [hover, setHover] = useState(null);
   const [step, setStep] = useState(checkIn && checkOut ? 2 : 0);
+
+  // Candado inteligente: Si le pasamos una fecha mínima (ej. checkIn en el pasado), usa esa. Si no, usa HOY.
+  const minD = minDate ? parseD(minDate) : parseD(fmt(TODAY));
 
   const y = base.getFullYear(),
     m = base.getMonth();
@@ -836,9 +838,19 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
     .concat(Array.from({ length: daysInMo }, (_, i) => new Date(y, m, i + 1)));
 
   const clickD = (d) => {
-    if (!d || d < parseD(fmt(TODAY))) return;
+    if (!d || d < minD) return;
     const s = fmt(d);
-    if (step === 0 || step === 2) {
+    
+    if (step === 2) {
+      if (s > checkIn) {
+        // ¡MAGIA DE 1 CLIC! Extiende o recorta el Check-out manteniendo el Check-in intacto.
+        onChange(checkIn, s);
+      } else {
+        // Si toca exactamente el checkIn o antes, asume que quiere cambiar las 2 fechas.
+        onChange(s, '');
+        setStep(1);
+      }
+    } else if (step === 0) {
       onChange(s, '');
       setStep(1);
     } else if (step === 1) {
@@ -851,7 +863,6 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
     }
   };
 
-  // Calculamos las noches aquí adentro para mostrarlas en la misma barra
   let nights = 0;
   if (checkIn && checkOut) {
     nights = Math.round((parseD(checkOut) - parseD(checkIn)) / 86400000);
@@ -951,7 +962,7 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
         {grid.map((d, i) => {
           if (!d) return <div key={i} />;
           const s = fmt(d);
-          const isPast = parseD(s) < parseD(fmt(TODAY));
+          const isDisabled = parseD(s) < minD; // Reemplazamos la lógica vieja por el candado inteligente
           const isCI = s === checkIn;
           const isCO = s === checkOut;
           const isEnd = isCI || isCO;
@@ -970,14 +981,29 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
             bg = '#DBEAFE';
             col = '#1E40AF';
             radius = 4;
-          } else if (isPast) {
+          } else if (isDisabled) {
             col = '#D1D5DB';
           }
 
           return (
-            <div key={i} onClick={()=>clickD(d)} onMouseEnter={()=>step===1 && setHover(s)}
-          style={{aspectRatio:"1/1", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:isEnd?800:600, background:bg, color:col, borderRadius:radius, cursor:"pointer"}}
-        >{d.getDate()}
+            <div
+              key={i}
+              onClick={() => clickD(d)}
+              onMouseEnter={() => step === 1 && setHover(s)}
+              style={{
+                aspectRatio: '1/1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 13,
+                fontWeight: isEnd ? 800 : 600,
+                background: bg,
+                color: col,
+                borderRadius: radius,
+                cursor: isDisabled ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {d.getDate()}
             </div>
           );
         })}
@@ -988,11 +1014,11 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
           justifyContent: 'space-between',
           alignItems: 'center',
           marginTop: 10,
-          fontSize: 13, /* Tamaño de fuente más grande */
+          fontSize: 13,
           fontWeight: 700,
           color: '#6B7280',
           background: '#F8FAFC',
-          padding: '8px 12px', /* Un toque más de margen para que respire */
+          padding: '8px 12px',
           borderRadius: 8,
         }}
       >
@@ -1011,6 +1037,7 @@ function RangeCalendar({ checkIn, checkOut, onChange }) {
     </div>
   );
 }
+
 // ── RESERVATION FORM ──────────────────────────────────────────────────────────
 // ── CARGADOR DE INE COMPRIMIDO (CORREGIDO) ───────────────────────────────────
 function IneUploader({ f, onUploadFrente, onUploadDorso }) {
@@ -1094,6 +1121,7 @@ function IneUploader({ f, onUploadFrente, onUploadDorso }) {
     </div>
   );
 }
+
 function ResForm({
   initial,
   visibleProps,
@@ -1159,6 +1187,9 @@ function ResForm({
     initial?.id
   );
   const [confModal, setConfModal] = useState(null);
+
+  // Candado dinámico: Si editamos reserva existente, permite navegar al pasado hasta su Check-in
+  const minDatePermitida = initial?.checkIn ? initial.checkIn : fmt(TODAY);
 
   const setTotalGuests = (n) => {
     sv('totalGuests', n);
@@ -1229,6 +1260,7 @@ function ResForm({
       <RangeCalendar
         checkIn={f.checkIn}
         checkOut={f.checkOut}
+        minDate={minDatePermitida}
         onChange={(ci, co) => {
           sv('checkIn', ci);
           sv('checkOut', co);
@@ -1255,7 +1287,7 @@ function ResForm({
         />
       )}
 
-      {/* 3. NOMBRE COMPLETO (Movido arriba) */}
+      {/* 3. NOMBRE COMPLETO */}
       <Inp
         label="Nombre completo"
         value={f.guestName}
@@ -1895,7 +1927,6 @@ function ResForm({
         </button>
       </div>
 
-      {/* --- MODAL DE CONFLICTOS INTACTO --- */}
       {confModal && (
         <div
           style={{
