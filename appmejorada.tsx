@@ -6568,8 +6568,12 @@ const toggleBlacklist = async (id, currentStatus) => {
       alert('Error al actualizar la lista negra en la nube.');
       return;
     }
-    // Actualizamos la vista en milisegundos
+
+    // 1. Actualiza la lista general de reservas (el fondo y el calendario)
     setRes(res.map(r => r.id === id ? { ...r, lista_negra: newStatus } : r));
+
+    // 2. ¡EL DETALLE VISUAL! Actualiza el panel abierto para que el botón reaccione al instante
+    setDrawer(prev => prev && prev.id === id ? { ...prev, lista_negra: newStatus } : prev);
   };
   const handleCI = (r) => {
     setDrawer(null);
