@@ -1152,6 +1152,7 @@ function ResForm({
     totalGuests: 1,
     companions: [],
     requiresInvoice: false,
+    lista_negra: false,
     pricing: {
       ratePerNight: '',
       rateLabel: '',
@@ -1189,6 +1190,16 @@ function ResForm({
   const [confModal, setConfModal] = useState(null);
 
   const minDatePermitida = initial?.checkIn ? initial.checkIn : fmt(TODAY);
+
+  // ── EL RADAR DE LISTA NEGRA EN VIVO ──
+  const matchBlacklist = allRes.find(r => 
+    r.lista_negra && 
+    r.guestName && 
+    f.guestName &&
+    r.guestName.toLowerCase().trim() === f.guestName.toLowerCase().trim() && 
+    r.guestNationality === f.guestNationality &&
+    r.id !== f.id
+  );
 
   const setTotalGuests = (n) => {
     sv('totalGuests', n);
@@ -1231,8 +1242,6 @@ function ResForm({
     return Math.max(0, b + addT);
   };
 
-  // ── AUTO-CÁLCULO EN TIEMPO REAL ──
-  // Si cambia la tarifa, el descuento, los adicionales o las noches, el Total se autocompleta.
   useEffect(() => {
     if (f.pricing.ratePerNight !== '') {
       const t = calcTotal();
@@ -1240,7 +1249,6 @@ function ResForm({
         sv('totalAmount', t);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     f.pricing.ratePerNight,
     f.pricing.discountType,
@@ -1262,7 +1270,6 @@ function ResForm({
 
   return (
     <div>
-      {/* 1. CALENDARIO */}
       <label
         style={{
           display: 'block',
@@ -1286,7 +1293,6 @@ function ResForm({
         }}
       />
 
-      {/* 2. HABITACIÓN */}
       {isHostel && (
         <Sel
           label="Habitación"
@@ -1306,14 +1312,41 @@ function ResForm({
         />
       )}
 
-      {/* 3. NOMBRE COMPLETO */}
       <Inp
         label="Nombre completo"
         value={f.guestName}
         onChange={(e) => sv('guestName', e.target.value)}
       />
 
-      {/* 4. NACIONALIDAD Y SCANNER */}
+      {/* ── ALERTA DE LISTA NEGRA (VISIBLE SOLO SI HAY COINCIDENCIA) ── */}
+      {matchBlacklist && (
+        <div style={{ background: '#FEF2F2', border: '1.5px solid #FECACA', borderRadius: 10, padding: '12px 16px', marginBottom: 16 }}>
+          <div style={{ color: '#991B1B', fontWeight: 800, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+            ⚠️ Alerta de Lista Negra
+          </div>
+          <div style={{ color: '#7F1D1D', fontSize: 12, marginBottom: 10, lineHeight: 1.4 }}>
+            El sistema detectó un huésped marcado como "No Grato" con el mismo nombre y nacionalidad. Verificá si es la misma persona:
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {matchBlacklist.url_ine_frente && (
+              <a href={matchBlacklist.url_ine_frente} target="_blank" rel="noreferrer" style={{ fontSize: 11, background: '#DC2626', color: '#fff', padding: '6px 12px', borderRadius: 6, textDecoration: 'none', fontWeight: 700 }}>
+                📷 ID Frente
+              </a>
+            )}
+            {matchBlacklist.url_ine_dorso && (
+              <a href={matchBlacklist.url_ine_dorso} target="_blank" rel="noreferrer" style={{ fontSize: 11, background: '#DC2626', color: '#fff', padding: '6px 12px', borderRadius: 6, textDecoration: 'none', fontWeight: 700 }}>
+                📷 ID Dorso
+              </a>
+            )}
+            {!matchBlacklist.url_ine_frente && !matchBlacklist.url_ine_dorso && (
+              <span style={{ fontSize: 11, color: '#991B1B', fontWeight: 600 }}>
+                (No hay fotos previas para contrastar).
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       <CountrySelector
         value={f.guestNationality}
         onChange={(c) => {
@@ -1327,10 +1360,7 @@ function ResForm({
         onUploadDorso={(url) => sv('url_ine_dorso', url)}
       />
 
-      {/* 5. RESTO DE DATOS DEL HUÉSPED */}
-      <div
-        style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 10 }}
-      >
+      <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 10 }}>
         <Sel
           label="Tipo doc."
           value={f.guestDocType}
@@ -1346,6 +1376,7 @@ function ResForm({
           onChange={(e) => sv('guestDoc', e.target.value)}
         />
       </div>
+
       <div style={{ marginBottom: 12 }}>
         <label
           style={{
@@ -1395,6 +1426,7 @@ function ResForm({
           />
         </div>
       </div>
+
       <Inp
         label="Email"
         value={f.guestEmail}
@@ -1402,7 +1434,7 @@ function ResForm({
       />
       <ConflictWarn conflicts={conflicts} properties={visibleProps} />
       
-     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <Sel
           label="Estado"
           value={f.status}
@@ -1411,7 +1443,6 @@ function ResForm({
             (v) => ({ value: v, label: RS[v]?.label })
           )}
         />
-        {/* NUEVO SELECTOR DE CANAL DESTACADO */}
         <div>
           <label
             style={{
@@ -1479,9 +1510,7 @@ function ResForm({
                   width: 38,
                   height: 38,
                   borderRadius: 8,
-                  border: `2px solid ${
-                    f.totalGuests === n ? '#3B82F6' : '#E5E7EB'
-                  }`,
+                  border: `2px solid ${f.totalGuests === n ? '#3B82F6' : '#E5E7EB'}`,
                   background: f.totalGuests === n ? '#EFF6FF' : '#fff',
                   fontFamily: 'inherit',
                   fontWeight: 700,
@@ -1569,7 +1598,6 @@ function ResForm({
         </div>
       )}
 
-      {/* ── BLOQUE UNIFICADO: LIQUIDACIÓN Y PAGO ── */}
       <div
         style={{
           marginBottom: 16,
@@ -1595,7 +1623,6 @@ function ResForm({
           💰 Liquidación y Pago
         </div>
         
-        {/* Fila 1: Tarifa */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <Inp
             label="Tarifa base/noche $"
@@ -1618,7 +1645,6 @@ function ResForm({
           />
         </div>
 
-        {/* Fila 2: Descuentos */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <Sel
             label="Descuento"
@@ -1661,7 +1687,6 @@ function ResForm({
           />
         )}
 
-        {/* Adicionales */}
         {addlCount > 0 && (
           <div style={{ marginTop: 8, borderTop: '1px dashed #E5E7EB', paddingTop: 8 }}>
             <div
@@ -1744,7 +1769,6 @@ function ResForm({
 
         <hr style={{ border: 'none', borderTop: '1px dashed #D1D5DB', margin: '16px 0 14px' }} />
 
-        {/* Fila 3: Total y Pagado con Botón Mágico */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'end' }}>
           <Inp
             label="Total a cobrar $"
@@ -1806,7 +1830,6 @@ function ResForm({
           </div>
         </div>
 
-        {/* Fila 4: Forma de Pago y Saldo Visual */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 4 }}>
           <div style={{ flex: 1, marginRight: 14 }}>
             <Sel
@@ -2070,6 +2093,7 @@ function ResDrawer({
   onClose,
   onEdit,
   onDelete,
+  onToggleBlacklist,
   properties,
   allRes,
   isMobile,
@@ -2139,7 +2163,8 @@ function ResDrawer({
           style={{
             padding: '16px 20px',
             borderBottom: '1px solid #F0F0F0',
-            background: prop?.color || '#3B82F6',
+            background: res.lista_negra ? '#991B1B' : (prop?.color || '#3B82F6'),
+            transition: 'background 0.3s ease',
           }}
         >
           <div
@@ -2201,7 +2226,21 @@ function ResDrawer({
           >
             <Badge status={res.status} />
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-              {freq && (
+              {res.lista_negra && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    color: '#fff',
+                    background: '#DC2626',
+                    padding: '2px 8px',
+                    borderRadius: 20,
+                  }}
+                >
+                  ⚠️ NO GRATO
+                </span>
+              )}
+              {freq && !res.lista_negra && (
                 <span
                   style={{
                     fontSize: 11,
@@ -2215,7 +2254,6 @@ function ResDrawer({
                   {freq.label}
                 </span>
               )}
-              {/* NUEVO BADGE DE CANAL DESTACADO EN EL DRAWER */}
               <div
                 style={{
                   display: 'flex',
@@ -2329,7 +2367,6 @@ function ResDrawer({
               )}
             </div>
           </div>
-          {/* LÍNEA DELGADA: FACTURA Y NOTAS */}
           {(res.requiresInvoice || res.notes) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 12px', borderBottom: '1px solid #F0F0F0', borderTop: '1px solid #F0F0F0', marginBottom: 14, background: '#FAFAFA' }}>
               {res.requiresInvoice && (
@@ -2345,7 +2382,6 @@ function ResDrawer({
             </div>
           )}
 
-          {/* FOTOS INE */}
           {(res.url_ine_frente || res.url_ine_dorso) && (
             <div style={{ background: '#F0F9FF', borderRadius: 10, padding: '12px 16px', marginBottom: 14, border: '1px solid #BAE6FD' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#0369A1', textTransform: 'uppercase', marginBottom: 8 }}>
@@ -2397,11 +2433,6 @@ function ResDrawer({
               >
                 Datos del huésped
               </div>
-              {freq && gp && gp.stays.length > 1 && (
-                <div style={{ fontSize: 11, color: '#6B7280' }}>
-                  {gp.stays.length} estadías · {currency(gp.totalSpent)}
-                </div>
-              )}
             </div>
             {[
               ['Documento', (res.guestDocType || 'Doc') + ': ' + res.guestDoc],
@@ -2580,6 +2611,31 @@ function ResDrawer({
               <Icon name="checkOut" size={18} /> Hacer Check-out
             </button>
           )}
+          
+          {/* BOTÓN MÁGICO DE LISTA NEGRA */}
+          <button
+            onClick={() => onToggleBlacklist(res.id, res.lista_negra)}
+            style={{
+              width: '100%',
+              padding: '10px',
+              background: res.lista_negra ? '#FEF2F2' : '#fff',
+              border: res.lista_negra ? '1.5px solid #FECACA' : '1px solid #E5E7EB',
+              borderRadius: 8,
+              fontFamily: 'inherit',
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: 'pointer',
+              color: res.lista_negra ? '#DC2626' : '#4B5563',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              transition: 'all 0.2s'
+            }}
+          >
+            {res.lista_negra ? '⚠️ Quitar de Lista Negra' : '🚫 Marcar como No Grato'}
+          </button>
+
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               onClick={() => onEdit(res)}
@@ -6217,6 +6273,7 @@ export default function AppMejorada() {
           notas: item.notas || '',
           requiresInvoice: item.solicita_factura === 'true' || item.solicita_factura === true,
           solicita_factura: item.solicita_factura === 'true' || item.solicita_factura === true
+          lista_negra: item.lista_negra === true || item.lista_negra === 'true',
         };
       });
 
@@ -6365,6 +6422,7 @@ export default function AppMejorada() {
         url_ine_dorso: newRes.url_ine_dorso || null,
         tarifa_base: String(newRes.pricing?.ratePerNight || ''),
         solicita_factura: tieneFactura ? 'true' : 'false' // Texto para la base de datos
+        lista_negra: newRes.lista_negra || false,
       };
 
       // Mantenemos duplicados los formatos en el estado de React para no romper las vistas
@@ -6374,6 +6432,7 @@ export default function AppMejorada() {
         notas: newRes.notes || newRes.notas || '',
         requiresInvoice: tieneFactura,
         solicita_factura: tieneFactura
+        lista_negra: newRes.lista_negra || false,
       };
 
       if (newRes.id) {
@@ -6497,6 +6556,20 @@ export default function AppMejorada() {
           : r
       )
     );
+  };
+const toggleBlacklist = async (id, currentStatus) => {
+    const newStatus = !currentStatus;
+    const { error } = await supabase
+      .from('reservas')
+      .update({ lista_negra: newStatus })
+      .eq('id', id);
+
+    if (error) {
+      alert('Error al actualizar la lista negra en la nube.');
+      return;
+    }
+    // Actualizamos la vista en milisegundos
+    setRes(res.map(r => r.id === id ? { ...r, lista_negra: newStatus } : r));
   };
   const handleCI = (r) => {
     setDrawer(null);
@@ -6940,7 +7013,7 @@ export default function AppMejorada() {
         ))}
       </div>
 
-      {/* Modales y Paneles flotantes */}
+     {/* Modales y Paneles flotantes */}
       {drawer && (
         <ResDrawer
           res={drawer}
@@ -6950,6 +7023,7 @@ export default function AppMejorada() {
             setDrawer(null);
           }}
           onDelete={(id) => setModal({ type: 'confirmDel', id })}
+          onToggleBlacklist={toggleBlacklist}
           properties={visProps}
           allRes={res}
           isMobile={isMobile}
