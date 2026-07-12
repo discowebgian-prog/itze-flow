@@ -6421,8 +6421,8 @@ export default function AppMejorada() {
         url_ine_frente: newRes.url_ine_frente || null,
         url_ine_dorso: newRes.url_ine_dorso || null,
         tarifa_base: String(newRes.pricing?.ratePerNight || ''),
-        solicita_factura: tieneFactura ? 'true' : 'false' // Texto para la base de datos
-        lista_negra: newRes.lista_negra || false,
+        solicita_factura: tieneFactura ? 'true' : 'false',  
+        lista_negra: newRes.lista_negra || false
       };
 
       // Mantenemos duplicados los formatos en el estado de React para no romper las vistas
