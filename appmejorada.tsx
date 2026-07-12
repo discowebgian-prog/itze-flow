@@ -1188,7 +1188,6 @@ function ResForm({
   );
   const [confModal, setConfModal] = useState(null);
 
-  // Candado dinámico: Si editamos reserva existente, permite navegar al pasado hasta su Check-in
   const minDatePermitida = initial?.checkIn ? initial.checkIn : fmt(TODAY);
 
   const setTotalGuests = (n) => {
@@ -1217,20 +1216,38 @@ function ResForm({
   };
 
   const calcTotal = () => {
-    if (!f.pricing.ratePerNight || !nights) return 0;
-    let b = f.pricing.ratePerNight * nights;
+    if (!nights) return 0;
+    let b = Number(f.pricing.ratePerNight) * nights;
     if (f.pricing.discountType === 'porcentaje')
-      b -= b * (f.pricing.discountValue / 100);
+      b -= b * (Number(f.pricing.discountValue) / 100);
     else if (f.pricing.discountType === 'monto_fijo')
-      b -= f.pricing.discountValue;
+      b -= Number(f.pricing.discountValue);
     else if (f.pricing.discountType === 'noche_gratis')
-      b -= f.pricing.ratePerNight * f.pricing.discountValue;
+      b -= Number(f.pricing.ratePerNight) * Number(f.pricing.discountValue);
     const addT = (f.pricing.additionals || []).reduce(
-      (s, a) => s + (a.bonificada ? 0 : (a.ratePerNight || 0) * nights),
+      (s, a) => s + (a.bonificada ? 0 : (Number(a.ratePerNight) || 0) * nights),
       0
     );
     return Math.max(0, b + addT);
   };
+
+  // ── AUTO-CÁLCULO EN TIEMPO REAL ──
+  // Si cambia la tarifa, el descuento, los adicionales o las noches, el Total se autocompleta.
+  useEffect(() => {
+    if (f.pricing.ratePerNight !== '') {
+      const t = calcTotal();
+      if (f.totalAmount !== t) {
+        sv('totalAmount', t);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    f.pricing.ratePerNight,
+    f.pricing.discountType,
+    f.pricing.discountValue,
+    f.pricing.additionals,
+    nights,
+  ]);
 
   const handleSave = () => {
     if (conflicts.length > 0) {
@@ -1241,9 +1258,11 @@ function ResForm({
     } else onSave(f);
   };
 
+  const saldoPendiente = Math.max(0, Number(f.totalAmount || 0) - Number(f.paid || 0));
+
   return (
     <div>
-      {/* 1. CALENDARIO EN PRIMER LUGAR */}
+      {/* 1. CALENDARIO */}
       <label
         style={{
           display: 'block',
@@ -1515,39 +1534,42 @@ function ResForm({
         </div>
       )}
 
+      {/* ── BLOQUE UNIFICADO: LIQUIDACIÓN Y PAGO ── */}
       <div
         style={{
           marginBottom: 16,
           background: '#F8FAFC',
           borderRadius: 10,
-          padding: '14px 16px',
+          padding: '16px',
           border: '1px solid #E5E7EB',
         }}
       >
         <div
           style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: '#6B7280',
+            fontSize: 12,
+            fontWeight: 800,
+            color: '#111',
             textTransform: 'uppercase',
-            letterSpacing: 0.4,
-            marginBottom: 10,
+            letterSpacing: 0.5,
+            marginBottom: 14,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
           }}
         >
-          Tarifa y beneficios
+          💰 Liquidación y Pago
         </div>
-        <div
-          style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}
-        >
+        
+        {/* Fila 1: Tarifa */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <Inp
-            label="Tarifa base/noche $ (2p.)"
+            label="Tarifa base/noche $"
             type="number"
             value={f.pricing.ratePerNight}
             onChange={(e) =>
               sv('pricing', {
                 ...f.pricing,
-                ratePerNight:
-                  e.target.value === '' ? '' : Number(e.target.value),
+                ratePerNight: e.target.value === '' ? '' : Number(e.target.value),
               })
             }
           />
@@ -1560,9 +1582,9 @@ function ResForm({
             placeholder="Tarifa rack"
           />
         </div>
-        <div
-          style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}
-        >
+
+        {/* Fila 2: Descuentos */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <Sel
             label="Descuento"
             value={f.pricing.discountType}
@@ -1603,14 +1625,10 @@ function ResForm({
             placeholder="Cliente frecuente..."
           />
         )}
+
+        {/* Adicionales */}
         {addlCount > 0 && (
-          <div
-            style={{
-              marginTop: 8,
-              borderTop: '1px dashed #E5E7EB',
-              paddingTop: 8,
-            }}
-          >
+          <div style={{ marginTop: 8, borderTop: '1px dashed #E5E7EB', paddingTop: 8 }}>
             <div
               style={{
                 fontSize: 11,
@@ -1637,9 +1655,7 @@ function ResForm({
                   border: `1px solid ${a.bonificada ? '#86EFAC' : '#E5E7EB'}`,
                 }}
               >
-                <div style={{ fontSize: 12, fontWeight: 600 }}>
-                  Persona adicional {i + 1}
-                </div>
+                <div style={{ fontSize: 12, fontWeight: 600 }}>Persona {i + 1}</div>
                 <input
                   type="number"
                   value={a.ratePerNight === 0 ? '' : a.ratePerNight}
@@ -1661,12 +1677,7 @@ function ResForm({
                   }}
                 />
                 <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    cursor: 'pointer',
-                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }}
                   onClick={() => {
                     const ads = [...(f.pricing.additionals || [])];
                     ads[i] = { ...ads[i], bonificada: !ads[i].bonificada };
@@ -1678,30 +1689,16 @@ function ResForm({
                       width: 18,
                       height: 18,
                       borderRadius: 4,
-                      border: `2px solid ${
-                        a.bonificada ? '#22C55E' : '#D1D5DB'
-                      }`,
+                      border: `2px solid ${a.bonificada ? '#22C55E' : '#D1D5DB'}`,
                       background: a.bonificada ? '#22C55E' : '#fff',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    {a.bonificada && (
-                      <span
-                        style={{ color: '#fff', fontSize: 11, fontWeight: 800 }}
-                      >
-                        ✓
-                      </span>
-                    )}
+                    {a.bonificada && <span style={{ color: '#fff', fontSize: 11, fontWeight: 800 }}>✓</span>}
                   </div>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: a.bonificada ? '#15803D' : '#9CA3AF',
-                    }}
-                  >
+                  <span style={{ fontSize: 11, fontWeight: 700, color: a.bonificada ? '#15803D' : '#9CA3AF' }}>
                     Bonif.
                   </span>
                 </div>
@@ -1709,98 +1706,120 @@ function ResForm({
             ))}
           </div>
         )}
-        {f.pricing.ratePerNight > 0 && nights > 0 && (
-          <div
-            style={{
-              marginTop: 10,
-              padding: '8px 12px',
-              background: '#EFF6FF',
-              borderRadius: 8,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <span style={{ fontSize: 12, color: '#374151' }}>
-              Total calculado:{' '}
-              <b style={{ color: '#1E40AF' }}>{currency(calcTotal())}</b>
-            </span>
-            <button
-              type="button"
-              onClick={() => sv('totalAmount', calcTotal())}
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: '#1E40AF',
-                background: '#DBEAFE',
-                border: 'none',
-                borderRadius: 6,
-                padding: '4px 10px',
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-              }}
-            >
-              Aplicar
-            </button>
-          </div>
-        )}
-      </div>
 
-      <div
-        style={{
-          marginBottom: 16,
-          background: '#F8FAFC',
-          borderRadius: 10,
-          padding: '14px 16px',
-          border: '1px solid #E5E7EB',
-        }}
-      >
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: '#6B7280',
-            textTransform: 'uppercase',
-            letterSpacing: 0.4,
-            marginBottom: 10,
-          }}
-        >
-          Pago
-        </div>
-        <Sel
-          label="Forma de pago"
-          value={f.paymentMethod || 'efectivo'}
-          onChange={(e) => sv('paymentMethod', e.target.value)}
-          options={[
-            { value: 'efectivo', label: 'Efectivo' },
-            { value: 'transferencia', label: 'Transferencia' },
-            { value: 'debito', label: 'Débito' },
-            { value: 'credito', label: 'Crédito' },
-            { value: 'otro', label: 'Otro' },
-          ]}
-        />
-        <div
-          style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}
-        >
+        <hr style={{ border: 'none', borderTop: '1px dashed #D1D5DB', margin: '16px 0 14px' }} />
+
+        {/* Fila 3: Total y Pagado con Botón Mágico */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'end' }}>
           <Inp
-            label="Monto total $"
+            label="Total a cobrar $"
             type="number"
             value={f.totalAmount}
             onChange={(e) =>
-              sv(
-                'totalAmount',
-                e.target.value === '' ? '' : Number(e.target.value)
-              )
+              sv('totalAmount', e.target.value === '' ? '' : Number(e.target.value))
             }
           />
-          <Inp
-            label="Monto pagado $"
-            type="number"
-            value={f.paid}
-            onChange={(e) =>
-              sv('paid', e.target.value === '' ? '' : Number(e.target.value))
-            }
-          />
+          <div style={{ marginBottom: 12 }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 11,
+                fontWeight: 700,
+                color: '#888',
+                marginBottom: 4,
+                textTransform: 'uppercase',
+                letterSpacing: 0.4,
+              }}
+            >
+              Pagado $
+            </label>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input
+                type="number"
+                value={f.paid}
+                onChange={(e) => sv('paid', e.target.value === '' ? '' : Number(e.target.value))}
+                style={{
+                  flex: 1,
+                  padding: '9px 12px',
+                  border: '1.5px solid #E5E7EB',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => sv('paid', f.totalAmount)}
+                style={{
+                  padding: '0 12px',
+                  background: '#D1FAE5',
+                  color: '#065F46',
+                  border: '1.5px solid #10B981',
+                  borderRadius: 8,
+                  fontWeight: 800,
+                  fontSize: 11,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Cobrar Total
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Fila 4: Forma de Pago y Saldo Visual */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 4 }}>
+          <div style={{ flex: 1, marginRight: 14 }}>
+            <Sel
+              label="Forma de pago"
+              value={f.paymentMethod || 'efectivo'}
+              onChange={(e) => sv('paymentMethod', e.target.value)}
+              options={[
+                { value: 'efectivo', label: 'Efectivo' },
+                { value: 'transferencia', label: 'Transferencia' },
+                { value: 'debito', label: 'Débito' },
+                { value: 'credito', label: 'Crédito' },
+                { value: 'otro', label: 'Otro' },
+              ]}
+            />
+          </div>
+          <div
+            style={{
+              background: saldoPendiente > 0 ? '#FEF2F2' : '#ECFDF5',
+              padding: '10px 14px',
+              borderRadius: 8,
+              border: `1.5px solid ${saldoPendiente > 0 ? '#FECACA' : '#A7F3D0'}`,
+              textAlign: 'right',
+              minWidth: 130,
+              marginBottom: 12,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                color: saldoPendiente > 0 ? '#DC2626' : '#059669',
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+                marginBottom: 2,
+              }}
+            >
+              {saldoPendiente > 0 ? 'Saldo pendiente' : 'Cuenta saldada'}
+            </div>
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 900,
+                color: saldoPendiente > 0 ? '#B45309' : '#059669',
+              }}
+            >
+              {currency(saldoPendiente)}
+            </div>
+          </div>
         </div>
       </div>
 
