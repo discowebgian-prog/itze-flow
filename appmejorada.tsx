@@ -1402,7 +1402,7 @@ function ResForm({
       />
       <ConflictWarn conflicts={conflicts} properties={visibleProps} />
       
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <Sel
           label="Estado"
           value={f.status}
@@ -1411,12 +1411,47 @@ function ResForm({
             (v) => ({ value: v, label: RS[v]?.label })
           )}
         />
-        <Sel
-          label="Canal"
-          value={f.source}
-          onChange={(e) => sv('source', e.target.value)}
-          options={SOURCES.map((s) => ({ value: s.value, label: s.label }))}
-        />
+        {/* NUEVO SELECTOR DE CANAL DESTACADO */}
+        <div>
+          <label
+            style={{
+              display: 'block',
+              fontSize: 11,
+              fontWeight: 800,
+              color: f.source === 'Booking' ? '#1E3A8A' : '#065F46',
+              marginBottom: 4,
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+            }}
+          >
+            Canal
+          </label>
+          <select
+            value={f.source}
+            onChange={(e) => sv('source', e.target.value)}
+            style={{
+              width: '100%',
+              padding: '9px 12px',
+              border: `2px solid ${f.source === 'Booking' ? '#3B82F6' : '#10B981'}`,
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 800,
+              fontFamily: 'inherit',
+              outline: 'none',
+              background: f.source === 'Booking' ? '#EFF6FF' : '#ECFDF5',
+              color: f.source === 'Booking' ? '#1E40AF' : '#065F46',
+              boxSizing: 'border-box',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {SOURCES.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {(!isHostel || selRoom) && maxG > 1 && (
@@ -2165,7 +2200,7 @@ function ResDrawer({
             }}
           >
             <Badge status={res.status} />
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
               {freq && (
                 <span
                   style={{
@@ -2180,19 +2215,36 @@ function ResDrawer({
                   {freq.label}
                 </span>
               )}
-              <span style={{ fontSize: 11, fontWeight: 600, color: '#555' }}>
+              {/* NUEVO BADGE DE CANAL DESTACADO EN EL DRAWER */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  background: res.source === 'Booking' ? '#EFF6FF' : '#ECFDF5',
+                  padding: '4px 10px',
+                  borderRadius: 20,
+                  border: `1.5px solid ${res.source === 'Booking' ? '#BFDBFE' : '#A7F3D0'}`,
+                }}
+              >
                 <span
                   style={{
                     width: 8,
                     height: 8,
                     borderRadius: '50%',
                     background: srcColor(res.source),
-                    display: 'inline-block',
-                    marginRight: 4,
                   }}
                 />
-                {srcLabel(res.source)}
-              </span>
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: res.source === 'Booking' ? '#1E40AF' : '#065F46',
+                  }}
+                >
+                  {srcLabel(res.source)}
+                </span>
+              </div>
             </div>
           </div>
           <div
@@ -2578,299 +2630,6 @@ function ResDrawer({
   );
 }
 
-// ── CHECK-IN / CHECK-OUT MODALS ───────────────────────────────────────────────
-function CIModal({ res, onConfirm, onCancel }) {
-  const now = new Date();
-  const isEarly = parseD(res.checkIn) > now;
-  const isLate = fmt(now) > res.checkIn;
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,.5)',
-        zIndex: 300,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 16,
-      }}
-    >
-      <div
-        style={{
-          background: '#fff',
-          borderRadius: 16,
-          width: '100%',
-          maxWidth: 380,
-          overflow: 'hidden',
-          boxShadow: '0 24px 64px rgba(0,0,0,.2)',
-        }}
-      >
-        <div
-          style={{
-            background: 'linear-gradient(135deg,#10B981,#059669)',
-            padding: '18px 22px',
-          }}
-        >
-          <div
-            style={{
-              fontSize: 11,
-              color: 'rgba(255,255,255,.7)',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              marginBottom: 4,
-            }}
-          >
-            Check-in
-          </div>
-          <div style={{ fontSize: 17, fontWeight: 800, color: '#fff' }}>
-            {res.guestName}
-          </div>
-          <div
-            style={{
-              fontSize: 12,
-              color: 'rgba(255,255,255,.8)',
-              marginTop: 2,
-            }}
-          >
-            {fmtD(res.checkIn)} → {fmtD(res.checkOut)}
-          </div>
-        </div>
-        <div style={{ padding: '20px 22px' }}>
-          {isEarly && (
-            <div
-              style={{
-                background: '#FFFBEB',
-                border: '1px solid #FDE68A',
-                borderRadius: 8,
-                padding: '8px 12px',
-                fontSize: 12,
-                color: '#92400E',
-                marginBottom: 12,
-              }}
-            >
-              ⚠️ Check-in anticipado — fecha reservada: {fmtD(res.checkIn)}
-            </div>
-          )}
-          {isLate && (
-            <div
-              style={{
-                background: '#FEF2F2',
-                border: '1px solid #FECACA',
-                borderRadius: 8,
-                padding: '8px 12px',
-                fontSize: 12,
-                color: '#991B1B',
-                marginBottom: 12,
-              }}
-            >
-              ⚠️ Check-in tardío — fecha reservada: {fmtD(res.checkIn)}
-            </div>
-          )}
-          <div
-            style={{
-              background: '#F0FDF4',
-              borderRadius: 10,
-              padding: '12px 16px',
-              marginBottom: 16,
-              border: '1px solid #BBF7D0',
-              textAlign: 'center',
-            }}
-          >
-            <div
-              style={{
-                fontSize: 11,
-                color: '#15803D',
-                fontWeight: 700,
-                marginBottom: 4,
-              }}
-            >
-              HORA DE INGRESO
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: '#15803D' }}>
-              {now.toLocaleTimeString('es-MX', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </div>
-            <div style={{ fontSize: 11, color: '#86EFAC' }}>
-              {now.toLocaleDateString('es-MX', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-              })}
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              onClick={onCancel}
-              style={{
-                flex: 1,
-                padding: '11px',
-                background: '#F3F4F6',
-                border: 'none',
-                borderRadius: 10,
-                fontFamily: 'inherit',
-                fontWeight: 700,
-                cursor: 'pointer',
-                color: '#555',
-              }}
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={() => onConfirm(new Date().toISOString())}
-              style={{
-                flex: 2,
-                padding: '11px',
-                background: 'linear-gradient(135deg,#10B981,#059669)',
-                border: 'none',
-                borderRadius: 10,
-                fontFamily: 'inherit',
-                fontWeight: 800,
-                cursor: 'pointer',
-                color: '#fff',
-              }}
-            >
-              ✅ Confirmar CI
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function COModal({ res, onConfirm, onCancel }) {
-  const saldo = res.totalAmount - res.paid;
-  const now = new Date();
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,.5)',
-        zIndex: 300,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 16,
-      }}
-    >
-      <div
-        style={{
-          background: '#fff',
-          borderRadius: 16,
-          width: '100%',
-          maxWidth: 380,
-          overflow: 'hidden',
-          boxShadow: '0 24px 64px rgba(0,0,0,.2)',
-        }}
-      >
-        <div
-          style={{
-            background: 'linear-gradient(135deg,#F59E0B,#D97706)',
-            padding: '18px 22px',
-          }}
-        >
-          <div
-            style={{
-              fontSize: 11,
-              color: 'rgba(255,255,255,.7)',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              marginBottom: 4,
-            }}
-          >
-            Check-out
-          </div>
-          <div style={{ fontSize: 17, fontWeight: 800, color: '#fff' }}>
-            {res.guestName}
-          </div>
-        </div>
-        <div style={{ padding: '20px 22px' }}>
-          {saldo > 0 && (
-            <div
-              style={{
-                background: '#FEF2F2',
-                border: '1px solid #FECACA',
-                borderRadius: 8,
-                padding: '10px 12px',
-                fontSize: 12,
-                color: '#991B1B',
-                marginBottom: 12,
-              }}
-            >
-              💰 Saldo pendiente: <b>{currency(saldo)}</b>
-            </div>
-          )}
-          <div
-            style={{
-              background: '#FFFBEB',
-              borderRadius: 10,
-              padding: '12px 16px',
-              marginBottom: 16,
-              border: '1px solid #FDE68A',
-              textAlign: 'center',
-            }}
-          >
-            <div
-              style={{
-                fontSize: 11,
-                color: '#B45309',
-                fontWeight: 700,
-                marginBottom: 4,
-              }}
-            >
-              HORA DE SALIDA
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: '#B45309' }}>
-              {now.toLocaleTimeString('es-MX', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              onClick={onCancel}
-              style={{
-                flex: 1,
-                padding: '11px',
-                background: '#F3F4F6',
-                border: 'none',
-                borderRadius: 10,
-                fontFamily: 'inherit',
-                fontWeight: 700,
-                cursor: 'pointer',
-                color: '#555',
-              }}
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={() => onConfirm(now.toISOString())}
-              style={{
-                flex: 2,
-                padding: '11px',
-                background: 'linear-gradient(135deg,#F59E0B,#D97706)',
-                border: 'none',
-                borderRadius: 10,
-                fontFamily: 'inherit',
-                fontWeight: 800,
-                cursor: 'pointer',
-                color: '#fff',
-              }}
-            >
-              🚪 Confirmar CO
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── TIMELINE MOBILE ───────────────────────────────────────────────────────────
 function TimelineMobile({ reservations, properties, onClickRes, onAddRes }) {
   const next14 = Array.from({ length: 14 }, (_, i) => addDays(TODAY, i - 1));
@@ -3032,6 +2791,12 @@ function TimelineMobile({ reservations, properties, onClickRes, onAddRes }) {
                       </div>
                       <div style={{ fontSize: 11, color: '#9CA3AF', display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
                         <span>{p?.name}{r.room ? ` · Hab.${r.room}` : ''}</span>
+                        {/* NUEVO ETIQUETA BOOKING EN MOBILE */}
+                        {r.source === 'Booking' && (
+                          <span style={{ color: '#1E40AF', background: '#DBEAFE', padding: '2px 6px', borderRadius: 4, fontWeight: 800, fontSize: 10 }}>
+                            Booking
+                          </span>
+                        )}
                         {r.requiresInvoice && <span style={{ color: '#7C3AED', fontWeight: 700 }}>· 🧾 Factura</span>}
                         {r.notes && <span style={{ color: '#D97706', fontWeight: 700 }}>· 📝 Notas</span>}
                       </div>
@@ -3110,7 +2875,6 @@ function Timeline({
   calView,
   setCalView,
 }) {
-  // Si es celular dibujamos 21 días, si es PC dibujamos 45 para llenar la pantalla
   const NCOLS = isMobile ? 21 : 45,
     COL = 44,
     ROW = 52,
@@ -3219,17 +2983,9 @@ function Timeline({
   const getCellBg = (d) => {
     const dow = new Date(d).getDay();
     const isPast = parseD(fmt(d)) < parseD(fmt(TODAY));
-    
-    // 1. Hoy siempre es azul
     if (fmt(d) === fmt(TODAY)) return '#EFF6FF'; 
-    
-    // 2. El pasado es gris
     if (isPast) return '#F3F4F6'; 
-    
-    // 3. Fines de semana futuros en VIOLETA SUAVE
-    if (dow === 0 || dow === 6) return '#F5F3FF'; // Violeta clarito (lavanda)
-    
-    // 4. Días normales futuros
+    if (dow === 0 || dow === 6) return '#F5F3FF';
     return '#fff';
   };
   const rows = [];
@@ -3254,15 +3010,12 @@ function Timeline({
     return all
       .map((r) => {
         if (parseD(r.checkOut) <= ws || parseD(r.checkIn) >= we) return null;
-
-        // Evaluamos si el Check-in o Check-out real caen fuera del límite visual de la pantalla
         const cutLeft = parseD(r.checkIn) < ws;
         const cutRight = parseD(r.checkOut) > we;
-
         const cs = Math.max(0, diffDays(fmt(ws), r.checkIn)),
           ce = Math.min(NCOLS, diffDays(fmt(ws), r.checkOut));
-        const pxL = cs * COL + (cutLeft ? 0 : COL / 2); // Si se corta a la izquierda, inicia recto en el borde del día (0)
-        const pxR = ce * COL + (cutRight ? COL : COL / 2); // Si se corta a la derecha, termina recto al final del día (COL)
+        const pxL = cs * COL + (cutLeft ? 0 : COL / 2);
+        const pxR = ce * COL + (cutRight ? COL : COL / 2);
 
         return {
           ...r,
@@ -3279,7 +3032,7 @@ function Timeline({
 
   const startDrag = (e, r, row) => {
     if (e && e.stopPropagation) e.stopPropagation();
-    setHdrDrag(null); // Frena el scroll del fondo del calendario
+    setHdrDrag(null);
     const cx = e.touches ? e.touches[0].clientX : e.clientX,
       cy = e.touches ? e.touches[0].clientY : e.clientY;
     const gt = gridEl ? gridEl.getBoundingClientRect().top : 0;
@@ -3328,8 +3081,7 @@ function Timeline({
     if (hdrDrag) {
       const cx = e.touches ? e.touches[0].clientX : e.clientX;
       const dd = -Math.round((cx - hdrDrag.startX) / COL);
-      // Permitimos navegar 2 años (730 días) hacia el pasado y el futuro sin trabas
-setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
+      setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
     }
   };
 
@@ -3559,10 +3311,10 @@ setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
                 color: '#374151',
                 borderRight: '1px solid #E5E7EB',
                 cursor: 'default',
-                position: 'sticky', // <--- LA FIJA A LA IZQUIERDA
+                position: 'sticky',
                 left: 0,
                 background: '#F9FAFB',
-                zIndex: 30, // <--- Evita que la tapen otras cosas al scrollear
+                zIndex: 30,
               }}
               onMouseDown={(e) => e.stopPropagation()}
             >
@@ -3571,7 +3323,7 @@ setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
             {days.map((d, i) => {
               const it = fmt(d) === fmt(TODAY),
                 dow = d.getDay();
-              const isPast = parseD(fmt(d)) < parseD(fmt(TODAY)); // Saber si es pasado
+              const isPast = parseD(fmt(d)) < parseD(fmt(TODAY)); 
               
               return (
                 <div
@@ -3605,7 +3357,7 @@ setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
                     : isPast
                     ? '#9CA3AF'
                     : dow === 0 || dow === 6
-                    ? '#8B5CF6' // Violeta para el texto de fin de semana
+                    ? '#8B5CF6' 
                     : '#374151',
                     }}
                   >
@@ -3657,8 +3409,8 @@ setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
                     padding: '0 12px',
                     borderRight: '1px solid #E5E7EB',
                     background: row.type === 'room' ? '#FAFAFA' : '#F3F4F6',
-                    zIndex: 25, // <--- Elevado para que las reservas pasen por debajo
-                    position: 'sticky', // <--- LA FIJA A LA IZQUIERDA
+                    zIndex: 25,
+                    position: 'sticky',
                     left: 0,
                     borderLeft: `3px solid ${row.prop.color}`,
                   }}
@@ -3769,20 +3521,19 @@ setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
                 {blocks.map((r) => {
                   const bc = BLOCK_COLORS[r.status] || BLOCK_COLORS.por_llegar;
                   const alerts = getAlerts(r);
-                  const H = ROW - 12; // Altura fija para el texto, evitando desplazamientos
+                  const H = ROW - 12; 
                   const W = Math.max(4, r.pxR - r.pxL - 4);
                   const isDrag = drag && drag.id === r.id;
                   const cid = `c${r.id}`;
-                  const tx = r.cutLeft ? 8 : Math.min(14, W * 0.2) + 4;
+                  const tx = (r.cutLeft ? 8 : Math.min(14, W * 0.2) + 4) + (r.source === 'Booking' ? 4 : 0);
 
-                  // Creamos los puntos del polígono dinámicamente según si está cortado o no
                   const D = Math.min(10, W * 0.25);
                   const ptTopLeft = r.cutLeft ? '0,0' : `${D},0`;
-                  const ptTopRight = r.cutRight ? `${W},0` : `${W},0`; // El tope derecho siempre es plano en check-out
+                  const ptTopRight = r.cutRight ? `${W},0` : `${W},0`; 
                   const ptBottomRight = r.cutRight
                     ? `${W},${H}`
-                    : `${W - D},${H}`; // Si se corta a la derecha, baja recto
-                  const ptBottomLeft = r.cutLeft ? `0,${H}` : `0,${H}`; // El fondo izquierdo siempre es plano en check-in
+                    : `${W - D},${H}`; 
+                  const ptBottomLeft = r.cutLeft ? `0,${H}` : `0,${H}`; 
                   const cp = `${ptTopLeft} ${ptTopRight} ${ptBottomRight} ${ptBottomLeft}`;
 
                   return (
@@ -3814,10 +3565,8 @@ setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
                         const touch = e.touches[0];
                         const fakeEvent = { touches: [touch] };
                         
-                        // Iniciamos el "Long Press" (400 milisegundos)
                         const timer = setTimeout(() => {
                           startDrag(fakeEvent, r, row);
-                          // Si el celular soporta vibración, hace un "tactito" al despegarse
                           if (window.navigator && window.navigator.vibrate) {
                             window.navigator.vibrate(40);
                           }
@@ -3825,7 +3574,6 @@ setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
                         lpt[1](timer);
                       }}
                       onTouchMove={() => {
-                        // Si el usuario desliza el dedo antes de los 400ms, cancelamos el timer (es un scroll normal del calendario)
                         if (lpt[0]) {
                           clearTimeout(lpt[0]);
                           lpt[1](null);
@@ -3863,7 +3611,17 @@ setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
                             clipPath={`url(#${cid})`}
                             rx={r.cutLeft ? 0 : 4}
                           />
-                          {/* Línea 1: Nombre del Huésped */}
+                          {/* NUEVA MARCA VISUAL BOOKING EN PC */}
+                          {r.source === 'Booking' && (
+                            <rect
+                              x={0}
+                              y={0}
+                              width={r.cutLeft ? 6 : 8}
+                              height={H}
+                              fill="#1E40AF"
+                              clipPath={`url(#${cid})`}
+                            />
+                          )}
                           <text
                             x={tx}
                             y={H / 2 - 2}
@@ -3876,13 +3634,13 @@ setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
                             }}
                             clipPath={`url(#${cid})`}
                           >
+                            {r.source === 'Booking' ? '🔵 ' : ''}
                             {r.guestName}
                             {r.companions?.length > 0
                               ? ` +${r.companions.length}`
                               : ''}{' '}
                             ({srcShort(r.source)})
                           </text>
-                          {/* Línea 2: Fechas de Check-in y Check-out */}
                           <text
                             x={tx}
                             y={H / 2 + 10}
@@ -3928,6 +3686,7 @@ setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
                               lineHeight: '1.2',
                             }}
                           >
+                            {r.source === 'Booking' ? '🔵 ' : ''}
                             {r.guestName} ({srcShort(r.source)})
                           </span>
                           <span
