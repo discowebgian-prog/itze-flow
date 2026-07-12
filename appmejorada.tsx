@@ -6431,7 +6431,7 @@ export default function AppMejorada() {
         notes: newRes.notes || newRes.notas || '',
         notas: newRes.notes || newRes.notas || '',
         requiresInvoice: tieneFactura,
-        solicita_factura: tieneFactura
+        solicita_factura: tieneFactura, 
         lista_negra: newRes.lista_negra || false,
       };
 
