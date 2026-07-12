@@ -6272,8 +6272,8 @@ export default function AppMejorada() {
           notes: item.notas || '',
           notas: item.notas || '',
           requiresInvoice: item.solicita_factura === 'true' || item.solicita_factura === true,
-          solicita_factura: item.solicita_factura === 'true' || item.solicita_factura === true
-          lista_negra: item.lista_negra === true || item.lista_negra === 'true',
+          solicita_factura: item.solicita_factura === 'true' || item.solicita_factura === true, // <--- ¡AQUÍ ESTÁ LA COMA QUE FALTABA!
+          lista_negra: item.lista_negra === true || item.lista_negra === 'true'
         };
       });
 
