@@ -3276,7 +3276,11 @@ function Timeline({
             ← 7d
           </button>
           <button
-            onClick={() => setOffset(-2)}
+            onClick={() => {
+              setOffset(-2); // Reinicia los días
+              // Hace que el scroll vuelva al inicio de forma suave
+              document.getElementById('calendario-scroll')?.scrollTo({ left: 0, behavior: 'smooth' }); 
+            }}
             style={{
               padding: '6px 12px',
               border: '1px solid #3B82F6',
@@ -3324,6 +3328,7 @@ function Timeline({
         </div>
       </div>
       <div
+        id="calendario-scroll"  // <--- ¡AGREGAMOS ESTO!
         style={{
           overflowX: 'auto',
           borderRadius: 12,
