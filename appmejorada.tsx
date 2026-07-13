@@ -2932,7 +2932,7 @@ function Timeline({
   setCalView,
 }) {
   const NCOLS = isMobile ? 21 : 45,
-    COL = 44,
+    COL = 60,
     ROW = 52,
     LABEL = 90,
     SH = 4;
