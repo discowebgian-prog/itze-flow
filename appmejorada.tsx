@@ -6584,20 +6584,29 @@ const toggleBlacklist = async (id, currentStatus) => {
     setCoModal(r);
   };
   const confCI = async (time) => {
+    if (!ciModal) return;
+    const targetId = ciModal.id;
+
+    // 1. Actualizamos la vista local de inmediato para una experiencia fluida
     setRes(
       res.map((x) =>
-        x.id === ciModal.id ? { ...x, status: 'hospedado', checkInAt: time } : x
+        x.id === targetId ? { ...x, status: 'hospedado', checkInAt: time } : x
       )
     );
     setCiModal(null);
-    // Impactar el estado en la base de datos
-    await supabase.from('reservas').update({ estado: 'hospedado' }).eq('id', ciModal.id);
+
+    // 2. Impactamos en la base de datos de Supabase de manera segura
+    await supabase.from('reservas').update({ estado: 'hospedado' }).eq('id', targetId);
   };
 
   const confCO = async (time) => {
+    if (!coModal) return;
+    const targetId = coModal.id;
+
+    // 1. Actualizamos la vista local
     setRes(
       res.map((x) =>
-        x.id === coModal.id
+        x.id === targetId
           ? {
               ...x,
               status: 'finalizada',
@@ -6607,8 +6616,9 @@ const toggleBlacklist = async (id, currentStatus) => {
       )
     );
     setCoModal(null);
-    // Impactar el estado en la base de datos
-    await supabase.from('reservas').update({ estado: 'finalizada' }).eq('id', coModal.id);
+
+    // 2. Impactamos en la base de datos de Supabase
+    await supabase.from('reservas').update({ estado: 'finalizada' }).eq('id', targetId);
   };
 
   // 4. EL DISEÑO VISUAL (Ahora sí, adentro de la función principal)
@@ -7149,19 +7159,170 @@ const toggleBlacklist = async (id, currentStatus) => {
           />
         </Modal>
       )}
+     {/* MODAL DE CONFIRMACIÓN CHECK-IN */}
       {ciModal && (
-        <CIModal
-          res={ciModal}
-          onConfirm={confCI}
-          onCancel={() => setCiModal(null)}
-        />
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,.5)',
+            zIndex: 400,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 16,
+              maxWidth: 380,
+              width: '100%',
+              overflow: 'hidden',
+              boxShadow: '0 24px 64px rgba(0,0,0,.25)',
+            }}
+          >
+            <div
+              style={{
+                background: '#10B981',
+                padding: '16px 22px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>
+                Confirmar Check-in
+              </div>
+            </div>
+            <div style={{ padding: '20px 22px' }}>
+              <p style={{ fontSize: 14, color: '#374151', marginBottom: 6 }}>
+                ¿Confirmas el ingreso de <b>{ciModal.guestName}</b>?
+              </p>
+              <p style={{ fontSize: 12, color: '#6B7280', marginBottom: 20 }}>
+                Esta acción marcará la reserva como "Hospedado" y registrará la hora de entrada.
+              </p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => setCiModal(null)}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: '#F3F4F6',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontFamily: 'inherit',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    color: '#4B5563',
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => confCI(new Date().toISOString())}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: '#10B981',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontFamily: 'inherit',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    color: '#fff',
+                  }}
+                >
+                  ✓ Check-in
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
+
+      {/* MODAL DE CONFIRMACIÓN CHECK-OUT */}
       {coModal && (
-        <COModal
-          res={coModal}
-          onConfirm={confCO}
-          onCancel={() => setCoModal(null)}
-        />
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,.5)',
+            zIndex: 400,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 16,
+              maxWidth: 380,
+              width: '100%',
+              overflow: 'hidden',
+              boxShadow: '0 24px 64px rgba(0,0,0,.25)',
+            }}
+          >
+            <div
+              style={{
+                background: '#F59E0B',
+                padding: '16px 22px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>
+                Confirmar Check-out
+              </div>
+            </div>
+            <div style={{ padding: '20px 22px' }}>
+              <p style={{ fontSize: 14, color: '#374151', marginBottom: 6 }}>
+                ¿Confirmas la salida de <b>{coModal.guestName}</b>?
+              </p>
+              <p style={{ fontSize: 12, color: '#6B7280', marginBottom: 20 }}>
+                La estadía pasará a "Finalizada" y se liberará la propiedad en el calendario.
+              </p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => setCoModal(null)}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: '#F3F4F6',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontFamily: 'inherit',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    color: '#4B5563',
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => confCO(new Date().toISOString())}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: '#F59E0B',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontFamily: 'inherit',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    color: '#fff',
+                  }}
+                >
+                  📤 Check-out
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
