@@ -2933,7 +2933,7 @@ function Timeline({
 }) {
   const NCOLS = isMobile ? 21 : 45,
     COL = 60,
-    ROW = 70,
+    ROW = 65,
     LABEL = 70,
     SH = 4;
   const [offset, setOffset] = useState(-2);
