@@ -2934,7 +2934,7 @@ function Timeline({
   const NCOLS = isMobile ? 21 : 45,
     COL = 60,
     ROW = 52,
-    LABEL = 90,
+    LABEL = 80,
     SH = 4;
   const [offset, setOffset] = useState(-2);
   const [drag, setDrag] = useState(null);
