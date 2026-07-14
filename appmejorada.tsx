@@ -2,8 +2,6 @@
 // @ts-nocheck
 import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { useState, useEffect } from 'react';
-import { createRoot } from 'react-dom/client';
 import { supabase } from './supabase';
 
 // Font y Candado Anti-Zoom para Celulares
@@ -6286,10 +6284,10 @@ export default function AppMejorada() {
           url_ine_dorso: item.url_ine_dorso || null,
           pricing: {
                 ratePerNight: Number(item.tarifa_base) || 0,
-                discountType: Number(item.descuento) > 0 ? 'monto_fijo' : 'ninguno',
+                discountType: item.tipo_descuento || (Number(item.descuento) > 0 ? 'monto_fijo' : 'ninguno'),
                 discountValue: Number(item.descuento) || 0,
                 rateLabel: '',
-                discountReason: '',
+                discountReason: item.motivo_descuento || '',
                 additionals: Array.isArray(item.adicionales) ? item.adicionales : []
               },
           notes: item.notas || '',
@@ -6445,6 +6443,8 @@ export default function AppMejorada() {
           url_ine_dorso: newRes.url_ine_dorso || null,
           tarifa_base: String(newRes.pricing?.ratePerNight || ''),
           descuento: String(newRes.pricing?.discountValue || 0),
+          tipo_descuento: newRes.pricing?.discountType || 'ninguno',
+          motivo_descuento: newRes.pricing?.discountReason || '',
           adicionales: newRes.pricing?.additionals || [],
           solicita_factura: tieneFactura ? 'true' : 'false',  
           lista_negra: newRes.lista_negra || false
