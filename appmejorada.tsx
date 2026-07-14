@@ -1163,16 +1163,34 @@ function ResForm({
       bonifications: [],
     },
   };
-  const [f, setF] = useState(
-    initial
-      ? {
-          ...blank,
-          ...initial,
-          companions: initial.companions || [],
-          pricing: { ...blank.pricing, ...(initial.pricing || {}) },
-        }
-      : blank
-  );
+  const [f, setF] = useState(() => {
+    if (!initial) return blank;
+    
+    // Rellenamos las cajas de adicionales si faltan datos en reservas viejas
+    const addsCount = Math.max(0, (initial.totalGuests || 1) - 2);
+    let loadedAdditionals = initial.pricing?.additionals || [];
+    
+    if (loadedAdditionals.length < addsCount) {
+      loadedAdditionals = [
+        ...loadedAdditionals,
+        ...Array(addsCount - loadedAdditionals.length).fill({
+          ratePerNight: 0,
+          bonificada: false,
+        })
+      ];
+    }
+
+    return {
+      ...blank,
+      ...initial,
+      companions: initial.companions || [],
+      pricing: { 
+        ...blank.pricing, 
+        ...(initial.pricing || {}),
+        additionals: loadedAdditionals 
+      },
+    };
+  });
   const sv = (k, v) => setF((x) => ({ ...x, [k]: v }));
   const nights = f.checkIn && f.checkOut ? diffDays(f.checkIn, f.checkOut) : 0;
   const isHostel = f.propertyId === 'hostel';
@@ -6267,13 +6285,13 @@ export default function AppMejorada() {
           url_ine_frente: item.url_ine_frente || null,
           url_ine_dorso: item.url_ine_dorso || null,
           pricing: {
-            ratePerNight: Number(item.tarifa_base) || 0,
-            discountType: Number(item.descuento) > 0 ? 'monto_fijo' : 'ninguno',
-            discountValue: Number(item.descuento) || 0,
-            rateLabel: '',
-            discountReason: '',
-            additionals: []
-          },
+                ratePerNight: Number(item.tarifa_base) || 0,
+                discountType: Number(item.descuento) > 0 ? 'monto_fijo' : 'ninguno',
+                discountValue: Number(item.descuento) || 0,
+                rateLabel: '',
+                discountReason: '',
+                additionals: Array.isArray(item.adicionales) ? item.adicionales : []
+              },
           notes: item.notas || '',
           notas: item.notas || '',
           requiresInvoice: item.solicita_factura === 'true' || item.solicita_factura === true,
@@ -6406,29 +6424,31 @@ export default function AppMejorada() {
       }
 
       const datosLimpios = {
-        huesped: newRes.guestName || 'Sin nombre',
-        habitacion: newRes.room || null,
-        fecha_ingreso: newRes.checkIn,
-        fecha_salida: newRes.checkOut,
-        estado: newRes.status || 'por_llegar',
-        monto: String(newRes.totalAmount || ''),
-        monto_pagado: String(newRes.paid || ''),
-        canal: newRes.source || 'Directo — Puerta',
-        nacionalidad: newRes.guestNationality || '',
-        tipo_doc: newRes.guestDocType || '',
-        num_doc: newRes.guestDoc || '',
-        telefono: newRes.guestPhonePrefix ? `${newRes.guestPhonePrefix} ${telefonoLimpioGuardar}` : telefonoLimpioGuardar,
-        email: newRes.guestEmail || '',
-        cantidad_huespedes: String(newRes.totalGuests || 1),
-        acompanantes: newRes.companions || [],
-        forma_pago: newRes.paymentMethod || 'Efectivo',
-        notas: String(newRes.notes || newRes.notas || ''),
-        url_ine_frente: newRes.url_ine_frente || null,
-        url_ine_dorso: newRes.url_ine_dorso || null,
-        tarifa_base: String(newRes.pricing?.ratePerNight || ''),
-        solicita_factura: tieneFactura ? 'true' : 'false',  
-        lista_negra: newRes.lista_negra || false
-      };
+          huesped: newRes.guestName || 'Sin nombre',
+          habitacion: newRes.room || null,
+          fecha_ingreso: newRes.checkIn,
+          fecha_salida: newRes.checkOut,
+          estado: newRes.status || 'por_llegar',
+          monto: String(newRes.totalAmount || ''),
+          monto_pagado: String(newRes.paid || ''),
+          canal: newRes.source || 'Directo — Puerta',
+          nacionalidad: newRes.guestNationality || '',
+          tipo_doc: newRes.guestDocType || '',
+          num_doc: newRes.guestDoc || '',
+          telefono: newRes.guestPhonePrefix ? `${newRes.guestPhonePrefix} ${telefonoLimpioGuardar}` : telefonoLimpioGuardar,
+          email: newRes.guestEmail || '',
+          cantidad_huespedes: String(newRes.totalGuests || 1),
+          acompanantes: newRes.companions || [],
+          forma_pago: newRes.paymentMethod || 'Efectivo',
+          notas: String(newRes.notes || newRes.notas || ''),
+          url_ine_frente: newRes.url_ine_frente || null,
+          url_ine_dorso: newRes.url_ine_dorso || null,
+          tarifa_base: String(newRes.pricing?.ratePerNight || ''),
+          descuento: String(newRes.pricing?.discountValue || 0),
+          adicionales: newRes.pricing?.additionals || [],
+          solicita_factura: tieneFactura ? 'true' : 'false',  
+          lista_negra: newRes.lista_negra || false
+        };
 
       // Mantenemos duplicados los formatos en el estado de React para no romper las vistas
       const reservaParaEstado = {
