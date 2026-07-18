@@ -4269,6 +4269,7 @@ function Dashboard({
               return (
                 <div
                   key={r.id + r.type}
+                  onClick={() => onGoTo('abrir_reserva', r)} // <--- ENVIARÁ LA ORDEN DE APERTURA
                   style={{
                     background: '#fff',
                     borderRadius: 10,
@@ -4277,7 +4278,10 @@ function Dashboard({
                     alignItems: 'center',
                     gap: 12,
                     border: '1px solid #F0F0F0',
+                    cursor: 'pointer', // <--- PONE LA MANITO INTERACTIVA
                   }}
+                  onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,.05)')}
+                  onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
                 >
                   <div
                     style={{
@@ -6307,8 +6311,12 @@ export default function AppMejorada() {
     setPrefill({ pid, date });
     setModal('new');
   };
-  const goTo = (newTab, pid) => {
-    setTab(newTab);
+  const goTo = (newTab, data) => {
+    if (newTab === 'abrir_reserva') {
+      setDrawer(data); // ¡Esto abre el panel lateral (Drawer) automáticamente con la reserva!
+    } else {
+      setTab(newTab);
+    }
   };
   const saveRes = async (newRes) => {
     try {
