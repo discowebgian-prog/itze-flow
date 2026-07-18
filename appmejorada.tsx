@@ -2194,21 +2194,47 @@ function ResDrawer({
             }}
           >
             <div>
+              {/* Línea superior: Solo el nombre del Hostel limpio */}
               <div
                 style={{
                   fontSize: 11,
-                  color: 'rgba(255,255,255,.7)',
+                  color: 'rgba(255,255,255,.75)',
                   fontWeight: 700,
                   textTransform: 'uppercase',
                   letterSpacing: 0.4,
-                  marginBottom: 4,
+                  marginBottom: 6,
                 }}
               >
                 {prop?.name}
-                {res.room ? ` · Hab.${res.room}` : ''}
               </div>
-              <div style={{ fontSize: 17, fontWeight: 800, color: '#fff' }}>
-                {res.guestName}
+              {/* Línea principal: Nombre del Huésped + Placa de Habitación destacada */}
+              <div 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 8, 
+                  flexWrap: 'wrap' 
+                }}
+              >
+                <span style={{ fontSize: 18, fontWeight: 800, color: '#fff' }}>
+                  {res.guestName}
+                </span>
+                {res.room && (
+                  <span 
+                    style={{ 
+                      background: 'rgba(255, 255, 255, 0.25)', // Fondo blanco translúcido cristal
+                      color: '#fff', 
+                      padding: '3px 9px', 
+                      borderRadius: 6, 
+                      fontSize: 13, 
+                      fontWeight: 900, // Súper negrita
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      lineHeight: 1
+                    }}
+                  >
+                    {res.room}
+                  </span>
+                )}
               </div>
             </div>
             <button
