@@ -2179,7 +2179,10 @@ function ResDrawer({
           style={{
             padding: '16px 20px',
             borderBottom: '1px solid #F0F0F0',
-            background: res.lista_negra ? '#991B1B' : (prop?.color || '#3B82F6'),
+            // MAGIA: Si está en lista negra usa rojo oscuro, si no, usa el color exacto del estado en el calendario
+            background: res.lista_negra 
+              ? '#991B1B' 
+              : (BLOCK_COLORS[res.status]?.bg || '#3B82F6'), 
             transition: 'background 0.3s ease',
           }}
         >
