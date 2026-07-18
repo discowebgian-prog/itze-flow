@@ -4466,51 +4466,71 @@ function PropertiesPage({
           {sub === 'info' && (
             <div>
               {(() => {
-                const r = propRes.find(
+                // CAMBIO CLAVE: Usamos .filter() para traer a TODOS los actuales
+                const actuales = propRes.filter(
                   (x) =>
-                    parseD(x.checkIn) <= TODAY && TODAY < parseD(x.checkOut)
+                    parseD(x.checkIn) <= TODAY && TODAY < parseD(x.checkOut) && x.status !== 'cancelada'
                 );
-                return r ? (
-                  <div
-                    style={{
-                      background: `linear-gradient(135deg,${prop.color},${prop.color}cc)`,
-                      borderRadius: 12,
-                      padding: '16px 20px',
-                      marginBottom: 14,
-                      color: '#fff',
-                    }}
-                  >
+
+                if (actuales.length === 0) return null;
+
+                return (
+                  <div style={{ marginBottom: 16 }}>
                     <div
                       style={{
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: 700,
+                        color: '#6B7280',
                         textTransform: 'uppercase',
-                        opacity: 0.7,
-                        marginBottom: 6,
+                        marginBottom: 8,
+                        letterSpacing: 0.4,
                       }}
                     >
-                      Huésped actual
+                      Huéspedes Actuales ({actuales.length})
                     </div>
-                    <div style={{ fontWeight: 800, fontSize: 17 }}>
-                      {r.guestName}
-                    </div>
-                    <div style={{ opacity: 0.8, fontSize: 12, marginTop: 3 }}>
-                      {fmtD(r.checkIn)} → {fmtD(r.checkOut)} · {r.guestPhone}
-                    </div>
-                    <div style={{ marginTop: 8 }}>
-                      <span
-                        style={{
-                          background: 'rgba(255,255,255,.2)',
-                          borderRadius: 8,
-                          padding: '3px 10px',
-                          fontSize: 11,
-                        }}
-                      >
-                        Saldo: {currency(r.totalAmount - r.paid)}
-                      </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {actuales.map((r) => (
+                        <div
+                          key={r.id}
+                          style={{
+                            background: `linear-gradient(135deg,${prop.color},${prop.color}cc)`,
+                            borderRadius: 12,
+                            padding: '12px 16px',
+                            color: '#fff',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: 10
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 800, fontSize: 15 }}>
+                              {r.guestName} {r.room ? `· Hab. ${r.room}` : ''}
+                            </div>
+                            <div style={{ opacity: 0.8, fontSize: 11, marginTop: 3 }}>
+                              {fmtD(r.checkIn)} → {fmtD(r.checkOut)} · {r.guestPhone || 'Sin tel'}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span
+                              style={{
+                                background: 'rgba(255,255,255,.2)',
+                                borderRadius: 8,
+                                padding: '4px 10px',
+                                fontSize: 11,
+                                fontWeight: 700,
+                                display: 'inline-block'
+                              }}
+                            >
+                              Saldo: {currency(r.totalAmount - r.paid)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ) : null;
+                );
               })()}
               <div
                 style={{
