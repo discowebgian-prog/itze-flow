@@ -4330,6 +4330,7 @@ function PropertiesPage({
   propStatus,
   setPropStatus,
   initProp,
+  onGoTo, 
 }) {
   const [ap, setAp] = useState(initProp || properties[0]?.id);
   const [sub, setSub] = useState('info');
@@ -4492,6 +4493,7 @@ function PropertiesPage({
                       {actuales.map((r) => (
                         <div
                           key={r.id}
+                          onClick={() => onGoTo && onGoTo('abrir_reserva', r)} // <--- ¡ABRE EL PANEL EN UN CLIC!
                           style={{
                             background: 'linear-gradient(135deg, #10B981, #059669)',
                             borderRadius: 12,
@@ -4501,8 +4503,12 @@ function PropertiesPage({
                             justifyContent: 'space-between',
                             alignItems: 'center',
                             flexWrap: 'wrap',
-                            gap: 10
+                            gap: 10,
+                            cursor: 'pointer', // <--- PONE LA MANITO INTERACTIVA
+                            transition: 'all 0.2s'
                           }}
+                          onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}
+                          onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
                         >
                           <div>
                             <div style={{ fontWeight: 800, fontSize: 15 }}>
@@ -6896,6 +6902,7 @@ const toggleBlacklist = async (id, currentStatus) => {
               propStatus={propStatus}
               setPropStatus={setPropStatus}
               initProp={initProp}
+              onGoTo={goTo}
             />
           )}
           {tab === 'huespedes' && (
