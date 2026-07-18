@@ -2333,32 +2333,33 @@ function ResDrawer({
               </div>
             </div>
           </div>
+          {/* FILA SUPERIOR: Tiempos de la estadía (3 columnas en línea) */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 10,
-              marginBottom: 14,
+              gridTemplateColumns: '1fr 1fr 1fr',
+              gap: 8,
+              marginBottom: 8,
             }}
           >
             {[
               ['Check-in', fmtD(res.checkIn)],
               ['Check-out', fmtD(res.checkOut)],
               ['Duración', nights + ' noche' + (nights !== 1 ? 's' : '')],
-              ['Total', currency(res.totalAmount)],
             ].map(([l, v]) => (
               <div
                 key={l}
                 style={{
                   background: '#F9FAFB',
                   borderRadius: 10,
-                  padding: '10px 14px',
+                  padding: '10px 4px',
                   border: '1px solid #F0F0F0',
+                  textAlign: 'center',
                 }}
               >
                 <div
                   style={{
-                    fontSize: 10,
+                    fontSize: 9.5,
                     color: '#9CA3AF',
                     fontWeight: 700,
                     textTransform: 'uppercase',
@@ -2367,9 +2368,39 @@ function ResDrawer({
                 >
                   {l}
                 </div>
-                <div style={{ fontWeight: 700, color: '#111', fontSize: 13 }}>{v}</div>
+                <div style={{ fontWeight: 700, color: '#111', fontSize: 12.5 }}>
+                  {v}
+                </div>
               </div>
             ))}
+          </div>
+
+          {/* FILA INFERIOR: Bloque masivo del Total General */}
+          <div
+            style={{
+              background: '#F9FAFB',
+              borderRadius: 10,
+              padding: '12px 14px',
+              border: '1px solid #F0F0F0',
+              marginBottom: 14,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                color: '#9CA3AF',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+              }}
+            >
+              Total Reserva
+            </div>
+            <div style={{ fontWeight: 800, color: '#111', fontSize: 16 }}>
+              {currency(res.totalAmount)}
+            </div>
           </div>
           <div
             style={{
