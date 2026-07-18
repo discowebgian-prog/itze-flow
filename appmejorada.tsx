@@ -6995,7 +6995,7 @@ const toggleBlacklist = async (id, currentStatus) => {
           background: '#fff',
           borderTop: '1px solid #F0F0F0',
           zIndex: 99,
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 8px) + 16px)',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 8px) + 20px)',
           display: 'flex',
           overflowX: 'auto',
           WebkitOverflowScrolling: 'touch',
