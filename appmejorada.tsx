@@ -4493,7 +4493,7 @@ function PropertiesPage({
                         <div
                           key={r.id}
                           style={{
-                            background: `linear-gradient(135deg,${prop.color},${prop.color}cc)`,
+                            background: 'linear-gradient(135deg, #10B981, #059669)',
                             borderRadius: 12,
                             padding: '12px 16px',
                             color: '#fff',
