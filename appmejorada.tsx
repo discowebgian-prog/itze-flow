@@ -5111,7 +5111,7 @@ async function exportToExcel(reservations, properties) {
 }
 
 // ── FINANCE PAGE ──────────────────────────────────────────────────────────────
-function FinancePage({ reservations, allRes, properties, user, restoreRes }) {
+function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoTo }) {
   const [showTrash, setShowTrash] = useState(false);
   const pending = reservations.filter(
     (r) => r.status !== 'cancelada' && r.paid < r.totalAmount
@@ -5571,6 +5571,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes }) {
           return (
             <div
               key={r.id}
+              onClick={() => onGoTo && onGoTo('abrir_reserva', r)} // <--- ¡ABRE LA RESERVA AL HACER CLIC!
               style={{
                 background: '#fff',
                 borderRadius: 10,
@@ -5579,7 +5580,11 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes }) {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 border: '1px solid #F0F0F0',
+                cursor: 'pointer', // <--- PONE LA MANITO INTERACTIVA
+                transition: 'all 0.2s',
               }}
+              onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,.06)')}
+              onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
             >
               <div>
                 <div style={{ fontWeight: 700, fontSize: 13, color: '#111' }}>
@@ -6887,6 +6892,7 @@ const toggleBlacklist = async (id, currentStatus) => {
               properties={visProps}
               user={user}
               restoreRes={restoreRes}
+              onGoTo={goTo}
             />
           )}
         </div>
