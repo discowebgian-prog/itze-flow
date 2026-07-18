@@ -2367,7 +2367,7 @@ function ResDrawer({
                 >
                   {l}
                 </div>
-                <div style={{ fontWeight: 700, color: '#111' }}>{v}</div>
+                <div style={{ fontWeight: 700, color: '#111', fontSize: 13 }}>{v}</div>
               </div>
             ))}
           </div>
