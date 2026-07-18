@@ -2272,7 +2272,7 @@ function ResDrawer({
               gap: 6,
             }}
           >
-            <Badge status={res.status} />
+           <Badge status={res.status} large />
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
               {res.lista_negra && (
                 <span
