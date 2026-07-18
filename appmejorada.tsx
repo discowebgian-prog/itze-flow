@@ -2394,9 +2394,16 @@ function ResDrawer({
                 </span>
               )}
               {res.notes && (
-                <span style={{ fontSize: 12, color: '#D97706', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Icon name="edit" size={14} /> Notas: {res.notes}
-                </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%', marginTop: 4 }}>
+                  {/* Título en mayúsculas y pequeño como indicador */}
+                  <span style={{ fontSize: 10, color: '#B45309', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 5, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                    <Icon name="edit" size={13} /> Notas Internas
+                  </span>
+                  {/* Bloque de texto más grande, destacado y que respeta saltos de línea */}
+                  <div style={{ fontSize: 13.5, color: '#78350F', fontWeight: 600, background: '#FEF3C7', padding: '8px 12px', borderRadius: 8, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>
+                    {res.notes}
+                  </div>
+                </div>
               )}
             </div>
           )}
