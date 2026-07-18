@@ -3627,7 +3627,7 @@ function Timeline({
                       height: '100%',
                       borderRight: '1px solid #F0F0F0',
                       background:
-                        fmt(d) === fmt(TODAY) ? '#F0F7FF' : getCellBg(d),
+                        fmt(d) === fmt(TODAY) ? '#DBEAFE' : getCellBg(d),
                       cursor: hdrDrag ? 'grabbing' : 'cell',
                     }}
                     onDoubleClick={() => {
