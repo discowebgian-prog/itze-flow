@@ -4568,68 +4568,45 @@ function PropertiesPage({
           {sub === 'info' && (
             <div>
               {(() => {
-                // CAMBIO CLAVE: Usamos .filter() para traer a TODOS los actuales
                 const actuales = propRes.filter(
-                  (x) =>
-                    parseD(x.checkIn) <= TODAY && TODAY < parseD(x.checkOut) && x.status !== 'cancelada'
+                  (x) => parseD(x.checkIn) <= TODAY && TODAY < parseD(x.checkOut) && x.status !== 'cancelada'
                 );
 
-                if (actuales.length === 0) return null;
+                if (actuales.length === 0) return (
+                  <div style={{ textAlign: 'center', padding: '30px 20px', background: '#F8FAFC', borderRadius: 12, border: '1px dashed #E5E7EB', color: '#9CA3AF', fontSize: 13 }}>
+                    No hay huéspedes en esta propiedad hoy.
+                  </div>
+                );
 
                 return (
                   <div style={{ marginBottom: 16 }}>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: '#6B7280',
-                        textTransform: 'uppercase',
-                        marginBottom: 8,
-                        letterSpacing: 0.4,
-                      }}
-                    >
+                    <div style={{ fontSize: 11, fontWeight: 800, color: '#6B7280', textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5 }}>
                       Huéspedes Actuales ({actuales.length})
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {actuales.map((r) => (
                         <div
                           key={r.id}
-                          onClick={() => onGoTo && onGoTo('abrir_reserva', r)} // <--- ¡ABRE EL PANEL EN UN CLIC!
+                          onClick={() => onGoTo && onGoTo('abrir_reserva', r)}
                           style={{
                             background: 'linear-gradient(135deg, #10B981, #059669)',
-                            borderRadius: 12,
-                            padding: '12px 16px',
-                            color: '#fff',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            flexWrap: 'wrap',
-                            gap: 10,
-                            cursor: 'pointer', // <--- PONE LA MANITO INTERACTIVA
-                            transition: 'all 0.2s'
+                            borderRadius: 12, padding: '14px 16px', color: '#fff',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            flexWrap: 'wrap', gap: 10, cursor: 'pointer', transition: 'all 0.2s',
+                            boxShadow: '0 4px 12px rgba(16,185,129,0.2)'
                           }}
-                          onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}
-                          onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
                         >
                           <div>
                             <div style={{ fontWeight: 800, fontSize: 15 }}>
                               {r.guestName} {r.room ? `· Hab. ${r.room}` : ''}
                             </div>
-                            <div style={{ opacity: 0.8, fontSize: 11, marginTop: 3 }}>
-                              {fmtD(r.checkIn)} → {fmtD(r.checkOut)} · {r.guestPhone || 'Sin tel'}
+                            <div style={{ opacity: 0.85, fontSize: 11, marginTop: 4, display: 'flex', gap: 6, alignItems: 'center' }}>
+                              <span>CI: {fmtD(r.checkIn)}</span>
+                              <span>CO: {fmtD(r.checkOut)}</span>
                             </div>
                           </div>
                           <div style={{ textAlign: 'right' }}>
-                            <span
-                              style={{
-                                background: 'rgba(255,255,255,.2)',
-                                borderRadius: 8,
-                                padding: '4px 10px',
-                                fontSize: 11,
-                                fontWeight: 700,
-                                display: 'inline-block'
-                              }}
-                            >
+                            <span style={{ background: 'rgba(255,255,255,.2)', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 800, display: 'inline-block' }}>
                               Saldo: {currency(r.totalAmount - r.paid)}
                             </span>
                           </div>
@@ -4639,68 +4616,6 @@ function PropertiesPage({
                   </div>
                 );
               })()}
-              <div
-                style={{
-                  background: '#fff',
-                  borderRadius: 12,
-                  padding: '16px 20px',
-                  border: '1px solid #F0F0F0',
-                }}
-              >
-                <div
-                  style={{
-                    fontWeight: 700,
-                    fontSize: 13,
-                    color: '#374151',
-                    marginBottom: 12,
-                  }}
-                >
-                  Últimas reservas
-                </div>
-                {propRes.slice(0, 5).map((r) => (
-                  <div
-                    key={r.id}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '8px 0',
-                      borderBottom: '1px solid #F9FAFB',
-                    }}
-                  >
-                    <div>
-                      <div
-                        style={{ fontWeight: 600, fontSize: 13, color: '#111' }}
-                      >
-                        {r.guestName}
-                      </div>
-                      <div style={{ fontSize: 11, color: '#9CA3AF' }}>
-                        {fmtD(r.checkIn)} → {fmtD(r.checkOut)}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <Badge status={r.status} />
-                      <div
-                        style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}
-                      >
-                        {currency(r.totalAmount)}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {propRes.length === 0 && (
-                  <div
-                    style={{
-                      color: '#D1D5DB',
-                      fontSize: 13,
-                      textAlign: 'center',
-                      padding: 20,
-                    }}
-                  >
-                    Sin reservas
-                  </div>
-                )}
-              </div>
             </div>
           )}
           {sub === 'reservas' && (
@@ -4956,173 +4871,108 @@ function PropertiesPage({
     </div>
   );
 }
-
-// ── GUESTS PAGE ───────────────────────────────────────────────────────────────
+// ── GUESTS PAGE (DIRECTORIO CRM) ──────────────────────────────────────────────
 function GuestsPage({ reservations, properties, onView }) {
   const [q, setQ] = useState('');
-  const all = reservations.filter(
-    (r) => !q || r.guestName.toLowerCase().includes(q.toLowerCase())
-  );
-  const unique = [...new Map(all.map((r) => [r.guestName, r])).values()];
+  
+  // Agrupamos el historial de los clientes
   const gdb = buildGuestDB(reservations);
+  
+  // Filtramos por búsqueda (nombre o documento)
+  const allGuests = Object.values(gdb).filter(g => 
+    !q || 
+    g.name.toLowerCase().includes(q.toLowerCase()) || 
+    (g.doc && g.doc.toLowerCase().includes(q.toLowerCase()))
+  );
+
+  // Ordenamos por los que más dinero han dejado (los mejores clientes primero)
+  allGuests.sort((a, b) => b.totalSpent - a.totalSpent);
+
   return (
     <div>
-      <h2
-        style={{
-          margin: '0 0 16px',
-          fontSize: 20,
-          fontWeight: 800,
-          color: '#111',
-        }}
-      >
-        Huéspedes
-      </h2>
+      <div style={{ marginBottom: 16 }}>
+        <h2 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 800, color: '#111' }}>Directorio CRM</h2>
+        <p style={{ margin: 0, fontSize: 12, color: '#6B7280' }}>Gestión de fidelización y valor de clientes</p>
+      </div>
+
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Buscar huésped..."
+        placeholder="Buscar por nombre o documento..."
         style={{
-          width: '100%',
-          padding: '10px 14px',
-          border: '1.5px solid #E5E7EB',
-          borderRadius: 10,
-          fontSize: 13,
-          fontFamily: 'inherit',
-          outline: 'none',
-          marginBottom: 14,
-          boxSizing: 'border-box',
+          width: '100%', padding: '10px 14px', border: '1.5px solid #E5E7EB', borderRadius: 10,
+          fontSize: 13, fontFamily: 'inherit', outline: 'none', marginBottom: 16, boxSizing: 'border-box',
         }}
       />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {unique.map((r) => {
-          const stays = all.filter((x) => x.guestName === r.guestName);
-          const prop = properties.find((p) => p.id === r.propertyId);
-          const gk = (r.guestDoc || '').replace(/\s+/g, '').toLowerCase();
-          const gp = gdb[gk];
-          const freq = gp ? freqBadge(gp.stays.length) : null;
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+        {allGuests.map((g, idx) => {
+          const freq = freqBadge(g.stays.length);
+          // Obtenemos la última reserva para ver sus detalles rápidos
+          const lastRes = reservations.find(r => r.id === g.stays[g.stays.length - 1]);
+
           return (
             <div
-              key={r.id}
+              key={idx}
+              onClick={() => lastRes && onView(lastRes)}
               style={{
-                background: '#fff',
-                borderRadius: 12,
-                padding: '14px 18px',
-                border: '1px solid #F0F0F0',
-                cursor: 'pointer',
-                display: 'flex',
-                gap: 12,
-                alignItems: 'center',
+                background: '#fff', borderRadius: 12, padding: '16px', border: '1px solid #F0F0F0',
+                cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 12,
+                boxShadow: '0 2px 6px rgba(0,0,0,.02)', transition: 'transform 0.1s'
               }}
-              onClick={() => onView(r)}
+              onMouseOver={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
+              onMouseOut={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
             >
-              <Avatar name={r.guestName} size={40} />
-              <div style={{ flex: 1, overflow: 'hidden' }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    marginBottom: 2,
-                  }}
-                >
-                  <div style={{ fontWeight: 700, fontSize: 14, color: '#111' }}>
-                    {r.guestName}
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <Avatar name={g.name} size={46} />
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                  <div style={{ fontWeight: 800, fontSize: 15, color: '#111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {g.name}
                   </div>
-                  {freq && (
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: freq.color,
-                        background: freq.bg,
-                        padding: '1px 7px',
-                        borderRadius: 12,
-                      }}
-                    >
-                      {freq.label}
-                    </span>
-                  )}
-                </div>
-                {/* NUEVO: Fechas de Check-in y Check-out agregadas abajo del nombre */}
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: '#2563EB',
-                    fontWeight: 600,
-                    marginBottom: 4,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                  }}
-                >
-                  <span>📅</span>
-                  <span>
-                    {fmtD(r.checkIn)} al {fmtD(r.checkOut)}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: '#9CA3AF',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
-                >
-                  <span>{r.guestDoc}</span>
-                  {r.guestPhone && (
-                    <>
-                      <span>·</span>
-                      <span>{r.guestPhone}</span>
-                      <a
-                        href={waLink(
-                          r.guestPhone,
-                          r.guestPhonePrefix,
-                          r.guestNationality
-                        )}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 20,
-                          height: 20,
-                          borderRadius: 5,
-                          background: '#22C55E',
-                          textDecoration: 'none',
-                        }}
-                        title="WhatsApp"
-                      >
-                        💬
-                      </a>
-                    </>
-                  )}
+                  <div style={{ fontSize: 11, color: '#6B7280', display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}>
+                    <span>{g.doc || 'Sin DOC'}</span>
+                    {freq && (
+                      <span style={{ fontSize: 10, fontWeight: 800, color: freq.color, background: freq.bg, padding: '2px 6px', borderRadius: 6 }}>
+                        {freq.label}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: 11, color: '#9CA3AF' }}>
-                  {prop?.emoji} {prop?.name}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#F8FAFC', borderRadius: 8, padding: '10px', gap: 8 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 700, textTransform: 'uppercase' }}>Visitas</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#374151' }}>{g.stays.length}</div>
                 </div>
-                <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>
-                  {stays.length} estadía{stays.length !== 1 ? 's' : ''}
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 700, textTransform: 'uppercase' }}>Inversión</div>
+                  <div style={{ fontSize: 14, fontWeight: 900, color: '#10B981' }}>{currency(g.totalSpent)}</div>
                 </div>
-                <Badge status={r.status} />
               </div>
+
+              {g.phone && lastRes && (
+                <a
+                  href={waLink(g.phone, lastRes.guestPhonePrefix, lastRes.guestNationality)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    width: '100%', padding: '8px', borderRadius: 8, background: '#ECFDF5', color: '#059669',
+                    textDecoration: 'none', fontWeight: 700, fontSize: 12, border: '1px solid #A7F3D0'
+                  }}
+                >
+                  <Icon name="whatsapp" size={16} /> Enviar WhatsApp
+                </a>
+              )}
             </div>
           );
         })}
-        {unique.length === 0 && (
-          <div
-            style={{
-              textAlign: 'center',
-              color: '#D1D5DB',
-              padding: 40,
-              fontSize: 13,
-            }}
-          >
-            Sin resultados
+        
+        {allGuests.length === 0 && (
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#D1D5DB', padding: 40, fontSize: 13 }}>
+            No se encontraron clientes.
           </div>
         )}
       </div>
@@ -5743,207 +5593,195 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
     </div>
   );
 }
-
-// ── RESERVATIONS LIST ─────────────────────────────────────────────────────────
+// ── RESERVATIONS LIST (AGENDA DIARIA ESTILO PULSE) ────────────────────────────
 function ResList({ reservations, properties, onView, onAdd }) {
-  const [filter, setFilter] = useState('todas');
+  const [selectedDate, setSelectedDate] = useState(fmt(TODAY));
   const [q, setQ] = useState('');
-  const filtered = reservations
-    .filter((r) => {
-      if (filter !== 'todas' && r.status !== filter) return false;
-      if (q && !r.guestName.toLowerCase().includes(q.toLowerCase())) return false;
-      return true;
-    })
-    .sort((a, b) => b.checkIn.localeCompare(a.checkIn)); // <-- ¡ESTA ES LA SOLUCIÓN! Ordena de más reciente a más antigua
-  return (
-    <div>
+
+  // Generamos un carrusel de 60 días (15 días al pasado y 45 al futuro)
+  const ribbonDates = Array.from({ length: 60 }, (_, i) => addDays(TODAY, i - 15));
+
+  // Auto-scroll para centrar el día seleccionado
+  useEffect(() => {
+    if (!q) {
+      const el = document.getElementById(`date-${selectedDate}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [selectedDate, q]);
+
+  // Si hay búsqueda, mostramos lista plana. Si no, mostramos la Agenda del Día.
+  const isSearching = q.length > 0;
+  const searchedRes = isSearching
+    ? reservations
+        .filter((r) => r.guestName.toLowerCase().includes(q.toLowerCase()))
+        .sort((a, b) => b.checkIn.localeCompare(a.checkIn))
+    : [];
+
+  // Lógica de Agenda del Día Seleccionado
+  const llegadas = reservations.filter(r => r.checkIn === selectedDate && r.status !== 'cancelada');
+  const salidas = reservations.filter(r => r.checkOut === selectedDate && r.status !== 'cancelada');
+  const hospedados = reservations.filter(r => r.checkIn < selectedDate && r.checkOut > selectedDate && r.status !== 'cancelada');
+  const canceladas = reservations.filter(r => r.checkIn === selectedDate && r.status === 'cancelada');
+
+  // Componente interno para dibujar cada tarjetita de reserva
+  const ResCard = ({ r }) => {
+    const prop = properties.find((p) => p.id === r.propertyId);
+    const saldo = r.totalAmount - r.paid;
+    return (
       <div
+        onClick={() => onView(r)}
         style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 16,
+          background: '#fff', borderRadius: 12, padding: '14px 16px', border: '1px solid #F0F0F0',
+          cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          boxShadow: '0 1px 3px rgba(0,0,0,.02)', marginBottom: 8
         }}
       >
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#111' }}>
-          Reservas
-        </h2>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <Avatar name={r.guestName} size={38} />
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: '#111' }}>{r.guestName}</div>
+            <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>
+              {prop?.name} {r.room ? `· Hab.${r.room}` : ''}
+            </div>
+            <div style={{ fontSize: 10, fontWeight: 600, color: '#6B7280', marginTop: 4, display: 'flex', gap: 6 }}>
+              <span>CI: {fmtD(r.checkIn)}</span>
+              <span>CO: {fmtD(r.checkOut)}</span>
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+          <Badge status={r.status} />
+          {saldo > 0 ? (
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#EF4444' }}>Debe {currency(saldo)}</span>
+          ) : (
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#10B981' }}>Pagado</span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#111' }}>Agenda Diaria</h2>
         <button
           onClick={() => onAdd()}
           style={{
-            padding: '8px 16px',
-            background: '#3B82F6',
-            border: 'none',
-            borderRadius: 8,
-            color: '#fff',
-            fontWeight: 700,
-            fontSize: 13,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
+            padding: '8px 16px', background: '#3B82F6', border: 'none', borderRadius: 8,
+            color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
           }}
         >
           + Nueva
         </button>
       </div>
+
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Buscar huésped..."
+        placeholder="Buscar por nombre de huésped..."
         style={{
-          width: '100%',
-          padding: '10px 14px',
-          border: '1.5px solid #E5E7EB',
-          borderRadius: 10,
-          fontSize: 13,
-          fontFamily: 'inherit',
-          outline: 'none',
-          marginBottom: 12,
-          boxSizing: 'border-box',
+          width: '100%', padding: '10px 14px', border: '1.5px solid #E5E7EB', borderRadius: 10,
+          fontSize: 13, fontFamily: 'inherit', outline: 'none', marginBottom: 16, boxSizing: 'border-box',
         }}
       />
-      <div
-        style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}
-      >
-        {['todas', 'hospedado', 'por_llegar', 'finalizada', 'cancelada'].map(
-          (f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              style={{
-                padding: '5px 14px',
-                borderRadius: 16,
-                border: 'none',
-                fontFamily: 'inherit',
-                fontWeight: 700,
-                fontSize: 11,
-                cursor: 'pointer',
-                background: filter === f ? '#1E293B' : '#F3F4F6',
-                color: filter === f ? '#fff' : '#6B7280',
-                textTransform: 'capitalize',
-              }}
-            >
-              {f}
-            </button>
-          )
-        )}
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {filtered.map((r) => {
-          const prop = properties.find((p) => p.id === r.propertyId);
-          const saldo = r.totalAmount - r.paid;
-          return (
-            <div
-              key={r.id}
-              style={{
-                background: '#fff',
-                borderRadius: 12,
-                padding: '14px 18px',
-                border: '1px solid #F0F0F0',
-                cursor: 'pointer',
-              }}
-              onClick={() => onView(r)}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: 8,
-                }}
-              >
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                  <Avatar name={r.guestName} size={36} />
-                  <div>
-                    <div
-                      style={{ fontWeight: 700, fontSize: 14, color: '#111' }}
-                    >
-                      {r.guestName}
-                    </div>
-                    <div style={{ fontSize: 11, color: '#9CA3AF' }}>
-                      {prop?.emoji} {prop?.name}
-                      {r.room ? ` · Hab.${r.room}` : ''}
-                    </div>
-                  </div>
-                </div>
-                <Badge status={r.status} />
-              </div>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr',
-                  gap: 8,
-                  fontSize: 12,
-                }}
-              >
-                <div>
-                  <span style={{ color: '#9CA3AF' }}>CI</span>
-                  <br />
-                  <b style={{ color: '#374151' }}>{fmtD(r.checkIn)}</b>
-                </div>
-                <div>
-                  <span style={{ color: '#9CA3AF' }}>CO</span>
-                  <br />
-                  <b style={{ color: '#374151' }}>{fmtD(r.checkOut)}</b>
-                </div>
-                <div>
-                  <span style={{ color: '#9CA3AF' }}>Saldo</span>
-                  <br />
-                  <b style={{ color: saldo > 0 ? '#EF4444' : '#10B981' }}>
-                    {currency(saldo)}
-                  </b>
-                </div>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  gap: 8,
-                  marginTop: 6,
-                  flexWrap: 'wrap',
-                  alignItems: 'center',
-                }}
-              >
-                <span style={{ fontSize: 10, fontWeight: 600, color: '#555' }}>
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      background: srcColor(r.source),
-                      display: 'inline-block',
-                      marginRight: 4,
-                    }}
-                  />
-                  {srcLabel(r.source)}
-                </span>
-                {r.requiresInvoice && (
-                  <span
-                    style={{ fontSize: 10, fontWeight: 700, color: '#7C3AED' }}
-                  >
-                    🧾 Factura
-                  </span>
-                )}
-              </div>
-            </div>
-          );
-        })}
-        {filtered.length === 0 && (
-          <div
-            style={{
-              textAlign: 'center',
-              color: '#D1D5DB',
-              padding: 40,
-              fontSize: 13,
-            }}
-          >
-            Sin reservas
+
+      {isSearching ? (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#6B7280', marginBottom: 10, textTransform: 'uppercase' }}>
+            Resultados de búsqueda ({searchedRes.length})
           </div>
-        )}
-      </div>
+          {searchedRes.map((r) => <ResCard key={r.id} r={r} />)}
+          {searchedRes.length === 0 && <div style={{ textAlign: 'center', color: '#9CA3AF', padding: 20 }}>No se encontraron huéspedes.</div>}
+        </div>
+      ) : (
+        <>
+          {/* CARRUSEL DE FECHAS ESTILO PULSE */}
+          <div style={{ display: 'flex', overflowX: 'auto', gap: 8, paddingBottom: 12, marginBottom: 16, borderBottom: '1px solid #E5E7EB', scrollBehavior: 'smooth' }} className="hide-scroll">
+            {ribbonDates.map((d) => {
+              const dStr = fmt(d);
+              const isSelected = selectedDate === dStr;
+              const isToday = fmt(TODAY) === dStr;
+              const hasActivity = reservations.some(r => (r.checkIn === dStr || r.checkOut === dStr) && r.status !== 'cancelada');
+              
+              return (
+                <div
+                  id={`date-${dStr}`}
+                  key={dStr}
+                  onClick={() => setSelectedDate(dStr)}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    minWidth: 48, height: 56, borderRadius: 12, cursor: 'pointer', flexShrink: 0,
+                    background: isSelected ? '#3B82F6' : isToday ? '#EFF6FF' : '#fff',
+                    border: `1.5px solid ${isSelected ? '#3B82F6' : isToday ? '#BFDBFE' : '#E5E7EB'}`,
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: isSelected ? 'rgba(255,255,255,0.8)' : '#6B7280' }}>
+                    {DAYS[d.getDay()]}
+                  </span>
+                  <span style={{ fontSize: 16, fontWeight: 900, color: isSelected ? '#fff' : '#111' }}>
+                    {d.getDate()}
+                  </span>
+                  <div style={{ width: 4, height: 4, borderRadius: '50%', background: hasActivity ? (isSelected ? '#fff' : '#10B981') : 'transparent', marginTop: 2 }} />
+                </div>
+              );
+            })}
+          </div>
+
+          {/* DESGLOSE DEL DÍA */}
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 16 }}>
+              {selectedDate === fmt(TODAY) ? 'Hoy, ' : ''} {parseD(selectedDate).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </div>
+
+            {llegadas.length === 0 && salidas.length === 0 && hospedados.length === 0 && canceladas.length === 0 && (
+              <div style={{ textAlign: 'center', color: '#9CA3AF', padding: 30, fontSize: 13, background: '#fff', borderRadius: 12, border: '1px dashed #E5E7EB' }}>
+                No hay movimientos registrados para este día.
+              </div>
+            )}
+
+            {llegadas.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <h3 style={{ fontSize: 12, color: '#059669', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  📥 Llegadas ({llegadas.length})
+                </h3>
+                {llegadas.map(r => <ResCard key={r.id} r={r} />)}
+              </div>
+            )}
+
+            {salidas.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <h3 style={{ fontSize: 12, color: '#D97706', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  📤 Salidas ({salidas.length})
+                </h3>
+                {salidas.map(r => <ResCard key={r.id} r={r} />)}
+              </div>
+            )}
+
+            {hospedados.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <h3 style={{ fontSize: 12, color: '#2563EB', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  🛏️ En Estadía ({hospedados.length})
+                </h3>
+                {hospedados.map(r => <ResCard key={r.id} r={r} />)}
+              </div>
+            )}
+
+            {canceladas.length > 0 && (
+              <div style={{ marginBottom: 20, opacity: 0.7 }}>
+                <h3 style={{ fontSize: 12, color: '#DC2626', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  🚫 Canceladas ({canceladas.length})
+                </h3>
+                {canceladas.map(r => <ResCard key={r.id} r={r} />)}
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
-
-// ── LOGIN ─────────────────────────────────────────────────────────────────────
 // ── LOGIN ─────────────────────────────────────────────────────────────────────
 function Login({ onLogin }) {
   const [uid, setUid] = useState('');
