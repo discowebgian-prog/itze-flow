@@ -3288,43 +3288,38 @@ function Timeline({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 16,
+          marginBottom: 20,
           flexWrap: 'wrap',
-          gap: 8,
+          gap: 16,
         }}
       >
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#111' }}>
-          Calendario
-        </h2>
-        <div
-          style={{
-            display: 'flex',
-            gap: 8,
-            alignItems: 'center',
-            flexWrap: 'wrap',
-          }}
-        >
+        {/* GRUPO IZQUIERDO: Título y Vistas */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: '#111', letterSpacing: -0.5 }}>
+            Calendario
+          </h2>
           <div
             style={{
               display: 'flex',
-              background: '#F3F4F6',
-              borderRadius: 9,
-              padding: 3,
+              background: '#F1F5F9',
+              borderRadius: 10,
+              padding: 4,
               gap: 2,
             }}
           >
             <button
               onClick={() => setCalView('lista')}
               style={{
-                padding: '5px 11px',
-                borderRadius: 7,
+                padding: '6px 12px',
+                borderRadius: 8,
                 border: 'none',
                 fontFamily: 'inherit',
                 fontWeight: 700,
                 fontSize: 12,
                 cursor: 'pointer',
                 background: 'transparent',
-                color: '#9CA3AF',
+                color: '#64748B',
+                transition: 'all 0.2s'
               }}
             >
               📋 Lista
@@ -3332,8 +3327,8 @@ function Timeline({
             <button
               onClick={() => setCalView('timeline')}
               style={{
-                padding: '5px 11px',
-                borderRadius: 7,
+                padding: '6px 12px',
+                borderRadius: 8,
                 border: 'none',
                 fontFamily: 'inherit',
                 fontWeight: 700,
@@ -3341,73 +3336,109 @@ function Timeline({
                 cursor: 'pointer',
                 background: '#fff',
                 color: '#1E40AF',
-                boxShadow: '0 1px 3px rgba(0,0,0,.1)',
+                boxShadow: '0 2px 4px rgba(0,0,0,.04)',
+                transition: 'all 0.2s'
               }}
             >
               📅 Timeline
             </button>
           </div>
-          <button
-            onClick={() => setOffset((s) => s - 7)}
+        </div>
+
+        {/* GRUPO DERECHO: Navegación de Fechas y Acción Principal */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 12,
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
+          {/* Navegador de fechas estilo "Píldora Unida" */}
+          <div
             style={{
-              padding: '6px 12px',
-              border: '1px solid #E5E7EB',
-              borderRadius: 8,
+              display: 'flex',
               background: '#fff',
-              cursor: 'pointer',
-              fontSize: 13,
-              fontFamily: 'inherit',
+              border: '1px solid #E2E8F0',
+              borderRadius: 10,
+              overflow: 'hidden',
+              boxShadow: '0 1px 2px rgba(0,0,0,.03)',
             }}
           >
-            ← 7d
-          </button>
-          <button
-            onClick={() => {
-              setOffset(-2); // Reinicia los días
-              // Hace que el scroll vuelva al inicio de forma suave
-              document.getElementById('calendario-scroll')?.scrollTo({ left: 0, behavior: 'smooth' }); 
-            }}
-            style={{
-              padding: '6px 12px',
-              border: '1px solid #3B82F6',
-              borderRadius: 8,
-              background: '#EFF6FF',
-              color: '#3B82F6',
-              cursor: 'pointer',
-              fontSize: 13,
-              fontWeight: 700,
-              fontFamily: 'inherit',
-            }}
-          >
-            Hoy
-          </button>
-          <button
-            onClick={() => setOffset((s) => s + 7)}
-            style={{
-              padding: '6px 12px',
-              border: '1px solid #E5E7EB',
-              borderRadius: 8,
-              background: '#fff',
-              cursor: 'pointer',
-              fontSize: 13,
-              fontFamily: 'inherit',
-            }}
-          >
-            7d →
-          </button>
+            <button
+              onClick={() => setOffset((s) => s - 7)}
+              style={{
+                padding: '8px 14px',
+                border: 'none',
+                borderRight: '1px solid #E2E8F0',
+                background: 'transparent',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 600,
+                fontFamily: 'inherit',
+                color: '#475569',
+              }}
+              onMouseOver={(e) => (e.currentTarget.style.background = '#F8FAFC')}
+              onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+            >
+              ← 7d
+            </button>
+            <button
+              onClick={() => {
+                setOffset(-2);
+                document.getElementById('calendario-scroll')?.scrollTo({ left: 0, behavior: 'smooth' });
+              }}
+              style={{
+                padding: '8px 16px',
+                border: 'none',
+                borderRight: '1px solid #E2E8F0',
+                background: '#F0F9FF',
+                color: '#2563EB',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 800,
+                fontFamily: 'inherit',
+              }}
+            >
+              Hoy
+            </button>
+            <button
+              onClick={() => setOffset((s) => s + 7)}
+              style={{
+                padding: '8px 14px',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 600,
+                fontFamily: 'inherit',
+                color: '#475569',
+              }}
+              onMouseOver={(e) => (e.currentTarget.style.background = '#F8FAFC')}
+              onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+            >
+              7d →
+            </button>
+          </div>
+
+          {/* Botón de Acción Principal */}
           <button
             onClick={() => onAddRes()}
             style={{
-              padding: '6px 14px',
+              padding: '8px 16px',
               background: '#3B82F6',
               border: 'none',
-              borderRadius: 8,
+              borderRadius: 10,
               color: '#fff',
               fontWeight: 700,
               fontSize: 13,
               cursor: 'pointer',
               fontFamily: 'inherit',
+              boxShadow: '0 2px 6px rgba(59,130,246,.25)',
+              transition: 'transform 0.1s',
             }}
+            onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.96)')}
+            onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
           >
             + Reserva
           </button>
