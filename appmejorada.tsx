@@ -5748,11 +5748,13 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
 function ResList({ reservations, properties, onView, onAdd }) {
   const [filter, setFilter] = useState('todas');
   const [q, setQ] = useState('');
-  const filtered = reservations.filter((r) => {
-    if (filter !== 'todas' && r.status !== filter) return false;
-    if (q && !r.guestName.toLowerCase().includes(q.toLowerCase())) return false;
-    return true;
-  });
+  const filtered = reservations
+    .filter((r) => {
+      if (filter !== 'todas' && r.status !== filter) return false;
+      if (q && !r.guestName.toLowerCase().includes(q.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a, b) => b.checkIn.localeCompare(a.checkIn)); // <-- ¡ESTA ES LA SOLUCIÓN! Ordena de más reciente a más antigua
   return (
     <div>
       <div
