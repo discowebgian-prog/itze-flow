@@ -7048,7 +7048,7 @@ const toggleBlacklist = async (id, currentStatus) => {
             key={t.id}
             onClick={() => setTab(t.id)}
             style={{
-              flex: '0 0 20%', // Esto hace que los iconos se distribuyan bien
+              flex: 1, // Ahora se distribuyen equitativamente sin salirse
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
