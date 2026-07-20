@@ -219,30 +219,43 @@ const waLink = (phone, prefix, nationality) => {
 // ── GUEST DB ──────────────────────────────────────────────────────────────────
 function buildGuestDB(reservations) {
   const db = {};
-  reservations
-    .filter((r) => r.guestDoc)
-    .forEach((r) => {
-      const k = (r.guestDoc || '').replace(/\s+/g, '').toLowerCase();
-      if (!db[k])
-        db[k] = {
-          doc: r.guestDoc,
-          name: r.guestName,
-          phone: r.guestPhone,
-          email: r.guestEmail,
-          stays: [],
-          totalSpent: 0,
-          firstStay: r.checkIn,
-          lastStay: r.checkIn,
-        };
-      const g = db[k];
+  reservations.forEach((r) => {
+    // Ignoramos si por algún error la reserva no tiene nombre
+    if (!r.guestName || r.guestName.trim() === '') return;
+
+    // MAGIA: Si tiene documento, agrupa por documento. Si no, agrupa por el nombre (en minúsculas para evitar duplicados).
+    const k = r.guestDoc
+      ? r.guestDoc.replace(/\s+/g, '').toLowerCase()
+      : r.guestName.trim().toLowerCase();
+
+    if (!db[k]) {
+      db[k] = {
+        doc: r.guestDoc || '',
+        name: r.guestName,
+        phone: r.guestPhone || '',
+        email: r.guestEmail || '',
+        stays: [],
+        totalSpent: 0,
+        firstStay: r.checkIn,
+        lastStay: r.checkIn,
+      };
+    }
+    
+    const g = db[k];
+    
+    // Sumamos sus estadísticas solo si no habíamos contado esta reserva antes
+    if (!g.stays.includes(r.id)) {
       g.stays.push(r.id);
       g.totalSpent += r.totalAmount || 0;
-      if (r.checkIn < g.firstStay) g.firstStay = r.checkIn;
-      if (r.checkIn > g.lastStay) {
-        g.lastStay = r.checkIn;
-        g.name = r.guestName;
-      }
-    });
+    }
+
+    if (r.checkIn < g.firstStay) g.firstStay = r.checkIn;
+    if (r.checkIn > g.lastStay) {
+      g.lastStay = r.checkIn;
+      g.name = r.guestName; // Se queda con el último nombre registrado
+      if (r.guestPhone) g.phone = r.guestPhone; // Se queda con el teléfono más actual
+    }
+  });
   return db;
 }
 function freqBadge(n) {
@@ -5762,8 +5775,8 @@ function ResList({ reservations, properties, onView, onAdd }) {
             {hospedados.length > 0 && (
               <div style={{ marginBottom: 20 }}>
                 <h3 style={{ fontSize: 12, color: '#2563EB', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  🛏️ En Estadía ({hospedados.length})
-                </h3>
+  🛏️ Alojados ({hospedados.length})
+</h3>
                 {hospedados.map(r => <ResCard key={r.id} r={r} />)}
               </div>
             )}
