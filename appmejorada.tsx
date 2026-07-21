@@ -4411,12 +4411,30 @@ function Dashboard({
                   >
                     📥
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: '#111' }}>
-                      {r.guestName}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, fontSize: 13, color: '#111' }}>
+                        {r.guestName}
+                      </span>
+                      {r.room && (
+                        <span 
+                          style={{ 
+                            background: '#F1F5F9', 
+                            color: '#475569', 
+                            padding: '1px 6px', 
+                            borderRadius: 5, 
+                            fontSize: 11, 
+                            fontWeight: 800, 
+                            border: '1px solid #E2E8F0',
+                            lineHeight: 1
+                          }}
+                        >
+                          {r.room}
+                        </span>
+                      )}
                     </div>
-                    <div style={{ fontSize: 11, color: '#9CA3AF' }}>
-                      {prop?.name} {r.room ? `· Hab. ${r.room}` : ''}
+                    <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>
+                      {prop?.name}
                     </div>
                   </div>
                   <Badge status={r.status} />
@@ -4476,12 +4494,30 @@ function Dashboard({
                   >
                     📤
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: '#111' }}>
-                      {r.guestName}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, fontSize: 13, color: '#111' }}>
+                        {r.guestName}
+                      </span>
+                      {r.room && (
+                        <span 
+                          style={{ 
+                            background: '#F1F5F9', 
+                            color: '#475569', 
+                            padding: '1px 6px', 
+                            borderRadius: 5, 
+                            fontSize: 11, 
+                            fontWeight: 800, 
+                            border: '1px solid #E2E8F0',
+                            lineHeight: 1
+                          }}
+                        >
+                          {r.room}
+                        </span>
+                      )}
                     </div>
-                    <div style={{ fontSize: 11, color: '#9CA3AF' }}>
-                      {prop?.name} {r.room ? `· Hab. ${r.room}` : ''}
+                    <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>
+                      {prop?.name}
                     </div>
                   </div>
                   <Badge status={r.status} />
