@@ -4608,6 +4608,8 @@ function PropertiesPage({
                             flexWrap: 'wrap', gap: 10, cursor: 'pointer', transition: 'all 0.2s',
                             boxShadow: '0 4px 12px rgba(16,185,129,0.2)'
                           }}
+                          onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(16,185,129,0.4)')}
+                          onMouseOut={(e) => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(16,185,129,0.2)')}
                         >
                           <div>
                             <div style={{ fontWeight: 800, fontSize: 15 }}>
@@ -4629,47 +4631,6 @@ function PropertiesPage({
                   </div>
                 );
               })()}
-            </div>
-          )}
-          {sub === 'reservas' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {propRes.map((r) => (
-                <div
-                  key={r.id}
-                  style={{
-                    background: '#fff',
-                    borderRadius: 10,
-                    padding: '12px 16px',
-                    border: '1px solid #F0F0F0',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 13 }}>
-                      {r.guestName}
-                    </div>
-                    <div style={{ fontSize: 11, color: '#9CA3AF' }}>
-                      {fmtD(r.checkIn)} → {fmtD(r.checkOut)} ·{' '}
-                      {currency(r.totalAmount)}
-                    </div>
-                  </div>
-                  <Badge status={r.status} />
-                </div>
-              ))}
-              {propRes.length === 0 && (
-                <div
-                  style={{
-                    color: '#D1D5DB',
-                    fontSize: 13,
-                    textAlign: 'center',
-                    padding: 30,
-                  }}
-                >
-                  Sin reservas
-                </div>
-              )}
             </div>
           )}
           {sub === 'notas' && (
