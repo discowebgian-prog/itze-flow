@@ -5705,56 +5705,74 @@ function ResList({ reservations, properties, onView, onAdd }) {
         style={{
           background: '#fff', borderRadius: 12, padding: '14px 16px', border: '1px solid #F0F0F0',
           cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          boxShadow: '0 1px 3px rgba(0,0,0,.02)', marginBottom: 8
+          boxShadow: '0 1px 3px rgba(0,0,0,.02)', marginBottom: 8, gap: 12
         }}
       >
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <Avatar name={r.guestName} size={38} />
-          <div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          
+          {/* Fila Principal: Nombre + Habitación Destacada + WhatsApp */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: '#111' }}>{r.guestName}</div>
             
-            {/* --- AQUÍ INTEGRAMOS EL BOTÓN DE WHATSAPP DISCRETO --- */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: '#111' }}>{r.guestName}</div>
-              
-              {r.guestPhone && (
-                <a
-                  href={waLink(r.guestPhone, r.guestPhonePrefix, r.guestNationality)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 24,
-                    height: 24,
-                    borderRadius: 6,
-                    background: '#ECFDF5',
-                    color: '#059669',
-                    border: '1px solid #A7F3D0',
-                    textDecoration: 'none',
-                    transition: 'all 0.2s'
-                  }}
-                  title="Enviar WhatsApp"
-                  onMouseOver={(e) => (e.currentTarget.style.background = '#D1FAE5')}
-                  onMouseOut={(e) => (e.currentTarget.style.background = '#ECFDF5')}
-                >
-                  <Icon name="whatsapp" size={14} />
-                </a>
-              )}
-            </div>
-            {/* ----------------------------------------------------- */}
+            {r.room && (
+              <span 
+                style={{ 
+                  background: '#F1F5F9', 
+                  color: '#475569', 
+                  padding: '1px 6px', 
+                  borderRadius: 5, 
+                  fontSize: 11, 
+                  fontWeight: 800, 
+                  border: '1px solid #E2E8F0',
+                  lineHeight: 1
+                }}
+              >
+                {r.room}
+              </span>
+            )}
 
-            <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>
-              {prop?.name} {r.room ? `· Hab.${r.room}` : ''}
-            </div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: '#6B7280', marginTop: 4, display: 'flex', gap: 6 }}>
-              <span>CI: {fmtD(r.checkIn)}</span>
-              <span>CO: {fmtD(r.checkOut)}</span>
-            </div>
+            {r.guestPhone && (
+              <a
+                href={waLink(r.guestPhone, r.guestPhonePrefix, r.guestNationality)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 24,
+                  height: 24,
+                  borderRadius: 6,
+                  background: '#ECFDF5',
+                  color: '#059669',
+                  border: '1px solid #A7F3D0',
+                  textDecoration: 'none',
+                  transition: 'all 0.2s'
+                }}
+                title="Enviar WhatsApp"
+                onMouseOver={(e) => (e.currentTarget.style.background = '#D1FAE5')}
+                onMouseOut={(e) => (e.currentTarget.style.background = '#ECFDF5')}
+              >
+                <Icon name="whatsapp" size={14} />
+              </a>
+            )}
+          </div>
+
+          {/* Fila Secundaria: Propiedad */}
+          <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>
+            {prop?.name}
+          </div>
+
+          {/* Fila Inferior: Fechas de Estadía */}
+          <div style={{ fontSize: 10, fontWeight: 600, color: '#6B7280', marginTop: 4, display: 'flex', gap: 6 }}>
+            <span>CI: {fmtD(r.checkIn)}</span>
+            <span>CO: {fmtD(r.checkOut)}</span>
           </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+
+        {/* Lado Derecho: Estado y Saldos */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
           <Badge status={r.status} />
           {saldo > 0 ? (
             <span style={{ fontSize: 11, fontWeight: 800, color: '#EF4444' }}>Debe {currency(saldo)}</span>
