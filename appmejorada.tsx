@@ -5613,7 +5613,40 @@ function ResList({ reservations, properties, onView, onAdd }) {
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <Avatar name={r.guestName} size={38} />
           <div>
-            <div style={{ fontWeight: 700, fontSize: 14, color: '#111' }}>{r.guestName}</div>
+            
+            {/* --- AQUÍ INTEGRAMOS EL BOTÓN DE WHATSAPP DISCRETO --- */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, color: '#111' }}>{r.guestName}</div>
+              
+              {r.guestPhone && (
+                <a
+                  href={waLink(r.guestPhone, r.guestPhonePrefix, r.guestNationality)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 24,
+                    height: 24,
+                    borderRadius: 6,
+                    background: '#ECFDF5',
+                    color: '#059669',
+                    border: '1px solid #A7F3D0',
+                    textDecoration: 'none',
+                    transition: 'all 0.2s'
+                  }}
+                  title="Enviar WhatsApp"
+                  onMouseOver={(e) => (e.currentTarget.style.background = '#D1FAE5')}
+                  onMouseOut={(e) => (e.currentTarget.style.background = '#ECFDF5')}
+                >
+                  <Icon name="whatsapp" size={14} />
+                </a>
+              )}
+            </div>
+            {/* ----------------------------------------------------- */}
+
             <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>
               {prop?.name} {r.room ? `· Hab.${r.room}` : ''}
             </div>
