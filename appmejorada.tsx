@@ -200,16 +200,6 @@ const COUNTRIES = [
   { code: 'ES', name: 'España', prefix: '+34', flag: '🇪🇸' },
   { code: 'US', name: 'Estados Unidos', prefix: '+1', flag: '🇺🇸' },
 ];
-
-const CHECKLIST = [
-  'Cambio de sábanas y toallas',
-  'Limpieza profunda de baño',
-  'Barrido y trapeado de pisos',
-  'Vaciado de basureros',
-  'Reposición de papel y amenidades',
-  'Revisión de luces y aire acondicionado',
-];
-
 const waLink = (phone, prefix, nationality) => {
   if (!phone) return '#';
   const cleanPhone = phone.replace(/\D/g, '');
@@ -4531,7 +4521,7 @@ function Dashboard({
   );
 }
 
-// ── PROPERTIES PAGE ───────────────────────────────────────────────────────────
+// ── PROPERTIES PAGE (NOTAS Y CHECKLIST TOTALMENTE EDITABLE) ───────────────────
 function PropertiesPage({
   properties,
   reservations,
@@ -4545,14 +4535,60 @@ function PropertiesPage({
   onGoTo, 
 }) {
   const [ap, setAp] = useState(initProp || properties[0]?.id);
-  const [sub, setSub] = useState('info');
+  const [sub, setSub] = useState('notas'); // Arranca por defecto en Notas
   const [editNote, setEditNote] = useState(false);
+  const [newItemText, setNewItemText] = useState(''); // Estado para el nuevo ítem del checklist
+
   const prop = properties.find((p) => p.id === ap);
-  const propRes = reservations
-    .filter((r) => r.propertyId === ap)
-    .sort((a, b) => b.checkIn.localeCompare(a.checkIn));
-  const cl = checklists[ap] || {};
-  const done = Object.values(cl).filter(Boolean).length;
+  
+  // Estructura de resguardo por si la propiedad seleccionada no fue inicializada aún
+  const currentChecklist = checklists[ap] || { items: [], checked: {} };
+  const items = currentChecklist.items || [];
+  const checked = currentChecklist.checked || {};
+  const done = Object.values(checked).filter(Boolean).length;
+
+  // Función para agregar ítems dinámicamente
+  const handleAddItem = (e) => {
+    e.preventDefault();
+    if (!newItemText.trim()) return;
+    
+    setChecklists((prev) => {
+      const propData = prev[ap] || { items: [], checked: {} };
+      return {
+        ...prev,
+        [ap]: {
+          ...propData,
+          items: [...(propData.items || []), newItemText.trim()]
+        }
+      };
+    });
+    setNewItemText('');
+  };
+
+  // Función para eliminar un ítem específico del checklist
+  const handleRemoveItem = (indexToRemove) => {
+    setChecklists((prev) => {
+      const propData = prev[ap] || { items: [], checked: {} };
+      const newItems = (propData.items || []).filter((_, idx) => idx !== indexToRemove);
+      
+      // Limpiamos también el estado de completado para que no se desfasen los índices
+      const newChecked = {};
+      Object.keys(propData.checked || {}).forEach((key) => {
+        const numericKey = parseInt(key, 10);
+        if (numericKey < indexToRemove) {
+          newChecked[numericKey] = propData.checked[numericKey];
+        } else if (numericKey > indexToRemove) {
+          newChecked[numericKey - 1] = propData.checked[numericKey];
+        }
+      });
+
+      return {
+        ...prev,
+        [ap]: { items: newItems, checked: newChecked }
+      };
+    });
+  };
+
   return (
     <div>
       <h2
@@ -4565,6 +4601,8 @@ function PropertiesPage({
       >
         Propiedades
       </h2>
+      
+      {/* Carrusel de Propiedades */}
       <div
         style={{
           display: 'flex',
@@ -4579,7 +4617,7 @@ function PropertiesPage({
             key={p.id}
             onClick={() => {
               setAp(p.id);
-              setSub('info');
+              setSub('notas'); // Reinicia siempre a Notas al cambiar de propiedad
             }}
             style={{
               flexShrink: 0,
@@ -4599,8 +4637,10 @@ function PropertiesPage({
           </button>
         ))}
       </div>
+
       {prop && (
         <>
+          {/* Encabezado de la Propiedad */}
           <div
             style={{
               background: '#fff',
@@ -4619,17 +4659,12 @@ function PropertiesPage({
                 <div style={{ fontWeight: 800, fontSize: 17, color: '#111' }}>
                   {prop.name}
                 </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: '#9CA3AF',
-                    textTransform: 'capitalize',
-                  }}
-                >
+                <div style={{ fontSize: 12, color: '#9CA3AF', textTransform: 'capitalize' }}>
                   {prop.type}
                 </div>
               </div>
             </div>
+            
             <select
               value={propStatus[ap] || 'libre'}
               onChange={(e) =>
@@ -4638,8 +4673,8 @@ function PropertiesPage({
               style={{
                 fontSize: 12,
                 fontWeight: 700,
-                color: PS[propStatus[ap]]?.color,
-                background: PS[propStatus[ap]]?.bg,
+                color: PS[propStatus[ap]]?.color || '#10B981',
+                background: PS[propStatus[ap]]?.bg || '#D1FAE5',
                 border: 'none',
                 borderRadius: 8,
                 padding: '6px 10px',
@@ -4654,8 +4689,10 @@ function PropertiesPage({
               ))}
             </select>
           </div>
+
+          {/* Selector Sub-Pestañas Reducido (Solo Notas y Limpieza) */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-            {['info', 'reservas', 'notas', 'limpieza'].map((t) => (
+            {['notas', 'limpieza'].map((t) => (
               <button
                 key={t}
                 onClick={() => setSub(t)}
@@ -4672,65 +4709,12 @@ function PropertiesPage({
                   textTransform: 'capitalize',
                 }}
               >
-                {t}
+                {t === 'limpieza' ? '🧼 Limpieza' : '📝 Notas'}
               </button>
             ))}
           </div>
-          {sub === 'info' && (
-            <div>
-              {(() => {
-                const actuales = propRes.filter(
-                  (x) => parseD(x.checkIn) <= TODAY && TODAY < parseD(x.checkOut) && x.status !== 'cancelada'
-                );
 
-                if (actuales.length === 0) return (
-                  <div style={{ textAlign: 'center', padding: '30px 20px', background: '#F8FAFC', borderRadius: 12, border: '1px dashed #E5E7EB', color: '#9CA3AF', fontSize: 13 }}>
-                    No hay huéspedes en esta propiedad hoy.
-                  </div>
-                );
-
-                return (
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: '#6B7280', textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5 }}>
-                      Huéspedes Actuales ({actuales.length})
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {actuales.map((r) => (
-                        <div
-                          key={r.id}
-                          onClick={() => onGoTo && onGoTo('abrir_reserva', r)}
-                          style={{
-                            background: 'linear-gradient(135deg, #10B981, #059669)',
-                            borderRadius: 12, padding: '14px 16px', color: '#fff',
-                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                            flexWrap: 'wrap', gap: 10, cursor: 'pointer', transition: 'all 0.2s',
-                            boxShadow: '0 4px 12px rgba(16,185,129,0.2)'
-                          }}
-                          onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(16,185,129,0.4)')}
-                          onMouseOut={(e) => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(16,185,129,0.2)')}
-                        >
-                          <div>
-                            <div style={{ fontWeight: 800, fontSize: 15 }}>
-                              {r.guestName} {r.room ? `· Hab. ${r.room}` : ''}
-                            </div>
-                            <div style={{ opacity: 0.85, fontSize: 11, marginTop: 4, display: 'flex', gap: 6, alignItems: 'center' }}>
-                              <span>CI: {fmtD(r.checkIn)}</span>
-                              <span>CO: {fmtD(r.checkOut)}</span>
-                            </div>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <span style={{ background: 'rgba(255,255,255,.2)', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 800, display: 'inline-block' }}>
-                              Saldo: {currency(r.totalAmount - r.paid)}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          )}
+          {/* VISTA: NOTAS */}
           {sub === 'notas' && (
             <div
               style={{
@@ -4740,17 +4724,9 @@ function PropertiesPage({
                 border: '1px solid #F0F0F0',
               }}
             >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginBottom: 12,
-                }}
-              >
-                <div
-                  style={{ fontWeight: 700, fontSize: 13, color: '#374151' }}
-                >
-                  Notas internas
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#374151' }}>
+                  Notas internas de la propiedad
                 </div>
                 <button
                   onClick={() => setEditNote((x) => !x)}
@@ -4803,7 +4779,7 @@ function PropertiesPage({
                       cursor: 'pointer',
                     }}
                   >
-                    Guardar
+                    Guardar Notas
                   </button>
                 </div>
               ) : (
@@ -4817,11 +4793,13 @@ function PropertiesPage({
                     lineHeight: 1.7,
                   }}
                 >
-                  {notes[ap] || 'Sin notas.'}
+                  {notes[ap] || 'Sin notas registradas para esta propiedad.'}
                 </pre>
               )}
             </div>
           )}
+
+          {/* VISTA: LIMPIEZA (CHECKLIST TOTALMENTE EDITABLE) */}
           {sub === 'limpieza' && (
             <div
               style={{
@@ -4831,25 +4809,17 @@ function PropertiesPage({
                 border: '1px solid #F0F0F0',
               }}
             >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginBottom: 16,
-                }}
-              >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <div>
-                  <div
-                    style={{ fontWeight: 700, fontSize: 13, color: '#374151' }}
-                  >
-                    Checklist
+                  <div style={{ fontWeight: 700, fontSize: 13, color: '#374151' }}>
+                    Control de Tareas Operativas
                   </div>
                   <div style={{ fontSize: 11, color: '#9CA3AF' }}>
-                    {done}/{CHECKLIST.length} completados
+                    {done}/{items.length} completados
                   </div>
                 </div>
                 <button
-                  onClick={() => setChecklists((c) => ({ ...c, [ap]: {} }))}
+                  onClick={() => setChecklists((c) => ({ ...c, [ap]: { items: items, checked: {} } }))}
                   style={{
                     background: '#FEF2F2',
                     color: '#DC2626',
@@ -4862,15 +4832,17 @@ function PropertiesPage({
                     cursor: 'pointer',
                   }}
                 >
-                  ↺ Reiniciar
+                  ↺ Desmarcar Todo
                 </button>
               </div>
+
+              {/* Barra de Progreso */}
               <div
                 style={{
-                  height: 4,
+                  height: 5,
                   background: '#F3F4F6',
                   borderRadius: 4,
-                  marginBottom: 16,
+                  marginBottom: 20,
                 }}
               >
                 <div
@@ -4878,64 +4850,131 @@ function PropertiesPage({
                     height: '100%',
                     background: '#10B981',
                     borderRadius: 4,
-                    width:
-                      CHECKLIST.length > 0
-                        ? Math.round((done / CHECKLIST.length) * 100) + '%'
-                        : '0%',
+                    width: items.length > 0 ? Math.round((done / items.length) * 100) + '%' : '0%',
                     transition: 'width .3s',
                   }}
                 />
               </div>
-              {CHECKLIST.map((item, i) => (
+
+              {/* Formulario para AGREGAR nuevas tareas en vivo */}
+              <form onSubmit={handleAddItem} style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+                <input 
+                  type="text"
+                  value={newItemText}
+                  onChange={(e) => setNewItemText(e.target.value)}
+                  placeholder="Ej: Revisar cañería de habitación P2..."
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    border: '1.5px solid #E5E7EB',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    outline: 'none'
+                  }}
+                />
+                <button
+                  type="submit"
+                  style={{
+                    padding: '8px 14px',
+                    background: '#10B981',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontWeight: 700,
+                    fontSize: 12,
+                    cursor: 'pointer'
+                  }}
+                >
+                  + Ítem
+                </button>
+              </form>
+
+              {/* Listado de Ítems */}
+              {items.map((item, i) => (
                 <div
                   key={i}
                   style={{
                     display: 'flex',
-                    gap: 12,
                     alignItems: 'center',
                     padding: '10px 0',
                     borderBottom: '1px solid #F9FAFB',
-                    cursor: 'pointer',
+                    gap: 12
                   }}
-                  onClick={() =>
-                    setChecklists((c) => ({
-                      ...c,
-                      [ap]: { ...cl, [i]: !cl[i] },
-                    }))
-                  }
                 >
+                  {/* Checkbox Interactivo */}
                   <div
                     style={{
                       width: 20,
                       height: 20,
                       borderRadius: 5,
-                      border: `1.5px solid ${cl[i] ? '#10B981' : '#D1D5DB'}`,
-                      background: cl[i] ? '#10B981' : '#fff',
+                      border: `1.5px solid ${checked[i] ? '#10B981' : '#D1D5DB'}`,
+                      background: checked[i] ? '#10B981' : '#fff',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
+                      cursor: 'pointer'
                     }}
+                    onClick={() =>
+                      setChecklists((c) => ({
+                        ...c,
+                        [ap]: {
+                          items: items,
+                          checked: { ...checked, [i]: !checked[i] }
+                        }
+                      }))
+                    }
                   >
-                    {cl[i] && (
-                      <span
-                        style={{ color: '#fff', fontSize: 12, fontWeight: 800 }}
-                      >
-                        ✓
-                      </span>
-                    )}
+                    {checked[i] && <span style={{ color: '#fff', fontSize: 12, fontWeight: 800 }}>✓</span>}
                   </div>
+                  
+                  {/* Texto de la Tarea */}
                   <span
                     style={{
+                      flex: 1,
                       fontSize: 13,
-                      color: cl[i] ? '#D1D5DB' : '#374151',
-                      textDecoration: cl[i] ? 'line-through' : 'none',
+                      color: checked[i] ? '#D1D5DB' : '#374151',
+                      textDecoration: checked[i] ? 'line-through' : 'none',
+                      cursor: 'pointer'
                     }}
+                    onClick={() =>
+                      setChecklists((c) => ({
+                        ...c,
+                        [ap]: {
+                          items: items,
+                          checked: { ...checked, [i]: !checked[i] }
+                        }
+                      }))
+                    }
                   >
                     {item}
                   </span>
+
+                  {/* Botón para ELIMINAR ítem */}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveItem(i)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#EF4444',
+                      cursor: 'pointer',
+                      fontSize: 14,
+                      fontWeight: 700,
+                      padding: '0 6px',
+                    }}
+                    title="Eliminar tarea"
+                  >
+                    ×
+                  </button>
                 </div>
               ))}
+
+              {items.length === 0 && (
+                <div style={{ textAlign: 'center', color: '#9CA3AF', padding: '20px 0', fontSize: 12, style: 'dashed' }}>
+                  No hay tareas en el checklist. ¡Agrega una arriba!
+                </div>
+              )}
             </div>
           )}
         </>
@@ -6368,7 +6407,20 @@ export default function AppMejorada() {
   const [coModal, setCoModal] = useState(null);
   const [propStatus, setPropStatus] = useState({});
   const [notes, setNotes] = useState({});
-  const [checklists, setChecklists] = useState({});
+  // Estado dinámico para el Checklist Editable por propiedad
+  const [checklists, setChecklists] = useState({
+    hostel: {
+      items: [
+        'Cambio de sábanas y toallas',
+        'Limpieza profunda de baño',
+        'Barrido y trapeado de pisos',
+        'Vaciado de basureros',
+        'Reposición de papel y amenidades',
+        'Revisión de luces y aire acondicionado'
+      ],
+      checked: {} // Guarda las tareas que ya se completaron (índice: true/false)
+    }
+  });
   const [calView, setCalView] = useState('timeline');
   const [prefill, setPrefill] = useState({});
 
