@@ -4362,28 +4362,28 @@ function Dashboard({
           </div>
         ))}
       </div>
-      {ciToday.length + coToday.length > 0 && (
-        <>
+      {/* 📥 SECCIÓN DE INGRESOS DE HOY */}
+      {ciToday.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
           <h3
             style={{
               margin: '0 0 12px',
-              fontSize: 15,
-              fontWeight: 700,
-              color: '#374151',
+              fontSize: 11,
+              fontWeight: 800,
+              color: '#059669',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
             }}
           >
-            Movimientos de hoy
+            📥 Ingresos de hoy ({ciToday.length})
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {[
-              ...ciToday.map((r) => ({ ...r, type: 'in' })),
-              ...coToday.map((r) => ({ ...r, type: 'out' })),
-            ].map((r) => {
+            {ciToday.map((r) => {
               const prop = PROPS.find((p) => p.id === r.propertyId);
               return (
                 <div
-                  key={r.id + r.type}
-                  onClick={() => onGoTo('abrir_reserva', r)} // <--- ENVIARÁ LA ORDEN DE APERTURA
+                  key={r.id + 'in'}
+                  onClick={() => onGoTo('abrir_reserva', r)}
                   style={{
                     background: '#fff',
                     borderRadius: 10,
@@ -4392,7 +4392,7 @@ function Dashboard({
                     alignItems: 'center',
                     gap: 12,
                     border: '1px solid #F0F0F0',
-                    cursor: 'pointer', // <--- PONE LA MANITO INTERACTIVA
+                    cursor: 'pointer',
                   }}
                   onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,.05)')}
                   onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
@@ -4402,24 +4402,21 @@ function Dashboard({
                       width: 32,
                       height: 32,
                       borderRadius: 8,
-                      background: r.type === 'in' ? '#D1FAE5' : '#FEE2E2',
+                      background: '#D1FAE5',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontSize: 16,
                     }}
                   >
-                    {r.type === 'in' ? '📥' : '📤'}
+                    📥
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div
-                      style={{ fontWeight: 700, fontSize: 13, color: '#111' }}
-                    >
+                    <div style={{ fontWeight: 700, fontSize: 13, color: '#111' }}>
                       {r.guestName}
                     </div>
                     <div style={{ fontSize: 11, color: '#9CA3AF' }}>
-                      {prop?.name} ·{' '}
-                      {r.type === 'in' ? 'Check-in' : 'Check-out'}
+                      {prop?.name} {r.room ? `· Hab. ${r.room}` : ''}
                     </div>
                   </div>
                   <Badge status={r.status} />
@@ -4427,7 +4424,72 @@ function Dashboard({
               );
             })}
           </div>
-        </>
+        </div>
+      )}
+
+      {/* 📤 SECCIÓN DE SALIDAS DE HOY */}
+      {coToday.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <h3
+            style={{
+              margin: '0 0 12px',
+              fontSize: 11,
+              fontWeight: 800,
+              color: '#D97706',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+            }}
+          >
+            📤 Salidas de hoy ({coToday.length})
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {coToday.map((r) => {
+              const prop = PROPS.find((p) => p.id === r.propertyId);
+              return (
+                <div
+                  key={r.id + 'out'}
+                  onClick={() => onGoTo('abrir_reserva', r)}
+                  style={{
+                    background: '#fff',
+                    borderRadius: 10,
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    border: '1px solid #F0F0F0',
+                    cursor: 'pointer',
+                  }}
+                  onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,.05)')}
+                  onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
+                >
+                  <div
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      background: '#FEE2E2',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 16,
+                    }}
+                  >
+                    📤
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: '#111' }}>
+                      {r.guestName}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#9CA3AF' }}>
+                      {prop?.name} {r.room ? `· Hab. ${r.room}` : ''}
+                    </div>
+                  </div>
+                  <Badge status={r.status} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
     </div>
   );
