@@ -4521,7 +4521,7 @@ function Dashboard({
   );
 }
 
-// ── PROPERTIES PAGE (NOTAS Y CHECKLIST TOTALMENTE EDITABLE) ───────────────────
+// ── PROPERTIES PAGE (NOTAS Y CHECKLIST DE TAREAS - DISEÑO PREMIUM) ───────────
 function PropertiesPage({
   properties,
   reservations,
@@ -4535,19 +4535,19 @@ function PropertiesPage({
   onGoTo, 
 }) {
   const [ap, setAp] = useState(initProp || properties[0]?.id);
-  const [sub, setSub] = useState('notas'); // Arranca por defecto en Notas
+  const [sub, setSub] = useState('notas'); // Por defecto arranca en Notas
   const [editNote, setEditNote] = useState(false);
-  const [newItemText, setNewItemText] = useState(''); // Estado para el nuevo ítem del checklist
+  const [newItemText, setNewItemText] = useState(''); 
 
   const prop = properties.find((p) => p.id === ap);
   
-  // Estructura de resguardo por si la propiedad seleccionada no fue inicializada aún
+  // Resguardo por si el estado dinámico aún no se cargó
   const currentChecklist = checklists[ap] || { items: [], checked: {} };
   const items = currentChecklist.items || [];
   const checked = currentChecklist.checked || {};
   const done = Object.values(checked).filter(Boolean).length;
 
-  // Función para agregar ítems dinámicamente
+  // Agregar una nueva tarea operativa
   const handleAddItem = (e) => {
     e.preventDefault();
     if (!newItemText.trim()) return;
@@ -4565,13 +4565,12 @@ function PropertiesPage({
     setNewItemText('');
   };
 
-  // Función para eliminar un ítem específico del checklist
+  // Eliminar una tarea operativa específica
   const handleRemoveItem = (indexToRemove) => {
     setChecklists((prev) => {
       const propData = prev[ap] || { items: [], checked: {} };
       const newItems = (propData.items || []).filter((_, idx) => idx !== indexToRemove);
       
-      // Limpiamos también el estado de completado para que no se desfasen los índices
       const newChecked = {};
       Object.keys(propData.checked || {}).forEach((key) => {
         const numericKey = parseInt(key, 10);
@@ -4602,7 +4601,7 @@ function PropertiesPage({
         Propiedades
       </h2>
       
-      {/* Carrusel de Propiedades */}
+      {/* Selector superior de Propiedades */}
       <div
         style={{
           display: 'flex',
@@ -4617,7 +4616,7 @@ function PropertiesPage({
             key={p.id}
             onClick={() => {
               setAp(p.id);
-              setSub('notas'); // Reinicia siempre a Notas al cambiar de propiedad
+              setSub('notas'); 
             }}
             style={{
               flexShrink: 0,
@@ -4640,7 +4639,7 @@ function PropertiesPage({
 
       {prop && (
         <>
-          {/* Encabezado de la Propiedad */}
+          {/* Encabezado Principal */}
           <div
             style={{
               background: '#fff',
@@ -4690,28 +4689,63 @@ function PropertiesPage({
             </select>
           </div>
 
-          {/* Selector Sub-Pestañas Reducido (Solo Notas y Limpieza) */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-            {['notas', 'limpieza'].map((t) => (
-              <button
-                key={t}
-                onClick={() => setSub(t)}
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: 8,
-                  border: 'none',
-                  fontFamily: 'inherit',
-                  fontWeight: 700,
-                  fontSize: 12,
-                  cursor: 'pointer',
-                  background: sub === t ? '#1E293B' : '#F3F4F6',
-                  color: sub === t ? '#fff' : '#6B7280',
-                  textTransform: 'capitalize',
-                }}
-              >
-                {t === 'limpieza' ? '🧼 Limpieza' : '📝 Notas'}
-              </button>
-            ))}
+          {/* ── NUEVO REDISEÑO DE BOTONES: CONTROL SEGMENTADO MODERNO (PULSE/iOS STYLE) ── */}
+          <div 
+            style={{ 
+              display: 'flex', 
+              background: '#E2E8F0', 
+              borderRadius: 12, 
+              padding: 4, 
+              gap: 4, 
+              marginBottom: 16 
+            }}
+          >
+            <button
+              onClick={() => setSub('notas')}
+              style={{
+                flex: 1,
+                padding: '10px 16px',
+                borderRadius: 9,
+                border: 'none',
+                fontFamily: 'inherit',
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: 'pointer',
+                background: sub === 'notas' ? '#fff' : 'transparent',
+                color: sub === 'notas' ? '#1E293B' : '#64748B',
+                boxShadow: sub === 'notas' ? '0 2px 6px rgba(0,0,0,.06)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                transition: 'all 0.2s ease'
+              }}
+            >
+              📝 Notas Internas
+            </button>
+            <button
+              onClick={() => setSub('tareas')}
+              style={{
+                flex: 1,
+                padding: '10px 16px',
+                borderRadius: 9,
+                border: 'none',
+                fontFamily: 'inherit',
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: 'pointer',
+                background: sub === 'tareas' ? '#fff' : 'transparent',
+                color: sub === 'tareas' ? '#1E293B' : '#64748B',
+                boxShadow: sub === 'tareas' ? '0 2px 6px rgba(0,0,0,.06)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                transition: 'all 0.2s ease'
+              }}
+            >
+              📋 Tareas Operativas
+            </button>
           </div>
 
           {/* VISTA: NOTAS */}
@@ -4799,8 +4833,8 @@ function PropertiesPage({
             </div>
           )}
 
-          {/* VISTA: LIMPIEZA (CHECKLIST TOTALMENTE EDITABLE) */}
-          {sub === 'limpieza' && (
+          {/* VISTA: TAREAS OPERATIVAS (CHECKLIST EDITABLE) */}
+          {sub === 'tareas' && (
             <div
               style={{
                 background: '#fff',
@@ -4856,16 +4890,16 @@ function PropertiesPage({
                 />
               </div>
 
-              {/* Formulario para AGREGAR nuevas tareas en vivo */}
+              {/* Formulario para agregar ítems */}
               <form onSubmit={handleAddItem} style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
                 <input 
                   type="text"
                   value={newItemText}
                   onChange={(e) => setNewItemText(e.target.value)}
-                  placeholder="Ej: Revisar cañería de habitación P2..."
+                  placeholder="Ej: Comprar bombilla para baño P1..."
                   style={{
                     flex: 1,
-                    padding: '8px 12px',
+                    padding: '9px 12px',
                     border: '1.5px solid #E5E7EB',
                     borderRadius: 8,
                     fontSize: 13,
@@ -4875,7 +4909,7 @@ function PropertiesPage({
                 <button
                   type="submit"
                   style={{
-                    padding: '8px 14px',
+                    padding: '9px 14px',
                     background: '#10B981',
                     color: '#fff',
                     border: 'none',
@@ -4889,7 +4923,7 @@ function PropertiesPage({
                 </button>
               </form>
 
-              {/* Listado de Ítems */}
+              {/* Lista de tareas */}
               {items.map((item, i) => (
                 <div
                   key={i}
@@ -4901,7 +4935,6 @@ function PropertiesPage({
                     gap: 12
                   }}
                 >
-                  {/* Checkbox Interactivo */}
                   <div
                     style={{
                       width: 20,
@@ -4928,7 +4961,6 @@ function PropertiesPage({
                     {checked[i] && <span style={{ color: '#fff', fontSize: 12, fontWeight: 800 }}>✓</span>}
                   </div>
                   
-                  {/* Texto de la Tarea */}
                   <span
                     style={{
                       flex: 1,
@@ -4950,7 +4982,6 @@ function PropertiesPage({
                     {item}
                   </span>
 
-                  {/* Botón para ELIMINAR ítem */}
                   <button
                     type="button"
                     onClick={() => handleRemoveItem(i)}
@@ -4963,7 +4994,6 @@ function PropertiesPage({
                       fontWeight: 700,
                       padding: '0 6px',
                     }}
-                    title="Eliminar tarea"
                   >
                     ×
                   </button>
@@ -4971,7 +5001,7 @@ function PropertiesPage({
               ))}
 
               {items.length === 0 && (
-                <div style={{ textAlign: 'center', color: '#9CA3AF', padding: '20px 0', fontSize: 12, style: 'dashed' }}>
+                <div style={{ textAlign: 'center', color: '#9CA3AF', padding: '20px 0', fontSize: 12 }}>
                   No hay tareas en el checklist. ¡Agrega una arriba!
                 </div>
               )}
