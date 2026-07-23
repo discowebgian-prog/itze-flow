@@ -7452,8 +7452,10 @@ const toggleBlacklist = async (id, currentStatus) => {
           style={{
             position: 'fixed',
             bottom: isMobile ? 90 : 40,
-            left: '50%',
-            transform: 'translateX(-50%)',
+            left: 0,
+            right: 0,
+            margin: '0 auto',
+            width: 'fit-content',
             background: '#10B981',
             color: '#fff',
             padding: '12px 24px',
@@ -7471,7 +7473,7 @@ const toggleBlacklist = async (id, currentStatus) => {
         >
           <span style={{ fontSize: 16 }}>✓</span> {toastMsg}
         </div>
-      )} 
+      )}
     </div>
   );
 }
