@@ -831,7 +831,7 @@ function RangeCalendar({ checkIn, checkOut, onChange, minDate }) {
   const [step, setStep] = useState(checkIn && checkOut ? 2 : 0);
 
   // Candado inteligente: Si le pasamos una fecha mínima (ej. checkIn en el pasado), usa esa. Si no, usa HOY.
-  const minD = minDate ? parseD(minDate) : parseD(fmt(TODAY));
+  const minD = null;
 
   const y = base.getFullYear(),
     m = base.getMonth();
@@ -966,7 +966,7 @@ function RangeCalendar({ checkIn, checkOut, onChange, minDate }) {
         {grid.map((d, i) => {
           if (!d) return <div key={i} />;
           const s = fmt(d);
-          const isDisabled = parseD(s) < minD; // Reemplazamos la lógica vieja por el candado inteligente
+          const isDisabled = false; // Sin restricciones de clics
           const isCI = s === checkIn;
           const isCO = s === checkOut;
           const isEnd = isCI || isCO;
@@ -1145,7 +1145,7 @@ function ResForm({
     guestNationality: 'MX',
     guestEmail: '',
     checkIn: prefillDate || fmt(TODAY),
-    checkOut: fmt(addDays(TODAY, 3)),
+    checkOut: fmt(addDays(TODAY, 1)),
     status: 'por_llegar',
     totalAmount: '',
     paid: '',
@@ -1211,7 +1211,7 @@ function ResForm({
   );
   const [confModal, setConfModal] = useState(null);
 
-  const minDatePermitida = initial?.checkIn ? initial.checkIn : fmt(TODAY);
+  const minDatePermitida = initial?.checkIn ? initial.checkIn : null;
 
   // ── EL RADAR DE LISTA NEGRA EN VIVO ──
   const matchBlacklist = allRes.find(r => 
@@ -2064,49 +2064,51 @@ function ResForm({
               </div>
             </div>
             <div style={{ padding: '20px 22px' }}>
-              <p style={{ fontSize: 13, color: '#374151', marginBottom: 16 }}>
-                Ya hay una reserva en esas fechas. ¿Guardar de todas formas?
-              </p>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button
-                  onClick={() => setConfModal(null)}
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    background: '#EFF6FF',
-                    border: 'none',
-                    borderRadius: 8,
-                    fontFamily: 'inherit',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    color: '#1E40AF',
-                  }}
-                >
-                  ← Corregir
-                </button>
-                <button
-                  onClick={confModal}
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    background: '#FEF2F2',
-                    border: 'none',
-                    borderRadius: 8,
-                    fontFamily: 'inherit',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    color: '#DC2626',
-                  }}
-                >
-                  Guardar igual
-                </button>
+                <p style={{ fontSize: 13, color: '#374151', marginBottom: 16, lineHeight: 1.4 }}>
+                  Ya hay una reserva actual de <b style={{ color: '#DC2626' }}>{conflicts.map(c => c.guestName).join(' y ')}</b> en estas fechas.
+                  <br /><br />
+                  ¿Deseas sobreescribir y guardar de todas formas?
+                </p>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    onClick={() => setConfModal(null)}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      background: '#EFF6FF',
+                      border: 'none',
+                      borderRadius: 8,
+                      fontFamily: 'inherit',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      color: '#1E40AF',
+                    }}
+                  >
+                    ← Corregir
+                  </button>
+                  <button
+                    onClick={confModal}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      background: '#FEF2F2',
+                      border: '1.5px solid #FECACA',
+                      borderRadius: 8,
+                      fontFamily: 'inherit',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      color: '#DC2626',
+                    }}
+                  >
+                    Sobreescribir
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </div>
+    );
 }
 
 // ── DRAWER ────────────────────────────────────────────────────────────────────
@@ -4253,25 +4255,30 @@ function Dashboard({
   
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 24 }}>
         <h2
           style={{
-            margin: '0 0 3px',
+            margin: 0,
             fontSize: 22,
-            fontWeight: 800,
+            fontWeight: 900,
             color: '#111',
+            letterSpacing: -0.5,
+            display: 'flex',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 10
           }}
         >
-          Panel general
+          <span>☀️ Panorama de hoy</span>
+          <span style={{ color: '#E5E7EB', fontWeight: 400 }}>|</span>
+          <span style={{ color: '#3B82F6', textTransform: 'capitalize' }}>
+            {TODAY.toLocaleDateString('es-MX', {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long'
+            })}
+          </span>
         </h2>
-        <p style={{ margin: 0, color: '#9CA3AF', fontSize: 13 }}>
-          {TODAY.toLocaleDateString('es-MX', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-          })}
-        </p>
       </div>
       <div
         style={{
