@@ -7453,30 +7453,38 @@ const toggleBlacklist = async (id, currentStatus) => {
             position: 'fixed',
             bottom: isMobile ? 90 : 40,
             left: 0,
-            right: 0,
-            margin: '0 auto',
-            width: 'fit-content',
-            background: '#10B981',
-            color: '#fff',
-            padding: '12px 24px',
-            borderRadius: 30,
-            fontSize: 14,
-            fontWeight: 800,
-            boxShadow: '0 8px 16px rgba(16,185,129,.25)',
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
             zIndex: 9999,
             pointerEvents: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            animation: 'slideUp 0.2s ease-out'
           }}
         >
-          <span style={{ fontSize: 16 }}>✓</span> {toastMsg}
+          <div
+            style={{
+              background: '#10B981',
+              color: '#fff',
+              padding: '12px 24px',
+              borderRadius: 30,
+              fontSize: 14,
+              fontWeight: 800,
+              boxShadow: '0 8px 16px rgba(16,185,129,.25)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              animation: 'slideUp 0.2s ease-out'
+            }}
+          >
+            <span style={{ fontSize: 16 }}>✓</span> {toastMsg}
+          </div>
         </div>
       )}
+
     </div>
   );
 }
+
+// --- MOTOR DE ARRANQUE ---
 
 // --- MOTOR DE ARRANQUE ---
 const rootElement = document.getElementById('root');
