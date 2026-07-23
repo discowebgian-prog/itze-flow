@@ -6459,6 +6459,7 @@ export default function AppMejorada() {
   });
   const [calView, setCalView] = useState('timeline');
   const [prefill, setPrefill] = useState({});
+  const [toastMsg, setToastMsg] = useState(null); 
 
   // 1. Verificación de Login
   if (!user) return <Login onLogin={setUser} />;
@@ -6583,7 +6584,7 @@ export default function AppMejorada() {
         reservaParaEstado.fecha_carga = momentoExacto;
         reservaParaEstado.usuario_carga = responsable;
 
-        if (data && data.length > 0) {
+       if (data && data.length > 0) {
           setRes([...res, { ...reservaParaEstado, id: data[0].id }]);
         } else {
           setRes([...res, { ...reservaParaEstado, id: 'r' + Date.now() }]);
@@ -6591,7 +6592,10 @@ export default function AppMejorada() {
       }
 
       setModal(null);
-      alert('Reserva guardada con éxito.');
+      
+      // Lanzamos el cartel flotante y lo borramos al segundo y medio
+      setToastMsg('Reserva guardada');
+      setTimeout(() => setToastMsg(null), 1500);
 
     } catch (err) {
       console.error('Error al conectar con la base de datos:', err);
@@ -7442,6 +7446,37 @@ const toggleBlacklist = async (id, currentStatus) => {
           </div>
         </div>
       )}
+     </div>
+          </div>
+        </div>
+      )}
+
+      {/* DISEÑO DEL CARTEL FLOTANTE (TOAST) */}
+      {toastMsg && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: isMobile ? 90 : 40,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: '#10B981',
+            color: '#fff',
+            padding: '12px 24px',
+            borderRadius: 30,
+            fontSize: 14,
+            fontWeight: 800,
+            boxShadow: '0 8px 16px rgba(16,185,129,.25)',
+            zIndex: 9999,
+            pointerEvents: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            animation: 'slideUp 0.2s ease-out'
+          }}
+        >
+          <span style={{ fontSize: 16 }}>✓</span> {toastMsg}
+        </div>
+      )} 
     </div>
   );
 }
