@@ -7446,11 +7446,6 @@ const toggleBlacklist = async (id, currentStatus) => {
           </div>
         </div>
       )}
-     </div>
-          </div>
-        </div>
-      )}
-
       {/* DISEÑO DEL CARTEL FLOTANTE (TOAST) */}
       {toastMsg && (
         <div
