@@ -6595,7 +6595,7 @@ export default function AppMejorada() {
       
       // Lanzamos el cartel flotante y lo borramos al segundo y medio
       setToastMsg('Reserva guardada');
-      setTimeout(() => setToastMsg(null), 2000);
+      setTimeout(() => setToastMsg(null), 1700);
 
     } catch (err) {
       console.error('Error al conectar con la base de datos:', err);
