@@ -842,18 +842,14 @@ function RangeCalendar({ checkIn, checkOut, onChange, minDate }) {
     .concat(Array.from({ length: daysInMo }, (_, i) => new Date(y, m, i + 1)));
 
   const clickD = (d) => {
-    if (!d || d < minD) return;
+    if (!d || (minD && d < minD)) return;
     const s = fmt(d);
     
+    // El nuevo estándar: Si ya hay un rango completo (step 2) y tocás cualquier fecha,
+    // se limpia la selección previa y esa fecha se convierte en tu nuevo Check-In.
     if (step === 2) {
-      if (s > checkIn) {
-        // ¡MAGIA DE 1 CLIC! Extiende o recorta el Check-out manteniendo el Check-in intacto.
-        onChange(checkIn, s);
-      } else {
-        // Si toca exactamente el checkIn o antes, asume que quiere cambiar las 2 fechas.
-        onChange(s, '');
-        setStep(1);
-      }
+      onChange(s, '');
+      setStep(1);
     } else if (step === 0) {
       onChange(s, '');
       setStep(1);
@@ -4255,29 +4251,32 @@ function Dashboard({
   
   return (
     <div>
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 28, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 800,
+            color: '#64748B',
+            textTransform: 'uppercase',
+            letterSpacing: 1.2,
+          }}
+        >
+          {TODAY.toLocaleDateString('es-MX', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long'
+          })}
+        </div>
         <h2
           style={{
             margin: 0,
-            fontSize: 22,
+            fontSize: 24,
             fontWeight: 900,
-            color: '#111',
-            letterSpacing: -0.5,
-            display: 'flex',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 10
+            color: '#0F172A',
+            letterSpacing: -0.6,
           }}
         >
-          <span>☀️ Panorama de hoy</span>
-          <span style={{ color: '#E5E7EB', fontWeight: 400 }}>|</span>
-          <span style={{ color: '#3B82F6', textTransform: 'capitalize' }}>
-            {TODAY.toLocaleDateString('es-MX', {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long'
-            })}
-          </span>
+          Panorama de hoy
         </h2>
       </div>
       <div
