@@ -1206,6 +1206,7 @@ function ResForm({
     initial?.id
   );
   const [confModal, setConfModal] = useState(null);
+  const [isSaving, setIsSaving] = useState(false); // <--- NUEVO: SEGURO ANTI DOBLE-CLIC
 
   const minDatePermitida = initial?.checkIn ? initial.checkIn : null;
 
@@ -1276,12 +1277,17 @@ function ResForm({
   ]);
 
   const handleSave = () => {
+    if (isSaving) return; // Si ya está guardando, ignora más clics
     if (conflicts.length > 0) {
       setConfModal(() => () => {
+        setIsSaving(true);
         onSave(f);
         setConfModal(null);
       });
-    } else onSave(f);
+    } else {
+      setIsSaving(true);
+      onSave(f);
+    }
   };
 
   const saldoPendiente = Math.max(0, Number(f.totalAmount || 0) - Number(f.paid || 0));
@@ -1983,6 +1989,7 @@ function ResForm({
       <div style={{ display: 'flex', gap: 10 }}>
         <button
           onClick={onClose}
+          disabled={isSaving}
           style={{
             flex: 1,
             padding: '12px',
@@ -1991,7 +1998,7 @@ function ResForm({
             borderRadius: 8,
             fontFamily: 'inherit',
             fontWeight: 600,
-            cursor: 'pointer',
+            cursor: isSaving ? 'not-allowed' : 'pointer',
             color: '#555',
           }}
         >
@@ -1999,6 +2006,7 @@ function ResForm({
         </button>
         <button
           onClick={handleSave}
+          disabled={isSaving}
           style={{
             flex: 2,
             padding: '12px',
@@ -2007,18 +2015,25 @@ function ResForm({
             borderRadius: 8,
             fontFamily: 'inherit',
             fontWeight: 700,
-            cursor: 'pointer',
+            cursor: isSaving ? 'wait' : 'pointer',
             color: '#fff',
             fontSize: 14,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
+            opacity: isSaving ? 0.7 : 1,
           }}
         >
-          {conflicts.length > 0 ? <Icon name="warning" size={18} /> : null}
-          Guardar
-          {conflicts.length > 0 ? ` (${conflicts.length} conflicto)` : ''}
+          {isSaving ? (
+            'Guardando...'
+          ) : (
+            <>
+              {conflicts.length > 0 ? <Icon name="warning" size={18} /> : null}
+              Guardar
+              {conflicts.length > 0 ? ` (${conflicts.length} conflicto)` : ''}
+            </>
+          )}
         </button>
       </div>
 
@@ -2060,53 +2075,52 @@ function ResForm({
               </div>
             </div>
             <div style={{ padding: '20px 22px' }}>
-                <p style={{ fontSize: 13, color: '#374151', marginBottom: 16, lineHeight: 1.4 }}>
-                  Ya hay una reserva actual de <b style={{ color: '#DC2626' }}>{conflicts.map(c => c.guestName).join(' y ')}</b> en estas fechas.
-                  <br /><br />
-                  ¿Deseas sobreescribir y guardar de todas formas?
-                </p>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <button
-                    onClick={() => setConfModal(null)}
-                    style={{
-                      flex: 1,
-                      padding: '10px',
-                      background: '#EFF6FF',
-                      border: 'none',
-                      borderRadius: 8,
-                      fontFamily: 'inherit',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      color: '#1E40AF',
-                    }}
-                  >
-                    ← Corregir
-                  </button>
-                  <button
-                    onClick={confModal}
-                    style={{
-                      flex: 1,
-                      padding: '10px',
-                      background: '#FEF2F2',
-                      border: '1.5px solid #FECACA',
-                      borderRadius: 8,
-                      fontFamily: 'inherit',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      color: '#DC2626',
-                    }}
-                  >
-                    Sobreescribir
-                  </button>
-                </div>
+              <p style={{ fontSize: 13, color: '#374151', marginBottom: 16, lineHeight: 1.4 }}>
+                Ya hay una reserva actual de <b style={{ color: '#DC2626' }}>{conflicts.map(c => c.guestName).join(' y ')}</b> en estas fechas.
+                <br /><br />
+                ¿Deseas forzar el empalme y guardar de todas formas?
+              </p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => setConfModal(null)}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: '#EFF6FF',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontFamily: 'inherit',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    color: '#1E40AF',
+                  }}
+                >
+                  ← Corregir
+                </button>
+                <button
+                  onClick={confModal}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: '#FEF2F2',
+                    border: '1.5px solid #FECACA',
+                    borderRadius: 8,
+                    fontFamily: 'inherit',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    color: '#DC2626',
+                  }}
+                >
+                  Forzar Empalme
+                </button>
               </div>
             </div>
           </div>
-        )}
-      </div>
-    );
+        </div>
+      )}
+    </div>
+  );
 }
-
 // ── DRAWER ────────────────────────────────────────────────────────────────────
 function ResDrawer({
   res,
