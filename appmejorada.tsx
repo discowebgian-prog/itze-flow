@@ -6850,7 +6850,6 @@ const toggleBlacklist = async (id, currentStatus) => {
       }}
     >
       <style>{`
-       <style>{`
         /* Reset y Tipografía Global */
         *, *::before, *::after { box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif !important; }
         html, body, #root { margin: 0 !important; padding: 0 !important; max-width: 100% !important; width: 100%; background: #F8FAFC; color: #111; overflow: hidden; }
