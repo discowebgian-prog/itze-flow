@@ -3031,13 +3031,15 @@ function Timeline({
   isMobile,
   calView,
   setCalView,
+  offset,      // <--- RECIBE DESDE AFUERA
+  setOffset,   // <--- RECIBE DESDE AFUERA
 }) {
   const NCOLS = isMobile ? 21 : 45,
     COL = 60,
     ROW = 62,
     LABEL = 70,
     SH = 4;
-  const [offset, setOffset] = useState(-2);
+  // BORRAMOS EL const [offset, setOffset] = useState(-2);
   const [drag, setDrag] = useState(null);
   const [dConf, setDConf] = useState(null);
   const [tooltip, setTooltip] = useState(null);
@@ -6513,6 +6515,7 @@ export default function AppMejorada() {
   const [calView, setCalView] = useState('timeline');
   const [prefill, setPrefill] = useState({});
   const [toastMsg, setToastMsg] = useState(null); 
+  const [calOffset, setCalOffset] = useState(-2);  
 
   // 1. Verificación de Login
   if (!user) return <Login onLogin={setUser} />;
@@ -6646,9 +6649,16 @@ export default function AppMejorada() {
 
       setModal(null);
       
-      // Lanzamos el cartel flotante y lo borramos al segundo y medio
+      setModal(null);
+      
+      // ¡LA MAGIA DEL SALTO! Calculamos la distancia en días y movemos el calendario
+      const diasDistancia = diffDays(fmt(TODAY), newRes.checkIn);
+      setCalOffset(diasDistancia - 2); // Lo centramos dejando 2 días de margen a la izquierda
+      setTab('calendario'); // Forzamos ir a la pestaña del calendario para ver la reserva
+      
+      // Lanzamos el cartel flotante y lo borramos a los 2 segundos
       setToastMsg('Reserva guardada');
-      setTimeout(() => setToastMsg(null), 1700);
+      setTimeout(() => setToastMsg(null), 2000);
 
     } catch (err) {
       console.error('Error al conectar con la base de datos:', err);
@@ -7090,6 +7100,8 @@ const toggleBlacklist = async (id, currentStatus) => {
               isMobile={isMobile}
               calView={effectiveCalView}
               setCalView={setCalView}
+              offset={calOffset}         {/* <--- CONECTAMOS LA MEMORIA */}
+              setOffset={setCalOffset}   {/* <--- CONECTAMOS EL CONTROL */}
             />
           )}
           {tab === 'reservas' && (
