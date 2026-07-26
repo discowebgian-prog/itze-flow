@@ -7100,8 +7100,8 @@ const toggleBlacklist = async (id, currentStatus) => {
               isMobile={isMobile}
               calView={effectiveCalView}
               setCalView={setCalView}
-              offset={calOffset}         {/* <--- CONECTAMOS LA MEMORIA */}
-              setOffset={setCalOffset}   {/* <--- CONECTAMOS EL CONTROL */}
+              offset={calOffset}
+              setOffset={setCalOffset}
             />
           )}
           {tab === 'reservas' && (
