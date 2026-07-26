@@ -1206,7 +1206,8 @@ function ResForm({
     initial?.id
   );
   const [confModal, setConfModal] = useState(null);
-  const [isSaving, setIsSaving] = useState(false); // <--- NUEVO: SEGURO ANTI DOBLE-CLIC
+  const [isSaving, setIsSaving] = useState(false);
+  const [valErr, setValErr] = useState(''); 
 
   const minDatePermitida = initial?.checkIn ? initial.checkIn : null;
 
@@ -1277,7 +1278,25 @@ function ResForm({
   ]);
 
   const handleSave = () => {
-    if (isSaving) return; // Si ya está guardando, ignora más clics
+    if (isSaving) return; 
+
+    // --- 1. VALIDACIÓN DE CAMPOS OBLIGATORIOS ---
+    if (!f.guestName || f.guestName.trim() === '') {
+      setValErr('El Nombre del huésped es obligatorio.');
+      return;
+    }
+    if (f.pricing.ratePerNight === '' || f.pricing.ratePerNight === null) {
+      setValErr('La Tarifa base/noche es obligatoria.');
+      return;
+    }
+    if (f.paid === '' || f.paid === null) {
+      setValErr('El Monto pagado es obligatorio (podés poner 0).');
+      return;
+    }
+    
+    setValErr(''); // Si todo está bien, limpiamos el error
+    // --------------------------------------------
+
     if (conflicts.length > 0) {
       setConfModal(() => () => {
         setIsSaving(true);
@@ -1969,24 +1988,43 @@ function ResForm({
           Notas internas
         </label>
         <textarea
-          value={f.notes}
-          onChange={(e) => sv('notes', e.target.value)}
-          rows={3}
-          style={{
-            width: '100%',
-            padding: '9px 12px',
-            border: '1.5px solid #E5E7EB',
-            borderRadius: 8,
-            fontSize: 13,
-            fontFamily: 'inherit',
-            outline: 'none',
-            resize: 'vertical',
-            boxSizing: 'border-box',
-          }}
-        />
-      </div>
+            value={f.notes}
+            onChange={(e) => sv('notes', e.target.value)}
+            rows={3}
+            style={{
+              width: '100%',
+              padding: '9px 12px',
+              border: '1.5px solid #E5E7EB',
+              borderRadius: 8,
+              fontSize: 13,
+              fontFamily: 'inherit',
+              outline: 'none',
+              resize: 'vertical',
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
 
-      <div style={{ display: 'flex', gap: 10 }}>
+        {/* ALERTA DE ERROR SI FALTAN CAMPOS OBLIGATORIOS */}
+        {valErr && (
+          <div
+            style={{
+              color: '#DC2626',
+              fontSize: 13,
+              fontWeight: 700,
+              marginBottom: 14,
+              textAlign: 'center',
+              background: '#FEF2F2',
+              padding: '10px',
+              borderRadius: 8,
+              border: '1px solid #FECACA',
+            }}
+          >
+            ⚠️ {valErr}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 10 }}>
         <button
           onClick={onClose}
           disabled={isSaving}
