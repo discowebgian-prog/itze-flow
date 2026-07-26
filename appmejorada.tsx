@@ -5106,10 +5106,9 @@ function GuestsPage({ reservations, properties, onView }) {
         }}
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 12 }}>
         {allGuests.map((g, idx) => {
           const freq = freqBadge(g.stays.length);
-          // Obtenemos la última reserva para ver sus detalles rápidos
           const lastRes = reservations.find(r => r.id === g.stays[g.stays.length - 1]);
 
           return (
@@ -5117,38 +5116,37 @@ function GuestsPage({ reservations, properties, onView }) {
               key={idx}
               onClick={() => lastRes && onView(lastRes)}
               style={{
-                background: '#fff', borderRadius: 12, padding: '16px', border: '1px solid #F0F0F0',
-                cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 12,
-                boxShadow: '0 2px 6px rgba(0,0,0,.02)', transition: 'transform 0.1s'
+                background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1px solid #E5E7EB',
+                cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 10,
+                boxShadow: '0 1px 3px rgba(0,0,0,.02)', transition: 'transform 0.1s'
               }}
               onMouseOver={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
               onMouseOut={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
             >
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                <Avatar name={g.name} size={46} />
-                <div style={{ flex: 1, overflow: 'hidden' }}>
-                  <div style={{ fontWeight: 800, fontSize: 15, color: '#111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: 14, color: '#111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {g.name}
                   </div>
-                  <div style={{ fontSize: 11, color: '#6B7280', display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}>
-                    <span>{g.doc || 'Sin DOC'}</span>
-                    {freq && (
-                      <span style={{ fontSize: 10, fontWeight: 800, color: freq.color, background: freq.bg, padding: '2px 6px', borderRadius: 6 }}>
-                        {freq.label}
-                      </span>
-                    )}
+                  <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>
+                    {g.doc || 'Sin DOC'}
                   </div>
                 </div>
+                {freq && (
+                  <div style={{ flexShrink: 0, fontSize: 9, fontWeight: 800, color: freq.color, background: freq.bg, padding: '3px 6px', borderRadius: 6 }}>
+                    {freq.label}
+                  </div>
+                )}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#F8FAFC', borderRadius: 8, padding: '10px', gap: 8 }}>
-                <div>
-                  <div style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 700, textTransform: 'uppercase' }}>Visitas</div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#374151' }}>{g.stays.length}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', background: '#F8FAFC', borderRadius: 6, padding: '8px 10px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                  <span style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 700, textTransform: 'uppercase' }}>Visitas:</span>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#374151' }}>{g.stays.length}</span>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 700, textTransform: 'uppercase' }}>Inversión</div>
-                  <div style={{ fontSize: 14, fontWeight: 900, color: '#10B981' }}>{currency(g.totalSpent)}</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                  <span style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 700, textTransform: 'uppercase' }}>Inversión:</span>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#10B981' }}>{currency(g.totalSpent)}</span>
                 </div>
               </div>
 
@@ -5160,11 +5158,11 @@ function GuestsPage({ reservations, properties, onView }) {
                   onClick={(e) => e.stopPropagation()}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    width: '100%', padding: '8px', borderRadius: 8, background: '#ECFDF5', color: '#059669',
-                    textDecoration: 'none', fontWeight: 700, fontSize: 12, border: '1px solid #A7F3D0'
+                    width: '100%', padding: '6px', borderRadius: 6, background: '#ECFDF5', color: '#059669',
+                    textDecoration: 'none', fontWeight: 700, fontSize: 11, border: '1px solid #A7F3D0'
                   }}
                 >
-                  <Icon name="whatsapp" size={16} /> Enviar WhatsApp
+                  <Icon name="whatsapp" size={14} /> Enviar WhatsApp
                 </a>
               )}
             </div>
