@@ -6890,15 +6890,14 @@ const toggleBlacklist = async (id, currentStatus) => {
         }
 
         /* 📱 OPTIMIZACIÓN MOBILE LANDSCAPE (CELULAR ACOSTADO) */
-        @media (max-height: 500px) and (orientation: landscape) {
-          .top-nav { display: none !important; } /* 1. Ocultar la barra blanca superior */
-          .app-layout { min-height: 100vh !important; }
-          .main-content { padding: 0px 0px 50px !important; } /* 2. Cero margen superior para ocupar el 100% de la pantalla */
+        @media (orientation: landscape) and (max-width: 950px) {
+          .top-nav { display: none !important; } 
+          html, body, #root, .app-layout { padding: 0 !important; margin: 0 !important; min-height: 100vh !important; }
+          .main-content { padding: 0px 0px 45px !important; margin: 0 !important; border: none !important; } 
           
-          /* 3. Menú inferior ultra-finito */
-          .bn { padding-bottom: env(safe-area-inset-bottom, 2px) !important; min-height: 40px !important; } 
-          .bn button { min-height: 40px !important; padding: 2px !important; flex-direction: row !important; justify-content: center !important; gap: 6px !important; } 
-          .bn button svg { width: 16px !important; height: 16px !important; }
+          .bn { padding-bottom: 0 !important; min-height: 38px !important; } 
+          .bn button { min-height: 38px !important; padding: 0 !important; flex-direction: row !important; justify-content: center !important; gap: 6px !important; } 
+          .bn button svg { width: 14px !important; height: 14px !important; margin: 0 !important; }
           .bn button span { font-size: 11px !important; margin-top: 0 !important; }
           .nav-indicator { display: none !important; } 
         }
