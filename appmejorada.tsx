@@ -5276,8 +5276,21 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
     return acc;
   }, {});
 
-  // Convertimos a array y ordenamos (del mes más reciente al más antiguo)
+  // 1. ORDEN CRONOLÓGICO: Futuro arriba, Pasado abajo.
   const monthlyArray = Object.values(monthlyStats).sort((a, b) => b.key.localeCompare(a.key));
+  
+  // 2. IDENTIFICADOR DEL MES ACTUAL
+  const currentMonthKey = `${TODAY.getFullYear()}-${String(TODAY.getMonth() + 1).padStart(2, '0')}`;
+
+  // 3. AUTO-SCROLL AL MES ACTUAL
+  useEffect(() => {
+    setTimeout(() => {
+      const el = document.getElementById(`month-${currentMonthKey}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 150);
+  }, [currentMonthKey]);
   // ----------------------------------------
 
   return (
@@ -5463,23 +5476,49 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))',
-          gap: 12,
+          gap: 16,
           marginBottom: 28,
         }}
       >
         {monthlyArray.map((m) => {
           const saldo = m.total - m.paid;
           const pct = m.total > 0 ? Math.round((m.paid / m.total) * 100) : 0;
+          const isCurrent = m.key === currentMonthKey;
+
           return (
             <div
               key={m.key}
+              id={`month-${m.key}`}
               style={{
-                background: '#fff',
+                background: isCurrent ? '#EFF6FF' : '#fff',
                 borderRadius: 12,
                 padding: '16px',
-                border: '1px solid #F0F0F0',
+                border: isCurrent ? '2px solid #3B82F6' : '1px solid #F0F0F0',
+                boxShadow: isCurrent ? '0 4px 12px rgba(59,130,246,0.15)' : 'none',
+                position: 'relative',
               }}
             >
+              {isCurrent && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: -10,
+                    right: 16,
+                    background: '#3B82F6',
+                    color: '#fff',
+                    fontSize: 10,
+                    fontWeight: 800,
+                    padding: '4px 10px',
+                    borderRadius: 12,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                    boxShadow: '0 2px 4px rgba(59,130,246,0.3)',
+                  }}
+                >
+                  Mes Actual
+                </div>
+              )}
+
               <div
                 style={{
                   display: 'flex',
@@ -5492,7 +5531,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
                   style={{
                     fontWeight: 800,
                     fontSize: 15,
-                    color: '#111',
+                    color: isCurrent ? '#1E40AF' : '#111',
                     textTransform: 'capitalize',
                   }}
                 >
@@ -5501,7 +5540,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
                 <div
                   style={{
                     fontSize: 11,
-                    color: '#9CA3AF',
+                    color: isCurrent ? '#60A5FA' : '#9CA3AF',
                     fontWeight: 600,
                   }}
                 >
@@ -5539,7 +5578,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
               <div
                 style={{
                   height: 4,
-                  background: '#F3F4F6',
+                  background: isCurrent ? '#BFDBFE' : '#F3F4F6',
                   borderRadius: 4,
                   marginBottom: 10,
                 }}
@@ -5560,11 +5599,11 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
                   display: 'flex',
                   justifyContent: 'space-between',
                   paddingTop: 8,
-                  borderTop: '1px dashed #E5E7EB',
+                  borderTop: isCurrent ? '1px dashed #93C5FD' : '1px dashed #E5E7EB',
                   fontSize: 13,
                 }}
               >
-                <span style={{ color: '#6B7280', fontWeight: 600 }}>
+                <span style={{ color: isCurrent ? '#3B82F6' : '#6B7280', fontWeight: 600 }}>
                   Por cobrar:
                 </span>
                 <span
