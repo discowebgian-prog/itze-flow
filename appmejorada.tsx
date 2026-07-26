@@ -6893,7 +6893,7 @@ const toggleBlacklist = async (id, currentStatus) => {
         @media (max-height: 500px) and (orientation: landscape) {
           .top-nav { display: none !important; } /* 1. Ocultar la barra blanca superior */
           .app-layout { min-height: 100vh !important; }
-          .main-content { padding: 8px 8px 50px !important; } /* 2. Achicar los márgenes para ganar espacio */
+          .main-content { padding: 0px 0px 50px !important; } /* 2. Cero margen superior para ocupar el 100% de la pantalla */
           
           /* 3. Menú inferior ultra-finito */
           .bn { padding-bottom: env(safe-area-inset-bottom, 2px) !important; min-height: 40px !important; } 
