@@ -6892,9 +6892,21 @@ const toggleBlacklist = async (id, currentStatus) => {
         /* 📱 OPTIMIZACIÓN MOBILE LANDSCAPE (CELULAR ACOSTADO) */
         @media (orientation: landscape) and (max-width: 950px) {
           .top-nav { display: none !important; } 
-          html, body, #root, .app-layout { padding: 0 !important; margin: 0 !important; min-height: 100vh !important; }
-          .main-content { padding: 0px 0px 45px !important; margin: 0 !important; border: none !important; } 
+          html, body, #root, .app-layout { 
+            padding: 0 !important; 
+            margin: 0 !important; 
+            min-height: 100vh !important; 
+          }
+          .main-content { 
+            /* 0 arriba, respeta la isla del iPhone a los costados, 45px abajo para el menú */
+            padding: 0px env(safe-area-inset-right, 16px) 45px env(safe-area-inset-left, 16px) !important; 
+            margin: 0 !important; 
+            border: none !important; 
+          } 
           
+          /* 🔥 ELIMINA EL MARGEN REBELDE SUPERIOR DE LOS ELEMENTOS INTERNOS */
+          .main-content > * { margin-top: 0 !important; }
+
           .bn { padding-bottom: 0 !important; min-height: 38px !important; } 
           .bn button { min-height: 38px !important; padding: 0 !important; flex-direction: row !important; justify-content: center !important; gap: 6px !important; } 
           .bn button svg { width: 14px !important; height: 14px !important; margin: 0 !important; }
