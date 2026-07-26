@@ -6889,7 +6889,7 @@ const toggleBlacklist = async (id, currentStatus) => {
           .bn { display: flex !important; position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #E5E7EB; z-index: 99; padding-bottom: env(safe-area-inset-bottom, 12px); box-shadow: 0 -2px 10px rgba(0,0,0,0.03); }
         }
 
-       /* 📱 OPTIMIZACIÓN MOBILE LANDSCAPE (CELULAR ACOSTADO) */
+      /* 📱 OPTIMIZACIÓN MOBILE LANDSCAPE (CELULAR ACOSTADO) */
         @media (orientation: landscape) and (max-width: 950px) {
           /* 1. Ocultamos barra blanca superior y el menú inferior */
           .top-nav { display: none !important; } 
@@ -6898,12 +6898,12 @@ const toggleBlacklist = async (id, currentStatus) => {
           /* 2. Forzamos la barra lateral izquierda (versión mini con iconos) */
           .sidebar { 
             display: flex !important; 
-            width: 64px !important; 
-            /* Se adapta a la Isla del iPhone si queda del lado izquierdo */
-            padding: env(safe-area-inset-top, 16px) 8px env(safe-area-inset-bottom, 16px) env(safe-area-inset-left, 8px) !important; 
+            width: 70px !important; 
+            padding: 10px 8px !important;
+            padding-left: env(safe-area-inset-left, 12px) !important; 
             align-items: center !important; 
           }
-          .sl, .sa { display: none !important; } /* Oculta textos de la barra, deja solo iconos */
+          .sl, .sa { display: none !important; } 
           
           html, body, #root, .app-layout { 
             padding: 0 !important; 
@@ -6912,20 +6912,28 @@ const toggleBlacklist = async (id, currentStatus) => {
             background: #fff !important; 
           }
           
-          /* 3. Contenido principal a sangre arriba y abajo, respetando la isla a la derecha */
+          /* 3. SEPARAMOS LOS MÁRGENES PARA QUE SAFARI NO LOS IGNORE */
           .main-content { 
-            padding: 0px env(safe-area-inset-right, 16px) 0px 0px !important; 
+            padding-top: 0 !important; 
+            padding-bottom: 0 !important;
+            padding-left: 0 !important;
+            padding-right: env(safe-area-inset-right, 16px) !important;
             margin: 0 !important; 
             border: none !important; 
           } 
           
-          /* 4. Aplasta el cuadro blanco del calendario contra el techo */
+          /* 4. Aplasta el contenedor principal contra el techo */
           .main-content > div { 
             margin-top: 0 !important; 
-            padding-top: 0 !important; 
+            padding-top: 10px !important; /* Apenas 10px para que no choque el título */
             border-radius: 0 !important; 
             border: none !important; 
             box-shadow: none !important; 
+          }
+
+          /* 5. Comprime el encabezado (Título "Calendario" y botones) */
+          .main-content > div > div:first-child {
+            margin-bottom: 8px !important; 
           }
         }
       `}</style>
