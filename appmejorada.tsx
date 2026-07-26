@@ -6850,6 +6850,7 @@ const toggleBlacklist = async (id, currentStatus) => {
       }}
     >
       <style>{`
+       <style>{`
         /* Reset y Tipografía Global */
         *, *::before, *::after { box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif !important; }
         html, body, #root { margin: 0 !important; padding: 0 !important; max-width: 100% !important; width: 100%; background: #F8FAFC; color: #111; overflow: hidden; }
@@ -6888,11 +6889,25 @@ const toggleBlacklist = async (id, currentStatus) => {
           .main-content { padding: 16px 12px 100px !important; overflow-y: visible; }
           .bn { display: flex !important; position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #E5E7EB; z-index: 99; padding-bottom: env(safe-area-inset-bottom, 12px); box-shadow: 0 -2px 10px rgba(0,0,0,0.03); }
         }
+
+        /* 📱 OPTIMIZACIÓN MOBILE LANDSCAPE (CELULAR ACOSTADO) */
+        @media (max-height: 500px) and (orientation: landscape) {
+          .top-nav { display: none !important; } /* 1. Ocultar la barra blanca superior */
+          .app-layout { min-height: 100vh !important; }
+          .main-content { padding: 8px 8px 50px !important; } /* 2. Achicar los márgenes para ganar espacio */
+          
+          /* 3. Menú inferior ultra-finito */
+          .bn { padding-bottom: env(safe-area-inset-bottom, 2px) !important; min-height: 40px !important; } 
+          .bn button { min-height: 40px !important; padding: 2px !important; flex-direction: row !important; justify-content: center !important; gap: 6px !important; } 
+          .bn button svg { width: 16px !important; height: 16px !important; }
+          .bn button span { font-size: 11px !important; margin-top: 0 !important; }
+          .nav-indicator { display: none !important; } 
+        }
       `}</style>
 
       {/* Navbar Superior */}
-      {/* Navbar Superior */}
       <div
+        className="top-nav"
         style={{
           background: '#fff',
           borderBottom: '1px solid #F0F0F0',
@@ -7237,6 +7252,7 @@ const toggleBlacklist = async (id, currentStatus) => {
             </span>
             {tab === t.id && (
               <div
+                className="nav-indicator"
                 style={{
                   width: 20,
                   height: 2.5,
