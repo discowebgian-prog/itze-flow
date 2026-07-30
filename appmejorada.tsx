@@ -4375,7 +4375,7 @@ function Dashboard({
               setTimeout(() => {
                 const el = document.getElementById('seccion-saldos-pendientes');
                 if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }, 150);
+              }, 400);
             },
           },
           {
