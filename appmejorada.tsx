@@ -4295,6 +4295,10 @@ function Dashboard({
   setPropStatus,
   onGoTo,
 }) {
+  // --- NUEVO: Controladores de Animación ---
+  const [pulseIn, setPulseIn] = useState(false);
+  const [pulseOut, setPulseOut] = useState(false);
+
   const isNow = (r) => parseD(r.checkIn) <= TODAY && TODAY < parseD(r.checkOut);
   const active = reservations.filter(isNow);
   const ciToday = reservations.filter((r) => r.checkIn === fmt(TODAY));
@@ -4305,6 +4309,18 @@ function Dashboard({
   
   return (
     <div>
+      {/* NUEVO: ESTILOS DE ANIMACIÓN DE PULSO */}
+      <style>{`
+        @keyframes pulseBlue {
+          0%, 100% { box-shadow: 0 1px 3px rgba(0,0,0,.05); border-color: #F0F0F0; background-color: #fff; }
+          50% { box-shadow: 0 4px 16px rgba(59,130,246,0.4); border-color: #3B82F6; background-color: #EFF6FF; }
+        }
+        @keyframes pulseOrange {
+          0%, 100% { box-shadow: 0 1px 3px rgba(0,0,0,.05); border-color: #F0F0F0; background-color: #fff; }
+          50% { box-shadow: 0 4px 16px rgba(245,158,11,0.4); border-color: #F59E0B; background-color: #FFFBEB; }
+        }
+      `}</style>
+
       <div style={{ marginBottom: 28, display: 'flex', flexDirection: 'column', gap: 4 }}>
         <div
           style={{
@@ -4348,6 +4364,14 @@ function Dashboard({
             icon: '📥',
             col: '#3B82F6',
             bg: '#EFF6FF',
+            onClick: () => {
+              const el = document.getElementById('seccion-ingresos');
+              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              // Apagamos y prendemos la animación
+              setPulseIn(false);
+              setTimeout(() => setPulseIn(true), 300); // Espera a que baje la pantalla
+              setTimeout(() => setPulseIn(false), 2700); // Lo apaga a los 2.4s (3 pulsos de 0.8s)
+            }
           },
           {
             label: 'Check-outs hoy',
@@ -4355,6 +4379,13 @@ function Dashboard({
             icon: '📤',
             col: '#F59E0B',
             bg: '#FFFBEB',
+            onClick: () => {
+              const el = document.getElementById('seccion-salidas');
+              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              setPulseOut(false);
+              setTimeout(() => setPulseOut(true), 300); 
+              setTimeout(() => setPulseOut(false), 2700); 
+            }
           },
           {
             label: 'En casa',
@@ -4375,7 +4406,7 @@ function Dashboard({
               setTimeout(() => {
                 const el = document.getElementById('seccion-saldos-pendientes');
                 if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }, 400);
+              }, 400); 
             },
           },
           {
@@ -4437,9 +4468,10 @@ function Dashboard({
           </div>
         ))}
       </div>
+      
       {/* 📥 SECCIÓN DE INGRESOS DE HOY */}
       {ciToday.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
+        <div id="seccion-ingresos" style={{ marginBottom: 24 }}>
           <h3
             style={{
               margin: '0 0 12px',
@@ -4468,6 +4500,7 @@ function Dashboard({
                     gap: 12,
                     border: '1px solid #F0F0F0',
                     cursor: 'pointer',
+                    animation: pulseIn ? 'pulseBlue 0.8s ease-in-out 3' : 'none', // <--- ANIMACIÓN AQUÍ
                   }}
                   onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,.05)')}
                   onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
@@ -4522,7 +4555,7 @@ function Dashboard({
 
       {/* 📤 SECCIÓN DE SALIDAS DE HOY */}
       {coToday.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
+        <div id="seccion-salidas" style={{ marginBottom: 24 }}>
           <h3
             style={{
               margin: '0 0 12px',
@@ -4551,6 +4584,7 @@ function Dashboard({
                     gap: 12,
                     border: '1px solid #F0F0F0',
                     cursor: 'pointer',
+                    animation: pulseOut ? 'pulseOrange 0.8s ease-in-out 3' : 'none', // <--- ANIMACIÓN AQUÍ
                   }}
                   onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,.05)')}
                   onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
