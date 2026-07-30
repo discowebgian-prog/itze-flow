@@ -4362,6 +4362,7 @@ function Dashboard({
             icon: '🛏️',
             col: '#10B981',
             bg: '#ECFDF5',
+            onClick: () => onGoTo('calendario'),
           },
           {
             label: 'Saldos pend.',
@@ -4369,9 +4370,16 @@ function Dashboard({
             icon: '💰',
             col: '#EF4444',
             bg: '#FEF2F2',
+            onClick: () => {
+              onGoTo('finanzas');
+              setTimeout(() => {
+                const el = document.getElementById('seccion-saldos-pendientes');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }, 150);
+            },
           },
           {
-            label: 'Ocupación actual',
+            label: 'Ocupación de hoy',
             val: (() => {
               const totalRooms = properties.reduce((s, p) => s + (p.rooms || 1), 0);
               return totalRooms > 0 
@@ -4381,16 +4389,33 @@ function Dashboard({
             icon: '📊',
             col: '#8B5CF6',
             bg: '#EDE9FE',
+            onClick: () => onGoTo('calendario'),
           },
         ].map((k) => (
           <div
             key={k.label}
+            onClick={k.onClick}
             style={{
               background: '#fff',
               borderRadius: 12,
               padding: '16px',
               border: '1px solid #F0F0F0',
               boxShadow: '0 1px 3px rgba(0,0,0,.05)',
+              cursor: k.onClick ? 'pointer' : 'default',
+              transition: 'all 0.2s ease',
+              userSelect: 'none',
+            }}
+            onMouseOver={(e) => {
+              if (k.onClick) {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,.08)';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (k.onClick) {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,.05)';
+              }
             }}
           >
             <div style={{ fontSize: 24, marginBottom: 6 }}>{k.icon}</div>
@@ -5771,6 +5796,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
 
       {/* SECCIÓN 3: SALDOS PENDIENTES */}
       <h3
+        id="seccion-saldos-pendientes"
         style={{
           margin: '0 0 12px',
           fontSize: 15,
