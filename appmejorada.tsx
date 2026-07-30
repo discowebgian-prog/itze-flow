@@ -2826,7 +2826,7 @@ function ResDrawer({
 }
 
 // ── TIMELINE MOBILE ───────────────────────────────────────────────────────────
-function TimelineMobile({ reservations, properties, onClickRes, onAddRes }) {
+function TimelineMobile({ reservations, properties, onClickRes, onAddRes, highlightStatus }) {
   const next14 = Array.from({ length: 14 }, (_, i) => addDays(TODAY, i - 1));
   const dayRes = (d) =>
     reservations.filter(
@@ -2959,6 +2959,7 @@ function TimelineMobile({ reservations, properties, onClickRes, onAddRes }) {
                       gap: 10,
                       borderBottom: '1px solid #F8FAFC',
                       cursor: 'pointer',
+                      animation: (highlightStatus && r.status === highlightStatus) ? 'pulseGreenCard 0.8s ease-in-out 3' : 'none',
                     }}
                     onClick={() => onClickRes(r)}
                   >
@@ -3069,8 +3070,9 @@ function Timeline({
   isMobile,
   calView,
   setCalView,
-  offset,      // <--- RECIBE DESDE AFUERA
-  setOffset,   // <--- RECIBE DESDE AFUERA
+  offset,
+  setOffset,
+  highlightStatus,
 }) {
   const NCOLS = isMobile ? 21 : 45,
     COL = 60,
@@ -3170,6 +3172,7 @@ function Timeline({
           properties={properties}
           onClickRes={onClickRes}
           onAddRes={onAddRes}
+          highlightStatus={highlightStatus}
         />
       </div>
     );
@@ -3324,6 +3327,17 @@ function Timeline({
     <div
       onMouseMove={onMove}
       onMouseUp={endDrag}
+    >
+      <style>{`
+        @keyframes pulseGreenBlock {
+          0%, 100% { transform: scale(1); filter: drop-shadow(0 1px 3px rgba(0,0,0,.18)); }
+          50% { transform: scale(1.05); filter: drop-shadow(0 0 14px rgba(16,185,129,0.95)); }
+        }
+        @keyframes pulseGreenCard {
+          0%, 100% { box-shadow: none; border-color: #F8FAFC; }
+          50% { box-shadow: 0 4px 16px rgba(16,185,129,0.4); border-color: #10B981; background-color: #ECFDF5; }
+        }
+      `}</style>
       onMouseLeave={endDrag}
       onTouchMove={(e) => {
         e.preventDefault();
@@ -3777,9 +3791,10 @@ function Timeline({
                         top: 6,
                         left: LABEL + r.pxL + 2,
                         width: W,
-                        zIndex: isDrag ? 10 : 4,
+                        zIndex: isDrag ? 10 : (highlightStatus && r.status === highlightStatus ? 15 : 4),
                         opacity: isDrag ? 0.3 : 1,
                         touchAction: 'none',
+                        animation: (highlightStatus && r.status === highlightStatus) ? 'pulseGreenBlock 0.8s ease-in-out 3' : 'none',
                       }}
                       onMouseEnter={(e) => {
                         if (!isMobile)
@@ -4393,7 +4408,7 @@ function Dashboard({
             icon: '🛏️',
             col: '#10B981',
             bg: '#ECFDF5',
-            onClick: () => onGoTo('calendario'),
+            onClick: () => onGoTo('calendario', 'hospedado'),
           },
           {
             label: 'Saldos pend.',
@@ -4420,7 +4435,7 @@ function Dashboard({
             icon: '📊',
             col: '#8B5CF6',
             bg: '#EDE9FE',
-            onClick: () => onGoTo('calendario'),
+            onClick: () => onGoTo('calendario', 'hospedado'),
           },
         ].map((k) => (
           <div
@@ -6444,6 +6459,7 @@ export default function AppMejorada() {
   const [user, setUser] = useState(null);
   const [res, setRes] = useState(INIT_RES);
   const [tab, setTab] = useState('dashboard');
+  const [highlightStatus, setHighlightStatus] = useState(null);
   const winW = useW();
   const isMobile = winW < 769;
   const isTablet = winW >= 769 && winW < 1280;
@@ -6649,9 +6665,13 @@ export default function AppMejorada() {
   };
   const goTo = (newTab, data) => {
     if (newTab === 'abrir_reserva') {
-      setDrawer(data); // ¡Esto abre el panel lateral (Drawer) automáticamente con la reserva!
+      setDrawer(data);
     } else {
       setTab(newTab);
+      if (typeof data === 'string') {
+        setHighlightStatus(data);
+        setTimeout(() => setHighlightStatus(null), 2700);
+      }
     }
   };
   const saveRes = async (newRes) => {
@@ -7246,6 +7266,7 @@ const toggleBlacklist = async (id, currentStatus) => {
               setCalView={setCalView}
               offset={calOffset}
               setOffset={setCalOffset}
+              highlightStatus={highlightStatus}
             />
           )}
           {tab === 'reservas' && (
