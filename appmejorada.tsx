@@ -3348,7 +3348,7 @@ function Timeline({
         }
         @keyframes pulseGreenCard {
           0%, 100% { box-shadow: none; border-color: #F8FAFC; }
-          50% { box-shadow: 0 4px 16px rgba(16,185,129,0.4); border-color: #10B981; background-color: #ECFDF5; }
+          50% { box-shadow: 0 4px 16px rgba(16,185,129,0.7); border-color: #10B981; background-color: #ECFDF5; }
         }
       `}</style>
 
