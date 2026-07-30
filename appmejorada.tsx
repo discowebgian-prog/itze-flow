@@ -3344,7 +3344,7 @@ function Timeline({
       <style>{`
         @keyframes pulseGreenBlock {
           0%, 100% { transform: scale(1); filter: drop-shadow(0 1px 3px rgba(0,0,0,.18)); }
-          50% { transform: scale(1.05); filter: drop-shadow(0 0 14px rgba(16,185,129,0.95)); }
+          50% { transform: scale(1.1); filter: drop-shadow(0 0 14px rgba(16,185,129,0.95)); }
         }
         @keyframes pulseGreenCard {
           0%, 100% { box-shadow: none; border-color: #F8FAFC; }
