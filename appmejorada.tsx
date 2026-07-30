@@ -4371,7 +4371,7 @@ function Dashboard({
             bg: '#FEF2F2',
           },
           {
-            label: 'Ocupación de hoy',
+            label: 'Ocupación hoy',
             val: (() => {
               const totalRooms = properties.reduce((s, p) => s + (p.rooms || 1), 0);
               return totalRooms > 0 
