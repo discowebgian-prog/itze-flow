@@ -2250,7 +2250,7 @@ function ResDrawer({
             }}
           >
             <div>
-              {/* Línea superior: Solo el nombre del Hostel limpio */}
+              {/* Línea superior: Nombre de la propiedad */}
               <div
                 style={{
                   fontSize: 11,
@@ -2263,7 +2263,7 @@ function ResDrawer({
               >
                 {prop?.name}
               </div>
-              {/* Línea principal: Nombre del Huésped + Placa de Habitación destacada */}
+              {/* Línea principal: Nombre del Huésped + Placa de Habitación */}
               <div 
                 style={{ 
                   display: 'flex', 
@@ -2278,12 +2278,12 @@ function ResDrawer({
                 {res.room && (
                   <span 
                     style={{ 
-                      background: 'rgba(255, 255, 255, 0.25)', // Fondo blanco translúcido cristal
+                      background: 'rgba(255, 255, 255, 0.25)', 
                       color: '#fff', 
                       padding: '3px 9px', 
                       borderRadius: 6, 
                       fontSize: 13, 
-                      fontWeight: 900, // Súper negrita
+                      fontWeight: 900, 
                       border: '1px solid rgba(255, 255, 255, 0.2)',
                       lineHeight: 1
                     }}
@@ -2291,6 +2291,20 @@ function ResDrawer({
                     {res.room}
                   </span>
                 )}
+              </div>
+              {/* Subtítulo: Cantidad de Pax / Ocupantes */}
+              <div
+                style={{
+                  fontSize: 12,
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  fontWeight: 700,
+                  marginTop: 6,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                👥 {res.totalGuests || 1} {(res.totalGuests || 1) === 1 ? 'Pax (1 persona)' : `Pax (${res.totalGuests} personas)`}
               </div>
             </div>
             <button
