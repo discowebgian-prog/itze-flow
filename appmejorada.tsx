@@ -6420,7 +6420,7 @@ export default function AppMejorada() {
         let fechaCheckout = item.fecha_salida || '';
 
         // ── AUTO CHECK-OUT AL CARGAR LA APP (Si ya pasaron las 11:00 AM) ──
-        if (horaActual >= 11 && estado === 'hospedado' && fechaCheckout <= hoyFmt) {
+        if (horaActual >= 14 && estado === 'hospedado' && fechaCheckout <= hoyFmt) {
             estado = 'finalizada';
             supabase.from('reservas').update({ estado: 'finalizada' }).eq('id', item.id).then();
         }
@@ -6499,7 +6499,7 @@ export default function AppMejorada() {
     const vigilante = setInterval(() => {
       const nowMerida = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Merida" }));
       
-      if (nowMerida.getHours() >= 11) {
+      if (nowMerida.getHours() >= 14) {
         const hoyFmt = fmt(nowMerida);
         
         setRes((prevRes) => {
@@ -6507,7 +6507,7 @@ export default function AppMejorada() {
           
           if (paraHacerCheckout.length === 0) return prevRes; // Todo en orden
           
-          console.log(`⏰ 11:00 AM en Mérida: Haciendo check-out automático para ${paraHacerCheckout.length} reservas.`);
+          console.log(`⏰ 14:00 pm en Mérida: Haciendo check-out automático para ${paraHacerCheckout.length} reservas.`);
           
           // Actualiza en Supabase silenciosamente
           paraHacerCheckout.forEach(r => {
