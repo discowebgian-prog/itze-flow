@@ -6138,19 +6138,97 @@ function ResList({ reservations, properties, onView, onAdd }) {
 
             {llegadas.length > 0 && (
               <div style={{ marginBottom: 20 }}>
-                <h3 style={{ fontSize: 12, color: '#059669', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  📥 Llegadas ({llegadas.length})
-                </h3>
+                <div style={{ marginBottom: 10 }}>
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    background: '#ECFDF5',
+                    color: '#065F46',
+                    border: '1px solid #A7F3D0',
+                    padding: '6px 14px',
+                    borderRadius: 20,
+                    fontSize: 12,
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5
+                  }}>
+                    📥 Llegadas ({llegadas.length})
+                  </span>
+                </div>
                 {llegadas.map(r => <ResCard key={r.id} r={r} />)}
               </div>
             )}
 
             {salidas.length > 0 && (
               <div style={{ marginBottom: 20 }}>
-                <h3 style={{ fontSize: 12, color: '#D97706', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  📤 Salidas ({salidas.length})
-                </h3>
+                <div style={{ marginBottom: 10 }}>
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    background: '#FFFBEB',
+                    color: '#92400E',
+                    border: '1px solid #FDE68A',
+                    padding: '6px 14px',
+                    borderRadius: 20,
+                    fontSize: 12,
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5
+                  }}>
+                    📤 Salidas ({salidas.length})
+                  </span>
+                </div>
                 {salidas.map(r => <ResCard key={r.id} r={r} />)}
+              </div>
+            )}
+
+            {hospedados.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ marginBottom: 10 }}>
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    background: '#EFF6FF',
+                    color: '#1E40AF',
+                    border: '1px solid #BFDBFE',
+                    padding: '6px 14px',
+                    borderRadius: 20,
+                    fontSize: 12,
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5
+                  }}>
+                    🛏️ Alojados ({hospedados.length})
+                  </span>
+                </div>
+                {hospedados.map(r => <ResCard key={r.id} r={r} />)}
+              </div>
+            )}
+
+            {canceladas.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ marginBottom: 10 }}>
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    background: '#FEF2F2',
+                    color: '#991B1B',
+                    border: '1px solid #FECACA',
+                    padding: '6px 14px',
+                    borderRadius: 20,
+                    fontSize: 12,
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5
+                  }}>
+                    🚫 Canceladas ({canceladas.length})
+                  </span>
+                </div>
+                {canceladas.map(r => <ResCard key={r.id} r={r} />)}
               </div>
             )}
 
