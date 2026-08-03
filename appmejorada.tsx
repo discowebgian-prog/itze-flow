@@ -5925,8 +5925,8 @@ function ResList({ reservations, properties, onView, onAdd }) {
   const [selectedDate, setSelectedDate] = useState(fmt(TODAY));
   const [q, setQ] = useState('');
 
-  // Generamos un carrusel de 60 días (15 días al pasado y 45 al futuro)
-  const ribbonDates = Array.from({ length: 60 }, (_, i) => addDays(TODAY, i - 15));
+  // Generamos un carrusel de 380 días (15 días al pasado y 1 año completo al futuro)
+  const ribbonDates = Array.from({ length: 380 }, (_, i) => addDays(TODAY, i - 15));
 
   // Auto-scroll para centrar el día seleccionado
   useEffect(() => {
