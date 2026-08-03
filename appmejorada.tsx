@@ -4501,18 +4501,182 @@ function Dashboard({
       {/* 📥 SECCIÓN DE INGRESOS DE HOY */}
       {ciToday.length > 0 && (
         <div id="seccion-ingresos" style={{ marginBottom: 24 }}>
-          <h3
-            style={{
-              margin: '0 0 12px',
-              fontSize: 11,
+          <div style={{ marginBottom: 12 }}>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              background: '#ECFDF5',
+              color: '#065F46',
+              border: '1px solid #A7F3D0',
+              padding: '6px 14px',
+              borderRadius: 20,
+              fontSize: 12,
               fontWeight: 800,
-              color: '#059669',
               textTransform: 'uppercase',
-              letterSpacing: 0.5,
-            }}
-          >
-            📥 Ingresos de hoy ({ciToday.length})
-          </h3>
+              letterSpacing: 0.5
+            }}>
+              📥 Ingresos de hoy ({ciToday.length})
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {ciToday.map((r) => {
+              const prop = PROPS.find((p) => p.id === r.propertyId);
+              return (
+                <div
+                  key={r.id + 'in'}
+                  onClick={() => onGoTo('abrir_reserva', r)}
+                  style={{
+                    background: '#fff',
+                    borderRadius: 10,
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    border: '1px solid #F0F0F0',
+                    cursor: 'pointer',
+                    animation: pulseIn ? 'pulseBlue 0.8s ease-in-out 3' : 'none',
+                  }}
+                  onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,.05)')}
+                  onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
+                >
+                  <div
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      background: '#D1FAE5',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 16,
+                    }}
+                  >
+                    📥
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, fontSize: 13, color: '#111' }}>
+                        {r.guestName}
+                      </span>
+                      {r.room && (
+                        <span 
+                          style={{ 
+                            background: '#F1F5F9', 
+                            color: '#475569', 
+                            padding: '1px 6px', 
+                            borderRadius: 5, 
+                            fontSize: 11, 
+                            fontWeight: 800, 
+                            border: '1px solid #E2E8F0',
+                            lineHeight: 1
+                          }}
+                        >
+                          {r.room}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>
+                      {prop?.name}
+                    </div>
+                  </div>
+                  <Badge status={r.status} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 📤 SECCIÓN DE SALIDAS DE HOY */}
+      {coToday.length > 0 && (
+        <div id="seccion-salidas" style={{ marginBottom: 24 }}>
+          <div style={{ marginBottom: 12 }}>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              background: '#FFFBEB',
+              color: '#92400E',
+              border: '1px solid #FDE68A',
+              padding: '6px 14px',
+              borderRadius: 20,
+              fontSize: 12,
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: 0.5
+            }}>
+              📤 Salidas de hoy ({coToday.length})
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {coToday.map((r) => {
+              const prop = PROPS.find((p) => p.id === r.propertyId);
+              return (
+                <div
+                  key={r.id + 'out'}
+                  onClick={() => onGoTo('abrir_reserva', r)}
+                  style={{
+                    background: '#fff',
+                    borderRadius: 10,
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    border: '1px solid #F0F0F0',
+                    cursor: 'pointer',
+                    animation: pulseOut ? 'pulseOrange 0.8s ease-in-out 3' : 'none',
+                  }}
+                  onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,.05)')}
+                  onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
+                >
+                  <div
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      background: '#FEE2E2',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 16,
+                    }}
+                  >
+                    📤
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, fontSize: 13, color: '#111' }}>
+                        {r.guestName}
+                      </span>
+                      {r.room && (
+                        <span 
+                          style={{ 
+                            background: '#F1F5F9', 
+                            color: '#475569', 
+                            padding: '1px 6px', 
+                            borderRadius: 5, 
+                            fontSize: 11, 
+                            fontWeight: 800, 
+                            border: '1px solid #E2E8F0',
+                            lineHeight: 1
+                          }}
+                        >
+                          {r.room}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>
+                      {prop?.name}
+                    </div>
+                  </div>
+                  <Badge status={r.status} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {ciToday.map((r) => {
               const prop = PROPS.find((p) => p.id === r.propertyId);
@@ -4581,22 +4745,6 @@ function Dashboard({
           </div>
         </div>
       )}
-
-      {/* 📤 SECCIÓN DE SALIDAS DE HOY */}
-      {coToday.length > 0 && (
-        <div id="seccion-salidas" style={{ marginBottom: 24 }}>
-          <h3
-            style={{
-              margin: '0 0 12px',
-              fontSize: 11,
-              fontWeight: 800,
-              color: '#D97706',
-              textTransform: 'uppercase',
-              letterSpacing: 0.5,
-            }}
-          >
-            📤 Salidas de hoy ({coToday.length})
-          </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {coToday.map((r) => {
               const prop = PROPS.find((p) => p.id === r.propertyId);
