@@ -2250,7 +2250,7 @@ function ResDrawer({
             }}
           >
             <div>
-              {/* Línea superior: Nombre de la propiedad */}
+              {/* Línea superior: Solo el nombre del Hostel limpio */}
               <div
                 style={{
                   fontSize: 11,
@@ -2263,7 +2263,7 @@ function ResDrawer({
               >
                 {prop?.name}
               </div>
-              {/* Línea principal: Nombre del Huésped + Placa de Habitación */}
+              {/* Línea principal: Nombre del Huésped + Placa de Habitación destacada */}
               <div 
                 style={{ 
                   display: 'flex', 
@@ -2278,12 +2278,12 @@ function ResDrawer({
                 {res.room && (
                   <span 
                     style={{ 
-                      background: 'rgba(255, 255, 255, 0.25)', 
+                      background: 'rgba(255, 255, 255, 0.25)', // Fondo blanco translúcido cristal
                       color: '#fff', 
                       padding: '3px 9px', 
                       borderRadius: 6, 
                       fontSize: 13, 
-                      fontWeight: 900, 
+                      fontWeight: 900, // Súper negrita
                       border: '1px solid rgba(255, 255, 255, 0.2)',
                       lineHeight: 1
                     }}
@@ -2291,20 +2291,6 @@ function ResDrawer({
                     {res.room}
                   </span>
                 )}
-              </div>
-              {/* Subtítulo: Cantidad de Pax / Ocupantes */}
-              <div
-                style={{
-                  fontSize: 12,
-                  color: 'rgba(255, 255, 255, 0.9)',
-                  fontWeight: 700,
-                  marginTop: 6,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                }}
-              >
-                👥 {res.totalGuests || 1} {(res.totalGuests || 1) === 1 ? 'Pax (1 persona)' : `Pax (${res.totalGuests} personas)`}
               </div>
             </div>
             <button
@@ -2840,7 +2826,7 @@ function ResDrawer({
 }
 
 // ── TIMELINE MOBILE ───────────────────────────────────────────────────────────
-function TimelineMobile({ reservations, properties, onClickRes, onAddRes, highlightStatus }) {
+function TimelineMobile({ reservations, properties, onClickRes, onAddRes }) {
   const next14 = Array.from({ length: 14 }, (_, i) => addDays(TODAY, i - 1));
   const dayRes = (d) =>
     reservations.filter(
@@ -2973,7 +2959,6 @@ function TimelineMobile({ reservations, properties, onClickRes, onAddRes, highli
                       gap: 10,
                       borderBottom: '1px solid #F8FAFC',
                       cursor: 'pointer',
-                      animation: (highlightStatus && r.status === highlightStatus) ? 'pulseGreenCard 0.8s ease-in-out 3' : 'none',
                     }}
                     onClick={() => onClickRes(r)}
                   >
@@ -3084,9 +3069,8 @@ function Timeline({
   isMobile,
   calView,
   setCalView,
-  offset,
-  setOffset,
-  highlightStatus,
+  offset,      // <--- RECIBE DESDE AFUERA
+  setOffset,   // <--- RECIBE DESDE AFUERA
 }) {
   const NCOLS = isMobile ? 21 : 45,
     COL = 60,
@@ -3186,7 +3170,6 @@ function Timeline({
           properties={properties}
           onClickRes={onClickRes}
           onAddRes={onAddRes}
-          highlightStatus={highlightStatus}
         />
       </div>
     );
@@ -3336,6 +3319,7 @@ function Timeline({
         )
       )
     : null;
+
   return (
     <div
       onMouseMove={onMove}
@@ -3354,18 +3338,6 @@ function Timeline({
       }}
       style={{ userSelect: 'none' }}
     >
-      {/* ESTILOS DE ANIMACIÓN DE PULSO VERDE */}
-      <style>{`
-        @keyframes pulseGreenBlock {
-          0%, 100% { transform: scale(1); filter: drop-shadow(0 1px 3px rgba(0,0,0,.18)); }
-          50% { transform: scale(1.1); filter: drop-shadow(0 0 14px rgba(16,185,129,0.95)); }
-        }
-        @keyframes pulseGreenCard {
-          0%, 100% { box-shadow: none; border-color: #F8FAFC; }
-          50% { box-shadow: 0 4px 16px rgba(16,185,129,0.4); border-color: #10B981; background-color: #ECFDF5; }
-        }
-      `}</style>
-
       <div
         style={{
           display: 'flex',
@@ -3805,10 +3777,9 @@ function Timeline({
                         top: 6,
                         left: LABEL + r.pxL + 2,
                         width: W,
-                        zIndex: isDrag ? 10 : (highlightStatus && r.status === highlightStatus ? 15 : 4),
+                        zIndex: isDrag ? 10 : 4,
                         opacity: isDrag ? 0.3 : 1,
                         touchAction: 'none',
-                        animation: (highlightStatus && r.status === highlightStatus) ? 'pulseGreenBlock 0.8s ease-in-out 3' : 'none',
                       }}
                       onMouseEnter={(e) => {
                         if (!isMobile)
@@ -4324,9 +4295,6 @@ function Dashboard({
   setPropStatus,
   onGoTo,
 }) {
-  const [pulseIn, setPulseIn] = useState(false);
-  const [pulseOut, setPulseOut] = useState(false);
-
   const isNow = (r) => parseD(r.checkIn) <= TODAY && TODAY < parseD(r.checkOut);
   const active = reservations.filter(isNow);
   const ciToday = reservations.filter((r) => r.checkIn === fmt(TODAY));
@@ -4337,159 +4305,128 @@ function Dashboard({
   
   return (
     <div>
-      <style>{`
-        @keyframes pulseBlue {
-          0%, 100% { box-shadow: 0 1px 3px rgba(0,0,0,.05); border-color: #F0F0F0; background-color: #fff; }
-          50% { box-shadow: 0 4px 16px rgba(59,130,246,0.4); border-color: #3B82F6; background-color: #EFF6FF; }
-        }
-        @keyframes pulseOrange {
-          0%, 100% { box-shadow: 0 1px 3px rgba(0,0,0,.05); border-color: #F0F0F0; background-color: #fff; }
-          50% { box-shadow: 0 4px 16px rgba(245,158,11,0.4); border-color: #F59E0B; background-color: #FFFBEB; }
-        }
-      `}</style>
-
       <div style={{ marginBottom: 28, display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: 1.2 }}>
-          {TODAY.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 800,
+            color: '#64748B',
+            textTransform: 'uppercase',
+            letterSpacing: 1.2,
+          }}
+        >
+          {TODAY.toLocaleDateString('es-MX', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long'
+          })}
         </div>
-        <h2 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#0F172A', letterSpacing: -0.6 }}>
+        <h2
+          style={{
+            margin: 0,
+            fontSize: 24,
+            fontWeight: 900,
+            color: '#0F172A',
+            letterSpacing: -0.6,
+          }}
+        >
           Panorama de hoy
         </h2>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(110px,1fr))', gap: 10, marginBottom: 20 }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill,minmax(110px,1fr))',
+          gap: 10,
+          marginBottom: 20,
+        }}
+      >
         {[
           {
-            label: 'Check-ins hoy', val: ciToday.length, icon: '📥', col: '#3B82F6', bg: '#EFF6FF',
-            onClick: () => {
-              const el = document.getElementById('seccion-ingresos');
-              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              setPulseIn(false);
-              setTimeout(() => setPulseIn(true), 300);
-              setTimeout(() => setPulseIn(false), 2700);
-            }
+            label: 'Check-ins hoy',
+            val: ciToday.length,
+            icon: '📥',
+            col: '#3B82F6',
+            bg: '#EFF6FF',
           },
           {
-            label: 'Check-outs hoy', val: coToday.length, icon: '📤', col: '#F59E0B', bg: '#FFFBEB',
-            onClick: () => {
-              const el = document.getElementById('seccion-salidas');
-              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              setPulseOut(false);
-              setTimeout(() => setPulseOut(true), 300); 
-              setTimeout(() => setPulseOut(false), 2700); 
-            }
+            label: 'Check-outs hoy',
+            val: coToday.length,
+            icon: '📤',
+            col: '#F59E0B',
+            bg: '#FFFBEB',
           },
           {
-            label: 'En casa', val: active.length, icon: '🛏️', col: '#10B981', bg: '#ECFDF5',
-            onClick: () => onGoTo('calendario', 'hospedado'),
+            label: 'En casa',
+            val: active.length,
+            icon: '🛏️',
+            col: '#10B981',
+            bg: '#ECFDF5',
           },
           {
-            label: 'Saldos pend.', val: pending.length, icon: '💰', col: '#EF4444', bg: '#FEF2F2',
-            onClick: () => {
-              onGoTo('finanzas');
-              setTimeout(() => {
-                const el = document.getElementById('seccion-saldos-pendientes');
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }, 400); 
-            },
+            label: 'Saldos pend.',
+            val: pending.length,
+            icon: '💰',
+            col: '#EF4444',
+            bg: '#FEF2F2',
           },
           {
-            label: 'Ocupación de hoy',
+            label: 'Ocupación',
             val: (() => {
               const totalRooms = properties.reduce((s, p) => s + (p.rooms || 1), 0);
-              return totalRooms > 0 ? Math.round((active.length / totalRooms) * 100) + '%' : '0%';
+              return totalRooms > 0 
+                ? Math.round((active.length / totalRooms) * 100) + '%' 
+                : '0%';
             })(),
-            icon: '📊', col: '#8B5CF6', bg: '#EDE9FE',
-            onClick: () => onGoTo('calendario', 'hospedado'),
+            icon: '📊',
+            col: '#8B5CF6',
+            bg: '#EDE9FE',
           },
         ].map((k) => (
           <div
             key={k.label}
-            onClick={k.onClick}
-            style={{ background: '#fff', borderRadius: 12, padding: '16px', border: '1px solid #F0F0F0', boxShadow: '0 1px 3px rgba(0,0,0,.05)', cursor: k.onClick ? 'pointer' : 'default', transition: 'all 0.2s ease', userSelect: 'none' }}
-            onMouseOver={(e) => { if (k.onClick) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,.08)'; } }}
-            onMouseOut={(e) => { if (k.onClick) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,.05)'; } }}
+            style={{
+              background: '#fff',
+              borderRadius: 12,
+              padding: '16px',
+              border: '1px solid #F0F0F0',
+              boxShadow: '0 1px 3px rgba(0,0,0,.05)',
+            }}
           >
             <div style={{ fontSize: 24, marginBottom: 6 }}>{k.icon}</div>
-            <div style={{ fontSize: 26, fontWeight: 800, color: k.col }}>{k.val}</div>
-            <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.3 }}>
+            <div style={{ fontSize: 26, fontWeight: 800, color: k.col }}>
+              {k.val}
+            </div>
+            <div
+              style={{
+                fontSize: 11,
+                color: '#9CA3AF',
+                marginTop: 3,
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: 0.3,
+              }}
+            >
               {k.label}
             </div>
           </div>
         ))}
       </div>
-      
       {/* 📥 SECCIÓN DE INGRESOS DE HOY */}
       {ciToday.length > 0 && (
-        <div id="seccion-ingresos" style={{ marginBottom: 24 }}>
-          <div style={{ marginBottom: 12 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#ECFDF5', color: '#065F46', border: '1px solid #A7F3D0', padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              📥 Ingresos de hoy ({ciToday.length})
-            </span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {ciToday.map((r) => {
-              const prop = PROPS.find((p) => p.id === r.propertyId);
-              return (
-                <div
-                  key={r.id + 'in'}
-                  onClick={() => onGoTo('abrir_reserva', r)}
-                  style={{ background: '#fff', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid #F0F0F0', cursor: 'pointer', animation: pulseIn ? 'pulseBlue 0.8s ease-in-out 3' : 'none' }}
-                  onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,.05)')}
-                  onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
-                >
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>📥</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 700, fontSize: 13, color: '#111' }}>{r.guestName}</span>
-                      {r.room && <span style={{ background: '#F1F5F9', color: '#475569', padding: '1px 6px', borderRadius: 5, fontSize: 11, fontWeight: 800, border: '1px solid #E2E8F0', lineHeight: 1 }}>{r.room}</span>}
-                    </div>
-                    <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>{prop?.name}</div>
-                  </div>
-                  <Badge status={r.status} />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* 📤 SECCIÓN DE SALIDAS DE HOY */}
-      {coToday.length > 0 && (
-        <div id="seccion-salidas" style={{ marginBottom: 24 }}>
-          <div style={{ marginBottom: 12 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A', padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              📤 Salidas de hoy ({coToday.length})
-            </span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {coToday.map((r) => {
-              const prop = PROPS.find((p) => p.id === r.propertyId);
-              return (
-                <div
-                  key={r.id + 'out'}
-                  onClick={() => onGoTo('abrir_reserva', r)}
-                  style={{ background: '#fff', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid #F0F0F0', cursor: 'pointer', animation: pulseOut ? 'pulseOrange 0.8s ease-in-out 3' : 'none' }}
-                  onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,.05)')}
-                  onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
-                >
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>📤</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 700, fontSize: 13, color: '#111' }}>{r.guestName}</span>
-                      {r.room && <span style={{ background: '#F1F5F9', color: '#475569', padding: '1px 6px', borderRadius: 5, fontSize: 11, fontWeight: 800, border: '1px solid #E2E8F0', lineHeight: 1 }}>{r.room}</span>}
-                    </div>
-                    <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>{prop?.name}</div>
-                  </div>
-                  <Badge status={r.status} />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+        <div style={{ marginBottom: 24 }}>
+          <h3
+            style={{
+              margin: '0 0 12px',
+              fontSize: 11,
+              fontWeight: 800,
+              color: '#059669',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+            }}
+          >
+            📥 Ingresos de hoy ({ciToday.length})
+          </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {ciToday.map((r) => {
               const prop = PROPS.find((p) => p.id === r.propertyId);
@@ -4506,7 +4443,6 @@ function Dashboard({
                     gap: 12,
                     border: '1px solid #F0F0F0',
                     cursor: 'pointer',
-                    animation: pulseIn ? 'pulseBlue 0.8s ease-in-out 3' : 'none', // <--- ANIMACIÓN AQUÍ
                   }}
                   onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,.05)')}
                   onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
@@ -4558,6 +4494,22 @@ function Dashboard({
           </div>
         </div>
       )}
+
+      {/* 📤 SECCIÓN DE SALIDAS DE HOY */}
+      {coToday.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <h3
+            style={{
+              margin: '0 0 12px',
+              fontSize: 11,
+              fontWeight: 800,
+              color: '#D97706',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+            }}
+          >
+            📤 Salidas de hoy ({coToday.length})
+          </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {coToday.map((r) => {
               const prop = PROPS.find((p) => p.id === r.propertyId);
@@ -4574,7 +4526,6 @@ function Dashboard({
                     gap: 12,
                     border: '1px solid #F0F0F0',
                     cursor: 'pointer',
-                    animation: pulseOut ? 'pulseOrange 0.8s ease-in-out 3' : 'none', // <--- ANIMACIÓN AQUÍ
                   }}
                   onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,.05)')}
                   onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
@@ -5820,7 +5771,6 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
 
       {/* SECCIÓN 3: SALDOS PENDIENTES */}
       <h3
-        id="seccion-saldos-pendientes"
         style={{
           margin: '0 0 12px',
           fontSize: 15,
@@ -5886,9 +5836,10 @@ function ResList({ reservations, properties, onView, onAdd }) {
   const [selectedDate, setSelectedDate] = useState(fmt(TODAY));
   const [q, setQ] = useState('');
 
-  // Generamos un carrusel de 455 días (90 días al pasado y 1 año al futuro)
-  const ribbonDates = Array.from({ length: 455 }, (_, i) => addDays(TODAY, i - 90));
+  // Generamos un carrusel de 60 días (15 días al pasado y 45 al futuro)
+  const ribbonDates = Array.from({ length: 60 }, (_, i) => addDays(TODAY, i - 15));
 
+  // Auto-scroll para centrar el día seleccionado
   useEffect(() => {
     if (!q) {
       const el = document.getElementById(`date-${selectedDate}`);
@@ -5896,6 +5847,7 @@ function ResList({ reservations, properties, onView, onAdd }) {
     }
   }, [selectedDate, q]);
 
+  // Si hay búsqueda, mostramos lista plana. Si no, mostramos la Agenda del Día.
   const isSearching = q.length > 0;
   const searchedRes = isSearching
     ? reservations
@@ -5903,11 +5855,13 @@ function ResList({ reservations, properties, onView, onAdd }) {
         .sort((a, b) => b.checkIn.localeCompare(a.checkIn))
     : [];
 
+  // Lógica de Agenda del Día Seleccionado
   const llegadas = reservations.filter(r => r.checkIn === selectedDate && r.status !== 'cancelada');
   const salidas = reservations.filter(r => r.checkOut === selectedDate && r.status !== 'cancelada');
   const hospedados = reservations.filter(r => r.checkIn < selectedDate && r.checkOut > selectedDate && r.status !== 'cancelada');
   const canceladas = reservations.filter(r => r.checkIn === selectedDate && r.status === 'cancelada');
 
+  // Componente interno para dibujar cada tarjetita de reserva
   const ResCard = ({ r }) => {
     const prop = properties.find((p) => p.id === r.propertyId);
     const saldo = r.totalAmount - r.paid;
@@ -5921,28 +5875,76 @@ function ResList({ reservations, properties, onView, onAdd }) {
         }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
+          
+          {/* Fila Principal: Nombre + Habitación Destacada + WhatsApp */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <div style={{ fontWeight: 700, fontSize: 14, color: '#111' }}>{r.guestName}</div>
-            {r.room && <span style={{ background: '#F1F5F9', color: '#475569', padding: '1px 6px', borderRadius: 5, fontSize: 11, fontWeight: 800, border: '1px solid #E2E8F0', lineHeight: 1 }}>{r.room}</span>}
+            
+            {r.room && (
+              <span 
+                style={{ 
+                  background: '#F1F5F9', 
+                  color: '#475569', 
+                  padding: '1px 6px', 
+                  borderRadius: 5, 
+                  fontSize: 11, 
+                  fontWeight: 800, 
+                  border: '1px solid #E2E8F0',
+                  lineHeight: 1
+                }}
+              >
+                {r.room}
+              </span>
+            )}
+
             {r.guestPhone && (
               <a
-                href={waLink(r.guestPhone, r.guestPhonePrefix, r.guestNationality)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: 6, background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0', textDecoration: 'none', transition: 'all 0.2s' }}
-                title="Enviar WhatsApp" onMouseOver={(e) => (e.currentTarget.style.background = '#D1FAE5')} onMouseOut={(e) => (e.currentTarget.style.background = '#ECFDF5')}
+                href={waLink(r.guestPhone, r.guestPhonePrefix, r.guestNationality)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 24,
+                  height: 24,
+                  borderRadius: 6,
+                  background: '#ECFDF5',
+                  color: '#059669',
+                  border: '1px solid #A7F3D0',
+                  textDecoration: 'none',
+                  transition: 'all 0.2s'
+                }}
+                title="Enviar WhatsApp"
+                onMouseOver={(e) => (e.currentTarget.style.background = '#D1FAE5')}
+                onMouseOut={(e) => (e.currentTarget.style.background = '#ECFDF5')}
               >
                 <Icon name="whatsapp" size={14} />
               </a>
             )}
           </div>
-          <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>{prop?.name}</div>
+
+          {/* Fila Secundaria: Propiedad */}
+          <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>
+            {prop?.name}
+          </div>
+
+          {/* Fila Inferior: Fechas de Estadía */}
           <div style={{ fontSize: 10, fontWeight: 600, color: '#6B7280', marginTop: 4, display: 'flex', gap: 6 }}>
             <span>CI: {fmtD(r.checkIn)}</span>
             <span>CO: {fmtD(r.checkOut)}</span>
           </div>
         </div>
+
+        {/* Lado Derecho: Estado y Saldos */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
           <Badge status={r.status} />
-          {saldo > 0 ? <span style={{ fontSize: 11, fontWeight: 800, color: '#EF4444' }}>Debe {currency(saldo)}</span> : <span style={{ fontSize: 11, fontWeight: 800, color: '#10B981' }}>Pagado</span>}
+          {saldo > 0 ? (
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#EF4444' }}>Debe {currency(saldo)}</span>
+          ) : (
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#10B981' }}>Pagado</span>
+          )}
         </div>
       </div>
     );
@@ -5952,49 +5954,71 @@ function ResList({ reservations, properties, onView, onAdd }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#111' }}>Agenda Diaria</h2>
-        <button onClick={() => onAdd()} style={{ padding: '8px 16px', background: '#3B82F6', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+        <button
+          onClick={() => onAdd()}
+          style={{
+            padding: '8px 16px', background: '#3B82F6', border: 'none', borderRadius: 8,
+            color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >
           + Nueva
         </button>
       </div>
 
       <input
-        value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nombre de huésped..."
-        style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #E5E7EB', borderRadius: 10, fontSize: 13, fontFamily: 'inherit', outline: 'none', marginBottom: 16, boxSizing: 'border-box' }}
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Buscar por nombre de huésped..."
+        style={{
+          width: '100%', padding: '10px 14px', border: '1.5px solid #E5E7EB', borderRadius: 10,
+          fontSize: 13, fontFamily: 'inherit', outline: 'none', marginBottom: 16, boxSizing: 'border-box',
+        }}
       />
 
       {isSearching ? (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#6B7280', marginBottom: 10, textTransform: 'uppercase' }}>Resultados de búsqueda ({searchedRes.length})</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#6B7280', marginBottom: 10, textTransform: 'uppercase' }}>
+            Resultados de búsqueda ({searchedRes.length})
+          </div>
           {searchedRes.map((r) => <ResCard key={r.id} r={r} />)}
           {searchedRes.length === 0 && <div style={{ textAlign: 'center', color: '#9CA3AF', padding: 20 }}>No se encontraron huéspedes.</div>}
         </div>
       ) : (
         <>
+          {/* CARRUSEL DE FECHAS ESTILO PULSE */}
           <div style={{ display: 'flex', overflowX: 'auto', gap: 8, paddingBottom: 12, marginBottom: 16, borderBottom: '1px solid #E5E7EB', scrollBehavior: 'smooth' }} className="hide-scroll">
             {ribbonDates.map((d) => {
               const dStr = fmt(d);
               const isSelected = selectedDate === dStr;
               const isToday = fmt(TODAY) === dStr;
-              const hasCI = reservations.some(r => r.checkIn === dStr && r.status !== 'cancelada');
-              const hasCO = reservations.some(r => r.checkOut === dStr && r.status !== 'cancelada');
+              const hasActivity = reservations.some(r => (r.checkIn === dStr || r.checkOut === dStr) && r.status !== 'cancelada');
               
               return (
                 <div
-                  id={`date-${dStr}`} key={dStr} onClick={() => setSelectedDate(dStr)}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 54, height: 72, borderRadius: 14, cursor: 'pointer', flexShrink: 0, background: isSelected ? '#3B82F6' : isToday ? '#EFF6FF' : '#fff', border: `1.5px solid ${isSelected ? '#3B82F6' : isToday ? '#BFDBFE' : '#E5E7EB'}`, transition: 'all 0.2s', boxShadow: isSelected ? '0 4px 10px rgba(59,130,246,0.3)' : 'none' }}
+                  id={`date-${dStr}`}
+                  key={dStr}
+                  onClick={() => setSelectedDate(dStr)}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    minWidth: 48, height: 56, borderRadius: 12, cursor: 'pointer', flexShrink: 0,
+                    background: isSelected ? '#3B82F6' : isToday ? '#EFF6FF' : '#fff',
+                    border: `1.5px solid ${isSelected ? '#3B82F6' : isToday ? '#BFDBFE' : '#E5E7EB'}`,
+                    transition: 'all 0.2s'
+                  }}
                 >
-                  <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: isSelected ? 'rgba(255,255,255,0.8)' : '#6B7280' }}>{DAYS[d.getDay()]}</span>
-                  <span style={{ fontSize: 18, fontWeight: 900, color: isSelected ? '#fff' : '#111', margin: '1px 0' }}>{d.getDate()}</span>
-                  <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', color: isSelected ? 'rgba(255,255,255,0.9)' : isToday ? '#2563EB' : '#9CA3AF' }}>{MONTHS[d.getMonth()]}</span>
-                  <div style={{ display: 'flex', gap: 3, marginTop: 4, height: 4 }}>
-                    {hasCI && <div style={{ width: 4, height: 4, borderRadius: '50%', background: isSelected ? '#fff' : '#3B82F6' }} title="Ingreso" />}
-                    {hasCO && <div style={{ width: 4, height: 4, borderRadius: '50%', background: isSelected ? '#fff' : '#F59E0B' }} title="Salida" />}
-                  </div>
+                  <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: isSelected ? 'rgba(255,255,255,0.8)' : '#6B7280' }}>
+                    {DAYS[d.getDay()]}
+                  </span>
+                  <span style={{ fontSize: 16, fontWeight: 900, color: isSelected ? '#fff' : '#111' }}>
+                    {d.getDate()}
+                  </span>
+                  <div style={{ width: 4, height: 4, borderRadius: '50%', background: hasActivity ? (isSelected ? '#fff' : '#10B981') : 'transparent', marginTop: 2 }} />
                 </div>
               );
             })}
           </div>
 
+          {/* DESGLOSE DEL DÍA */}
           <div>
             <div style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 16 }}>
               {selectedDate === fmt(TODAY) ? 'Hoy, ' : ''} {parseD(selectedDate).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -6008,44 +6032,36 @@ function ResList({ reservations, properties, onView, onAdd }) {
 
             {llegadas.length > 0 && (
               <div style={{ marginBottom: 20 }}>
-                <div style={{ marginBottom: 10 }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#ECFDF5', color: '#065F46', border: '1px solid #A7F3D0', padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    📥 Llegadas ({llegadas.length})
-                  </span>
-                </div>
+                <h3 style={{ fontSize: 12, color: '#059669', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  📥 Llegadas ({llegadas.length})
+                </h3>
                 {llegadas.map(r => <ResCard key={r.id} r={r} />)}
               </div>
             )}
 
             {salidas.length > 0 && (
               <div style={{ marginBottom: 20 }}>
-                <div style={{ marginBottom: 10 }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A', padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    📤 Salidas ({salidas.length})
-                  </span>
-                </div>
+                <h3 style={{ fontSize: 12, color: '#D97706', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  📤 Salidas ({salidas.length})
+                </h3>
                 {salidas.map(r => <ResCard key={r.id} r={r} />)}
               </div>
             )}
 
             {hospedados.length > 0 && (
               <div style={{ marginBottom: 20 }}>
-                <div style={{ marginBottom: 10 }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#EFF6FF', color: '#1E40AF', border: '1px solid #BFDBFE', padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    🛏️ Alojados ({hospedados.length})
-                  </span>
-                </div>
+                <h3 style={{ fontSize: 12, color: '#2563EB', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+  🛏️ Alojados ({hospedados.length})
+</h3>
                 {hospedados.map(r => <ResCard key={r.id} r={r} />)}
               </div>
             )}
 
             {canceladas.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ marginBottom: 10 }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#FEF2F2', color: '#991B1B', border: '1px solid #FECACA', padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    🚫 Canceladas ({canceladas.length})
-                  </span>
-                </div>
+              <div style={{ marginBottom: 20, opacity: 0.7 }}>
+                <h3 style={{ fontSize: 12, color: '#DC2626', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  🚫 Canceladas ({canceladas.length})
+                </h3>
                 {canceladas.map(r => <ResCard key={r.id} r={r} />)}
               </div>
             )}
@@ -6368,7 +6384,6 @@ export default function AppMejorada() {
   const [user, setUser] = useState(null);
   const [res, setRes] = useState(INIT_RES);
   const [tab, setTab] = useState('dashboard');
-  const [highlightStatus, setHighlightStatus] = useState(null);
   const winW = useW();
   const isMobile = winW < 769;
   const isTablet = winW >= 769 && winW < 1280;
@@ -6405,7 +6420,7 @@ export default function AppMejorada() {
         let fechaCheckout = item.fecha_salida || '';
 
         // ── AUTO CHECK-OUT AL CARGAR LA APP (Si ya pasaron las 11:00 AM) ──
-        if (horaActual >= 14 && estado === 'hospedado' && fechaCheckout <= hoyFmt) {
+        if (horaActual >= 11 && estado === 'hospedado' && fechaCheckout <= hoyFmt) {
             estado = 'finalizada';
             supabase.from('reservas').update({ estado: 'finalizada' }).eq('id', item.id).then();
         }
@@ -6484,7 +6499,7 @@ export default function AppMejorada() {
     const vigilante = setInterval(() => {
       const nowMerida = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Merida" }));
       
-      if (nowMerida.getHours() >= 14) {
+      if (nowMerida.getHours() >= 11) {
         const hoyFmt = fmt(nowMerida);
         
         setRes((prevRes) => {
@@ -6492,7 +6507,7 @@ export default function AppMejorada() {
           
           if (paraHacerCheckout.length === 0) return prevRes; // Todo en orden
           
-          console.log(`⏰ 14:00 pm en Mérida: Haciendo check-out automático para ${paraHacerCheckout.length} reservas.`);
+          console.log(`⏰ 11:00 AM en Mérida: Haciendo check-out automático para ${paraHacerCheckout.length} reservas.`);
           
           // Actualiza en Supabase silenciosamente
           paraHacerCheckout.forEach(r => {
@@ -6574,13 +6589,9 @@ export default function AppMejorada() {
   };
   const goTo = (newTab, data) => {
     if (newTab === 'abrir_reserva') {
-      setDrawer(data);
+      setDrawer(data); // ¡Esto abre el panel lateral (Drawer) automáticamente con la reserva!
     } else {
       setTab(newTab);
-      if (typeof data === 'string') {
-        setHighlightStatus(data);
-        setTimeout(() => setHighlightStatus(null), 2700);
-      }
     }
   };
   const saveRes = async (newRes) => {
@@ -6877,59 +6888,11 @@ const toggleBlacklist = async (id, currentStatus) => {
           .main-content { padding: 16px 12px 100px !important; overflow-y: visible; }
           .bn { display: flex !important; position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #E5E7EB; z-index: 99; padding-bottom: env(safe-area-inset-bottom, 12px); box-shadow: 0 -2px 10px rgba(0,0,0,0.03); }
         }
-
-      /* 📱 OPTIMIZACIÓN MOBILE LANDSCAPE (CELULAR ACOSTADO) */
-        @media (orientation: landscape) and (max-width: 950px) {
-          /* 1. Ocultamos barra blanca superior y el menú inferior */
-          .top-nav { display: none !important; } 
-          .bn { display: none !important; } 
-          
-          /* 2. Forzamos la barra lateral izquierda (versión mini con iconos) */
-          .sidebar { 
-            display: flex !important; 
-            width: 70px !important; 
-            padding: 10px 8px !important;
-            padding-left: env(safe-area-inset-left, 12px) !important; 
-            align-items: center !important; 
-          }
-          .sl, .sa { display: none !important; } 
-          
-          html, body, #root, .app-layout { 
-            padding: 0 !important; 
-            margin: 0 !important; 
-            min-height: 100vh !important; 
-            background: #fff !important; 
-          }
-          
-          /* 3. SEPARAMOS LOS MÁRGENES PARA QUE SAFARI NO LOS IGNORE */
-          .main-content { 
-            padding-top: 0 !important; 
-            padding-bottom: 0 !important;
-            padding-left: 0 !important;
-            padding-right: env(safe-area-inset-right, 16px) !important;
-            margin: 0 !important; 
-            border: none !important; 
-          } 
-          
-          /* 4. Aplasta el contenedor principal contra el techo */
-          .main-content > div { 
-            margin-top: 0 !important; 
-            padding-top: 10px !important; /* Apenas 10px para que no choque el título */
-            border-radius: 0 !important; 
-            border: none !important; 
-            box-shadow: none !important; 
-          }
-
-          /* 5. Comprime el encabezado (Título "Calendario" y botones) */
-          .main-content > div > div:first-child {
-            margin-bottom: 8px !important; 
-          }
-        }
       `}</style>
 
       {/* Navbar Superior */}
+      {/* Navbar Superior */}
       <div
-        className="top-nav"
         style={{
           background: '#fff',
           borderBottom: '1px solid #F0F0F0',
@@ -7175,7 +7138,6 @@ const toggleBlacklist = async (id, currentStatus) => {
               setCalView={setCalView}
               offset={calOffset}
               setOffset={setCalOffset}
-              highlightStatus={highlightStatus}
             />
           )}
           {tab === 'reservas' && (
@@ -7275,7 +7237,6 @@ const toggleBlacklist = async (id, currentStatus) => {
             </span>
             {tab === t.id && (
               <div
-                className="nav-indicator"
                 style={{
                   width: 20,
                   height: 2.5,
@@ -7631,4 +7592,3 @@ const rootElement = document.getElementById('root');
 if (rootElement) {
   createRoot(rootElement).render(<AppMejorada />);
 }
-      
