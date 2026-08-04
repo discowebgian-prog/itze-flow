@@ -4324,7 +4324,7 @@ function Dashboard({
   setPropStatus,
   onGoTo,
 }) {
-  // --- Controladores de Animación ---
+  // --- NUEVO: Controladores de Animación ---
   const [pulseIn, setPulseIn] = useState(false);
   const [pulseOut, setPulseOut] = useState(false);
 
@@ -4338,7 +4338,7 @@ function Dashboard({
   
   return (
     <div>
-      {/* ESTILOS DE ANIMACIÓN DE PULSO */}
+      {/* NUEVO: ESTILOS DE ANIMACIÓN DE PULSO */}
       <style>{`
         @keyframes pulseBlue {
           0%, 100% { box-shadow: 0 1px 3px rgba(0,0,0,.05); border-color: #F0F0F0; background-color: #fff; }
@@ -4396,9 +4396,10 @@ function Dashboard({
             onClick: () => {
               const el = document.getElementById('seccion-ingresos');
               if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              // Apagamos y prendemos la animación
               setPulseIn(false);
-              setTimeout(() => setPulseIn(true), 300);
-              setTimeout(() => setPulseIn(false), 2700);
+              setTimeout(() => setPulseIn(true), 300); // Espera a que baje la pantalla
+              setTimeout(() => setPulseIn(false), 2700); // Lo apaga a los 2.4s (3 pulsos de 0.8s)
             }
           },
           {
@@ -4534,7 +4535,7 @@ function Dashboard({
                     gap: 12,
                     border: '1px solid #F0F0F0',
                     cursor: 'pointer',
-                    animation: pulseIn ? 'pulseBlue 0.8s ease-in-out 3' : 'none',
+                    animation: pulseIn ? 'pulseBlue 0.8s ease-in-out 3' : 'none', // <--- ANIMACIÓN AQUÍ
                   }}
                   onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,.05)')}
                   onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
@@ -4624,7 +4625,7 @@ function Dashboard({
                     gap: 12,
                     border: '1px solid #F0F0F0',
                     cursor: 'pointer',
-                    animation: pulseOut ? 'pulseOrange 0.8s ease-in-out 3' : 'none',
+                    animation: pulseOut ? 'pulseOrange 0.8s ease-in-out 3' : 'none', // <--- ANIMACIÓN AQUÍ
                   }}
                   onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,.05)')}
                   onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
