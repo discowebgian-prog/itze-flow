@@ -6153,17 +6153,40 @@ function Login({ onLogin }) {
   const [err, setErr] = useState('');
   const [recoverySent, setRecoverySent] = useState(false);
 
-  const go = () => {
-    const u = USERS.find((x) => x.id === uid && x.password === pw);
-    if (u) onLogin(u);
-    else setErr('Usuario o contraseña incorrectos');
+  const go = async () => {
+    setErr(''); // Limpia errores previos
+    
+    // Se conecta a la base de datos real de Supabase
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: uid,
+      password: pw,
+    });
+
+    if (error) {
+      setErr('Usuario o contraseña incorrectos');
+    } else if (data.user) {
+      // Usa la primera parte del correo como nombre temporal
+      const nombreUsuario = data.user.email.split('@')[0];
+      onLogin({ id: data.user.id, name: nombreUsuario, role: 'admin' });
+    }
   };
 
-  const handleRecovery = () => {
-    // Aquí a futuro se conecta la API para mandar el mail real
-    setRecoverySent(true);
-    // Vuelve a su estado normal después de 5 segundos
-    setTimeout(() => setRecoverySent(false), 5000); 
+  const handleRecovery = async () => {
+    if (!uid) {
+      setErr('Por favor, escribe tu correo en el campo superior.');
+      return;
+    }
+    setErr('');
+    
+    // Activa el envío de correo real de recuperación
+    const { error } = await supabase.auth.resetPasswordForEmail(uid);
+
+    if (error) {
+      setErr('Error al enviar el enlace. Revisa tu correo.');
+    } else {
+      setRecoverySent(true);
+      setTimeout(() => setRecoverySent(false), 5000);
+    }
   };
 
   const si = {
