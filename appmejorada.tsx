@@ -5370,20 +5370,23 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
 
   // --- NUEVA LÓGICA: AGRUPACIÓN MENSUAL ---
   const monthlyStats = reservations.reduce((acc, r) => {
-    // Ignoramos las canceladas para la contabilidad real (y prevenimos pantalla blanca si no hay fecha)
     if (r.status === 'cancelada' || !r.checkIn) return acc;
     
-    // Extraemos Año y Mes del Check-in (ej: "2026-06-12" -> y:"2026", m:"06")
     const [y, m] = r.checkIn.split('-');
     const key = `${y}-${m}`;
     
     if (!acc[key]) {
       const mName = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][parseInt(m, 10) - 1];
-      acc[key] = { key, label: `${mName} ${y}`, total: 0, paid: 0, count: 0 };
+      acc[key] = { key, label: `${mName} ${y}`, total: 0, paid: 0, count: 0, occupiedNights: 0 };
     }
     acc[key].total += (r.totalAmount || 0);
     acc[key].paid += (r.paid || 0);
     acc[key].count += 1;
+
+    // Sumamos las noches ocupadas físicamente por habitación
+    if (r.checkIn && r.checkOut) {
+      acc[key].occupiedNights += diffDays(r.checkIn, r.checkOut);
+    }
     
     return acc;
   }, {});
@@ -5597,6 +5600,14 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
           const pct = m.total > 0 ? Math.round((m.paid / m.total) * 100) : 0;
           const isCurrent = m.key === currentMonthKey;
 
+          // ── CÁLCULO DE OCUPACIÓN FÍSICA ──
+          const [yStr, mStr] = m.key.split('-');
+          const daysInMonth = new Date(parseInt(yStr), parseInt(mStr), 0).getDate();
+          const passedDays = isCurrent ? TODAY.getDate() : daysInMonth;
+          const totalRooms = properties.reduce((s, p) => s + (p.rooms || 1), 0);
+          const availableNights = totalRooms * passedDays;
+          const occPct = availableNights > 0 ? Math.min(100, Math.round((m.occupiedNights / availableNights) * 100)) : 0;
+
           return (
             <div
               key={m.key}
@@ -5658,6 +5669,25 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
                 >
                   {m.count} reservas
                 </div>
+              </div>
+
+              {/* ── NUEVA FILA DE OCUPACIÓN ── */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: 14,
+                  fontSize: 12,
+                  paddingBottom: 8,
+                  borderBottom: '1px solid #F3F4F6'
+                }}
+              >
+                <span style={{ color: '#6B7280', fontWeight: 600 }}>
+                  {isCurrent ? 'Ocup. al momento:' : 'Ocupación total:'}
+                </span>
+                <span style={{ fontWeight: 800, color: occPct >= 70 ? '#10B981' : occPct >= 40 ? '#F59E0B' : '#EF4444' }}>
+                  {occPct}%
+                </span>
               </div>
 
               <div
