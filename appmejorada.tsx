@@ -6090,7 +6090,7 @@ function ResList({ reservations, properties, onView, onAdd }) {
         </div>
       ) : (
         <>
-          {/* CARRUSEL DE FECHAS ESTILO PULSE */}
+         {/* CARRUSEL DE FECHAS ESTILO PULSE */}
           <div style={{ display: 'flex', overflowX: 'auto', gap: 8, paddingBottom: 12, marginBottom: 16, borderBottom: '1px solid #E5E7EB', scrollBehavior: 'smooth' }} className="hide-scroll">
             {ribbonDates.map((d) => {
               const dStr = fmt(d);
@@ -6105,7 +6105,7 @@ function ResList({ reservations, properties, onView, onAdd }) {
                   onClick={() => setSelectedDate(dStr)}
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    minWidth: 48, height: 56, borderRadius: 12, cursor: 'pointer', flexShrink: 0,
+                    minWidth: 52, height: 68, borderRadius: 12, cursor: 'pointer', flexShrink: 0,
                     background: isSelected ? '#3B82F6' : isToday ? '#EFF6FF' : '#fff',
                     border: `1.5px solid ${isSelected ? '#3B82F6' : isToday ? '#BFDBFE' : '#E5E7EB'}`,
                     transition: 'all 0.2s'
@@ -6114,10 +6114,13 @@ function ResList({ reservations, properties, onView, onAdd }) {
                   <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: isSelected ? 'rgba(255,255,255,0.8)' : '#6B7280' }}>
                     {DAYS[d.getDay()]}
                   </span>
-                  <span style={{ fontSize: 16, fontWeight: 900, color: isSelected ? '#fff' : '#111' }}>
+                  <span style={{ fontSize: 16, fontWeight: 900, color: isSelected ? '#fff' : '#111', lineHeight: 1.2 }}>
                     {d.getDate()}
                   </span>
-                  <div style={{ width: 4, height: 4, borderRadius: '50%', background: hasActivity ? (isSelected ? '#fff' : '#10B981') : 'transparent', marginTop: 2 }} />
+                  <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: isSelected ? 'rgba(255,255,255,0.8)' : '#9CA3AF' }}>
+                    {MONTHS[d.getMonth()]}
+                  </span>
+                  <div style={{ width: 4, height: 4, borderRadius: '50%', background: hasActivity ? (isSelected ? '#fff' : '#10B981') : 'transparent', marginTop: 3 }} />
                 </div>
               );
             })}
