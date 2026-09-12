@@ -5370,22 +5370,49 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
 
   // --- NUEVA LÓGICA: AGRUPACIÓN MENSUAL ---
   const monthlyStats = reservations.reduce((acc, r) => {
+    // Ignoramos las canceladas para la contabilidad real
     if (r.status === 'cancelada' || !r.checkIn) return acc;
     
+    // Extraemos Año y Mes del Check-in (ej: "2026-06-12" -> y:"2026", m:"06")
     const [y, m] = r.checkIn.split('-');
     const key = `${y}-${m}`;
     
     if (!acc[key]) {
       const mName = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][parseInt(m, 10) - 1];
-      acc[key] = { key, label: `${mName} ${y}`, total: 0, paid: 0, count: 0, occupiedNights: 0 };
+      acc[key] = { 
+        key, 
+        label: `${mName} ${y}`, 
+        total: 0, 
+        paid: 0, 
+        count: 0, 
+        occupiedNights: 0,
+        pmTotals: { efectivo: 0, transferencia: 0, debito: 0, credito: 0, otro: 0 },
+        srcTotals: { Booking: 0, 'Directo-Puerta': 0, 'Directo-Celular': 0 }
+      };
     }
-    acc[key].total += (r.totalAmount || 0);
+    
+    const tAmt = r.totalAmount || 0;
+    acc[key].total += tAmt;
     acc[key].paid += (r.paid || 0);
     acc[key].count += 1;
 
     // Sumamos las noches ocupadas físicamente por habitación
     if (r.checkIn && r.checkOut) {
       acc[key].occupiedNights += diffDays(r.checkIn, r.checkOut);
+    }
+    
+    // Agrupamos por Medio de Pago (Usamos totalAmount para reflejar el volumen facturado)
+    const pm = r.paymentMethod || 'efectivo';
+    if (acc[key].pmTotals[pm] !== undefined) {
+      acc[key].pmTotals[pm] += tAmt;
+    } else {
+      acc[key].pmTotals['otro'] += tAmt;
+    }
+
+    // Agrupamos por Canal de Ingreso
+    const src = r.source || 'Directo-Puerta';
+    if (acc[key].srcTotals[src] !== undefined) {
+      acc[key].srcTotals[src] += tAmt;
     }
     
     return acc;
@@ -5642,46 +5669,17 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
                 </div>
               )}
 
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: 12,
-                }}
-              >
-                <div
-                  style={{
-                    fontWeight: 800,
-                    fontSize: 15,
-                    color: isCurrent ? '#1E40AF' : '#111',
-                    textTransform: 'capitalize',
-                  }}
-                >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ fontWeight: 800, fontSize: 15, color: isCurrent ? '#1E40AF' : '#111', textTransform: 'capitalize' }}>
                   {m.label}
                 </div>
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: isCurrent ? '#60A5FA' : '#9CA3AF',
-                    fontWeight: 600,
-                  }}
-                >
+                <div style={{ fontSize: 11, color: isCurrent ? '#60A5FA' : '#9CA3AF', fontWeight: 600 }}>
                   {m.count} reservas
                 </div>
               </div>
 
-              {/* ── NUEVA FILA DE OCUPACIÓN ── */}
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginBottom: 14,
-                  fontSize: 12,
-                  paddingBottom: 8,
-                  borderBottom: '1px solid #F3F4F6'
-                }}
-              >
+              {/* ── FILA DE OCUPACIÓN ── */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14, fontSize: 12, paddingBottom: 8, borderBottom: '1px solid #F3F4F6' }}>
                 <span style={{ color: '#6B7280', fontWeight: 600 }}>
                   {isCurrent ? 'Ocup. al momento:' : 'Ocupación total:'}
                 </span>
@@ -5690,73 +5688,61 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
                 </span>
               </div>
 
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginBottom: 6,
-                  fontSize: 13,
-                }}
-              >
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 13 }}>
                 <span style={{ color: '#6B7280' }}>Facturado:</span>
-                <span style={{ fontWeight: 700, color: '#111' }}>
-                  {currency(m.total)}
-                </span>
+                <span style={{ fontWeight: 700, color: '#111' }}>{currency(m.total)}</span>
               </div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginBottom: 10,
-                  fontSize: 13,
-                }}
-              >
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, fontSize: 13 }}>
                 <span style={{ color: '#6B7280' }}>Cobrado:</span>
-                <span style={{ fontWeight: 700, color: '#10B981' }}>
-                  {currency(m.paid)}
-                </span>
+                <span style={{ fontWeight: 700, color: '#10B981' }}>{currency(m.paid)}</span>
               </div>
 
-              <div
-                style={{
-                  height: 4,
-                  background: isCurrent ? '#BFDBFE' : '#F3F4F6',
-                  borderRadius: 4,
-                  marginBottom: 10,
-                }}
-              >
-                <div
-                  style={{
-                    height: '100%',
-                    background: '#10B981',
-                    borderRadius: 4,
-                    width: `${pct}%`,
-                    transition: 'width .3s',
-                  }}
-                />
+              <div style={{ height: 4, background: isCurrent ? '#BFDBFE' : '#F3F4F6', borderRadius: 4, marginBottom: 10 }}>
+                <div style={{ height: '100%', background: '#10B981', borderRadius: 4, width: `${pct}%`, transition: 'width .3s' }} />
               </div>
 
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  paddingTop: 8,
-                  borderTop: isCurrent ? '1px dashed #93C5FD' : '1px dashed #E5E7EB',
-                  fontSize: 13,
-                }}
-              >
-                <span style={{ color: isCurrent ? '#3B82F6' : '#6B7280', fontWeight: 600 }}>
-                  Por cobrar:
-                </span>
-                <span
-                  style={{
-                    fontWeight: 800,
-                    color: saldo > 0 ? '#EF4444' : '#9CA3AF',
-                  }}
-                >
-                  {currency(saldo)}
-                </span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, borderTop: isCurrent ? '1px dashed #93C5FD' : '1px dashed #E5E7EB', fontSize: 13, marginBottom: 12 }}>
+                <span style={{ color: isCurrent ? '#3B82F6' : '#6B7280', fontWeight: 600 }}>Por cobrar:</span>
+                <span style={{ fontWeight: 800, color: saldo > 0 ? '#EF4444' : '#9CA3AF' }}>{currency(saldo)}</span>
               </div>
+
+              {/* ── DESGLOSE DE PAGOS Y CANALES ── */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10, marginTop: 4 }}>
+                <div style={{ background: isCurrent ? '#DBEAFE' : '#F9FAFB', padding: '10px 12px', borderRadius: 8 }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: isCurrent ? '#1E40AF' : '#6B7280', textTransform: 'uppercase', marginBottom: 6 }}>
+                    {isCurrent ? 'Pagos hasta el momento' : 'Total por medio de pago'}
+                  </div>
+                  {Object.entries(m.pmTotals).map(([k, val]) => {
+                    if (val === 0) return null;
+                    const pmPct = m.total > 0 ? Math.round((val / m.total) * 100) : 0;
+                    const pmNames = { efectivo: 'Efectivo', transferencia: 'Transf.', debito: 'Débito', credito: 'Crédito', otro: 'Otro' };
+                    return (
+                      <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
+                        <span style={{ color: '#4B5563', fontWeight: 600 }}>{pmNames[k]} <span style={{ opacity: 0.6 }}>({pmPct}%)</span></span>
+                        <span style={{ fontWeight: 700, color: '#111' }}>{currency(val)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div style={{ background: isCurrent ? '#DBEAFE' : '#F9FAFB', padding: '10px 12px', borderRadius: 8 }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: isCurrent ? '#1E40AF' : '#6B7280', textTransform: 'uppercase', marginBottom: 6 }}>
+                    {isCurrent ? 'Canales hasta el momento' : 'Total por canal'}
+                  </div>
+                  {Object.entries(m.srcTotals).map(([k, val]) => {
+                    if (val === 0) return null;
+                    const srcPct = m.total > 0 ? Math.round((val / m.total) * 100) : 0;
+                    const srcNames = { Booking: 'Booking', 'Directo-Puerta': 'Puerta', 'Directo-Celular': 'Celular' };
+                    return (
+                      <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
+                        <span style={{ color: '#4B5563', fontWeight: 600 }}>{srcNames[k] || k} <span style={{ opacity: 0.6 }}>({srcPct}%)</span></span>
+                        <span style={{ fontWeight: 700, color: '#111' }}>{currency(val)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
             </div>
           );
         })}
