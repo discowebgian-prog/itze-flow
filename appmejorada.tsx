@@ -5627,13 +5627,16 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
           const pct = m.total > 0 ? Math.round((m.paid / m.total) * 100) : 0;
           const isCurrent = m.key === currentMonthKey;
 
-          // ── CÁLCULO DE OCUPACIÓN FÍSICA ──
+          // ── CÁLCULO DE OCUPACIÓN FÍSICA Y MÉTRICAS (ADR / RevPAR) ──
           const [yStr, mStr] = m.key.split('-');
           const daysInMonth = new Date(parseInt(yStr), parseInt(mStr), 0).getDate();
           const passedDays = isCurrent ? TODAY.getDate() : daysInMonth;
           const totalRooms = properties.reduce((s, p) => s + (p.rooms || 1), 0);
           const availableNights = totalRooms * passedDays;
+          
           const occPct = availableNights > 0 ? Math.min(100, Math.round((m.occupiedNights / availableNights) * 100)) : 0;
+          const adr = m.occupiedNights > 0 ? Math.round(m.total / m.occupiedNights) : 0;
+          const revpar = availableNights > 0 ? Math.round(m.total / availableNights) : 0;
 
           return (
             <div
@@ -5678,14 +5681,20 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
                 </div>
               </div>
 
-              {/* ── FILA DE OCUPACIÓN ── */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14, fontSize: 12, paddingBottom: 8, borderBottom: '1px solid #F3F4F6' }}>
-                <span style={{ color: '#6B7280', fontWeight: 600 }}>
-                  {isCurrent ? 'Ocup. al momento:' : 'Ocupación total:'}
-                </span>
-                <span style={{ fontWeight: 800, color: occPct >= 70 ? '#10B981' : occPct >= 40 ? '#F59E0B' : '#EF4444' }}>
-                  {occPct}%
-                </span>
+              {/* ── KPI HOTELEROS: OCUPACIÓN, ADR, RevPAR ── */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 14, paddingBottom: 14, borderBottom: '1px solid #F3F4F6' }}>
+                <div style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 4px', borderRadius: 8 }}>
+                  <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#6B7280', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Ocup.</div>
+                  <div style={{ fontWeight: 800, fontSize: 13, color: occPct >= 70 ? '#10B981' : occPct >= 40 ? '#F59E0B' : '#EF4444' }}>{occPct}%</div>
+                </div>
+                <div style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 4px', borderRadius: 8 }}>
+                  <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#6B7280', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>ADR</div>
+                  <div style={{ fontWeight: 800, fontSize: 13, color: '#374151' }}>{currency(adr)}</div>
+                </div>
+                <div style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 4px', borderRadius: 8 }}>
+                  <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#6B7280', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>RevPAR</div>
+                  <div style={{ fontWeight: 800, fontSize: 13, color: '#3B82F6' }}>{currency(revpar)}</div>
+                </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 13 }}>
@@ -5742,7 +5751,6 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
                   })}
                 </div>
               </div>
-
             </div>
           );
         })}
