@@ -5681,19 +5681,22 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
                 </div>
               </div>
 
-              {/* ── KPI HOTELEROS: OCUPACIÓN, ADR, RevPAR ── */}
+             {/* ── KPI HOTELEROS: OCUPACIÓN, ADR, RevPAR ── */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 14, paddingBottom: 14, borderBottom: '1px solid #F3F4F6' }}>
                 <div style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 4px', borderRadius: 8 }}>
                   <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#6B7280', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Ocup.</div>
                   <div style={{ fontWeight: 800, fontSize: 13, color: occPct >= 70 ? '#10B981' : occPct >= 40 ? '#F59E0B' : '#EF4444' }}>{occPct}%</div>
+                  <div style={{ fontSize: 8, color: '#9CA3AF', marginTop: 2, fontWeight: 600, letterSpacing: -0.2 }}>Física</div>
                 </div>
-                <div style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 4px', borderRadius: 8 }}>
+                <div title="Tarifa Promedio Diaria" style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 4px', borderRadius: 8, cursor: 'help' }}>
                   <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#6B7280', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>ADR</div>
                   <div style={{ fontWeight: 800, fontSize: 13, color: '#374151' }}>{currency(adr)}</div>
+                  <div style={{ fontSize: 8, color: '#9CA3AF', marginTop: 2, fontWeight: 600, letterSpacing: -0.2 }}>Tarifa Promedio</div>
                 </div>
-                <div style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 4px', borderRadius: 8 }}>
+                <div title="Ingreso por Habitación Disponible" style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 4px', borderRadius: 8, cursor: 'help' }}>
                   <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#6B7280', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>RevPAR</div>
                   <div style={{ fontWeight: 800, fontSize: 13, color: '#3B82F6' }}>{currency(revpar)}</div>
+                  <div style={{ fontSize: 8, color: '#9CA3AF', marginTop: 2, fontWeight: 600, letterSpacing: -0.2 }}>Ingreso x Hab.</div>
                 </div>
               </div>
 
