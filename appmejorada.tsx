@@ -5696,7 +5696,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
                 <div title="Ingreso por Habitación Disponible" style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 4px', borderRadius: 8, cursor: 'help' }}>
                   <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#6B7280', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>RevPAR</div>
                   <div style={{ fontWeight: 800, fontSize: 13, color: '#3B82F6' }}>{currency(revpar)}</div>
-                  <div style={{ fontSize: 8, color: '#9CA3AF', marginTop: 2, fontWeight: 600, letterSpacing: -0.2 }}>Ingreso x Hab.</div>
+                  <div style={{ fontSize: 8, color: '#9CA3AF', marginTop: 2, fontWeight: 600, letterSpacing: -0.2 }}>Ingreso x Hab. Disponible</div>
                 </div>
               </div>
 
