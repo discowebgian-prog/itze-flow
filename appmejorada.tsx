@@ -621,11 +621,10 @@ function DocScanner({ onResult }) {
         if (!apiKey) throw new Error('Falta la API Key en Vercel');
 
         const base64 = dataUrl.split(',')[1];
-        const mt =
-          file.type && file.type.startsWith('image/')
-            ? file.type
-            : 'image/jpeg';
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        const mt = file.type && file.type.startsWith('image/') ? file.type : 'image/jpeg';
+        
+        // USAMOS EL MISMO "PUENTE" (PROXY) AQUÍ
+        const resp = await fetch('https://corsproxy.io/?https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -640,34 +639,25 @@ function DocScanner({ onResult }) {
               {
                 role: 'user',
                 content: [
-                  {
-                    type: 'image',
-                    source: { type: 'base64', media_type: mt, data: base64 },
-                  },
-                  {
-                    type: 'text',
-                    text: 'Extract identity document data. Return ONLY valid JSON:\n{"firstName":"","lastName":"","fullName":"","docNumber":"","docType":"INE","nationality":"MX"}\ndocType=INE|Pasaporte|Otro. nationality=2-letter ISO code. Leave empty if unclear.',
-                  },
-                ],
-              },
-            ],
+                  { type: 'image', source: { type: 'base64', media_type: mt, data: base64 } },
+                  { type: 'text', text: 'Extract identity document data. Return ONLY valid JSON:\n{"firstName":"","lastName":"","fullName":"","docNumber":"","docType":"INE","nationality":"MX"}\ndocType=INE|Pasaporte|Otro. nationality=2-letter ISO code. Leave empty if unclear.' }
+                ]
+              }
+            ]
           }),
         });
+
         if (!resp.ok) {
           const errData = await resp.json();
           throw new Error(errData.error?.message || 'API ' + resp.status);
         }
+
         const data = await resp.json();
-        const raw =
-          (data.content && data.content[0] && data.content[0].text) || '{}';
+        const raw = (data.content && data.content[0] && data.content[0].text) || '{}';
         const FENCE = String.fromCharCode(96, 96, 96);
-        const clean = raw
-          .split(FENCE + 'json')
-          .join('')
-          .split(FENCE)
-          .join('')
-          .trim();
+        const clean = raw.split(FENCE + 'json').join('').split(FENCE).join('').trim();
         const parsed = JSON.parse(clean);
+        
         if (!parsed.docNumber && !parsed.firstName && !parsed.fullName) {
           setError('No se detectaron datos. Usá buena iluminación.');
         } else {
@@ -675,6 +665,7 @@ function DocScanner({ onResult }) {
           setSuccess(true);
         }
       } catch (err) {
+        console.error('DocScanner Error:', err);
         setError(`Error: ${err.message}`);
       } finally {
         setScanning(false);
