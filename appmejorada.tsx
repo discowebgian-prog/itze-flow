@@ -5643,18 +5643,17 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
                 <div style={{ fontSize: 11, color: isCurrent ? '#60A5FA' : '#9CA3AF', fontWeight: 600 }}>{m.count} reservas</div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 14 }}>
-                <div style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 4px', borderRadius: 8 }}>
-                  <div style={{ fontSize: 10, color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>Ocup.</div>
-                  <div style={{ fontWeight: 800, fontSize: 13, color: occPct >= 70 ? '#10B981' : occPct >= 40 ? '#F59E0B' : '#EF4444' }}>{occPct}%</div>
+              {/* ── KPI HOTELEROS: OCUPACIÓN Y ADR ── */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+                <div style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '10px 6px', borderRadius: 8 }}>
+                  <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#64748B', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Ocupación</div>
+                  <div style={{ fontWeight: 800, fontSize: 14, color: occPct >= 70 ? '#10B981' : occPct >= 40 ? '#F59E0B' : '#EF4444' }}>{occPct}%</div>
+                  <div style={{ fontSize: 9, color: '#9CA3AF', marginTop: 2, fontWeight: 600 }}>Física</div>
                 </div>
-                <div style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 4px', borderRadius: 8 }}>
-                  <div style={{ fontSize: 10, color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>ADR</div>
-                  <div style={{ fontWeight: 800, fontSize: 13, color: '#374151' }}>{currency(adr)}</div>
-                </div>
-                <div style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 4px', borderRadius: 8 }}>
-                  <div style={{ fontSize: 10, color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>RevPAR</div>
-                  <div style={{ fontWeight: 800, fontSize: 13, color: '#3B82F6' }}>{currency(revpar)}</div>
+                <div title="Tarifa Promedio Diaria" style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '10px 6px', borderRadius: 8, cursor: 'help' }}>
+                  <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#64748B', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>ADR</div>
+                  <div style={{ fontWeight: 800, fontSize: 14, color: '#374151' }}>{currency(adr)}</div>
+                  <div style={{ fontSize: 9, color: '#9CA3AF', marginTop: 2, fontWeight: 600 }}>Tarifa Promedio</div>
                 </div>
               </div>
 
@@ -5678,15 +5677,25 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
                 </div>
               </div>
 
-              {/* REVPAR SEGMENTADO TEMPORAL */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
-                <div style={{ background: '#FFFBEB', border: '1px solid #FEF3C7', padding: '8px 10px', borderRadius: 8 }}>
-                  <div style={{ fontSize: 10, color: '#D97706', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Dom a Mié</div>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: '#92400E' }}>RevPAR {currency(revparEntre)}</div>
+              {/* ── RENDIMIENTO: REVPAR SEGMENTADO Y GLOBAL ── */}
+              <div style={{ background: '#F8FAFC', borderRadius: 10, padding: '10px 12px', border: '1px solid #E5E7EB', marginBottom: 14 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
+                  <span>RevPAR Segmentado</span>
+                  <span style={{ fontSize: 9, color: '#9CA3AF' }}>Ingreso x Hab.</span>
                 </div>
-                <div style={{ background: '#F5F3FF', border: '1px solid #EDE9FE', padding: '8px 10px', borderRadius: 8 }}>
-                  <div style={{ fontSize: 10, color: '#7C3AED', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Jue a Sáb</div>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: '#5B21B6' }}>RevPAR {currency(revparFinde)}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+                  <div style={{ background: '#FFFBEB', border: '1px solid #FEF3C7', padding: '8px 4px', borderRadius: 8, textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, color: '#D97706', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Dom - Mié</div>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: '#92400E' }}>{currency(revparEntre)}</div>
+                  </div>
+                  <div style={{ background: '#F5F3FF', border: '1px solid #EDE9FE', padding: '8px 4px', borderRadius: 8, textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, color: '#7C3AED', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Jue - Sáb</div>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: '#5B21B6' }}>{currency(revparFinde)}</div>
+                  </div>
+                  <div title="Ingreso por Habitación Disponible" style={{ background: isCurrent ? '#DBEAFE' : '#fff', border: `1px solid ${isCurrent ? '#BFDBFE' : '#E5E7EB'}`, padding: '8px 4px', borderRadius: 8, textAlign: 'center', cursor: 'help' }}>
+                    <div style={{ fontSize: 9, color: isCurrent ? '#1E40AF' : '#4B5563', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Global</div>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: isCurrent ? '#1D4ED8' : '#111' }}>{currency(revpar)}</div>
+                  </div>
                 </div>
               </div>
 
