@@ -5366,6 +5366,52 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
   const [gastos, setGastos] = useState([]);
   const [formGasto, setFormGasto] = useState({ fecha: fmt(TODAY), monto: '', categoria: 'Insumos', notas: '' });
   const [guardandoGasto, setGuardandoGasto] = useState(false);
+  // ── ESTADOS PARA REVENUE INTELLIGENCE ──
+  const [analyzingMonth, setAnalyzingMonth] = useState(null);
+  const [aiInsights, setAiInsights] = useState({});
+
+  const analizarRevenue = async (m, metrics) => {
+    setAnalyzingMonth(m.key);
+    try {
+      const prompt = `Actúa como Consultor Senior en Revenue Management Hotelero para "Itzé Hostel Boutique" en Progreso, Yucatán (destino de playa con demanda inelástica en fines de semana).
+      Datos del mes (${m.label}):
+      - Ingreso Base: $${metrics.trueRevenue}
+      - Egresos Operativos: $${metrics.gastos}
+      - Ocupación Física: ${metrics.occPct}%
+      - ADR: $${metrics.adr}
+      - RevPAR Global: $${metrics.revpar}
+      - GOPPAR: $${metrics.goppar}
+      - RevPAR (Dom-Mié): $${metrics.revparEntre}
+      - RevPAR (Jue-Sáb): $${metrics.revparFinde}
+      - Ocup. Matrimonial (P6): ${metrics.oMat}% | King (P4): ${metrics.oKing}% | Compartidas: ${metrics.oComp}%
+
+      REGLA DE ORO: Si los "Egresos Operativos" son $0, tu primer punto DEBE ser una advertencia estricta indicando que el GOPPAR es una ilusión y deben cargar los gastos.
+      Luego, analiza el contraste entre el RevPAR de entresemana vs fin de semana, y el rendimiento por tipo de cuarto.
+      Brinda 2 consejos tácticos concretos (pricing, promociones, o restricciones MinLOS).
+      Devuelve exactamente 3 viñetas cortas, directas y altamente profesionales. Sin introducciones.`;
+
+      // Replicamos la conexión exacta que ya usás en el DocScanner
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20240620',
+          max_tokens: 400,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+
+      if (!resp.ok) throw new Error('Error en API');
+      const data = await resp.json();
+      const text = (data.content && data.content[0] && data.content[0].text) || 'No se pudo generar el diagnóstico.';
+      
+      setAiInsights(prev => ({ ...prev, [m.key]: text }));
+    } catch (err) {
+      alert('Error al generar el diagnóstico de Revenue.');
+    } finally {
+      setAnalyzingMonth(null);
+    }
+  };
   
   const pending = reservations.filter(
     (r) => r.status !== 'cancelada' && r.paid < r.totalAmount
@@ -5729,6 +5775,31 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
                 <div style={{ height: 4, background: '#F3F4F6', borderRadius: 4, marginBottom: 8 }}>
                   <div style={{ height: '100%', background: '#10B981', borderRadius: 4, width: `${pct}%` }} />
                 </div>
+              </div>
+              {/* ── REVENUE INTELLIGENCE (IA) ── */}
+              <div style={{ borderTop: '1px dashed #CBD5E1', paddingTop: 14, marginTop: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: aiInsights[m.key] ? 12 : 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: '#4F46E5', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    ✨ Asesor Estratégico IA
+                  </div>
+                  {!aiInsights[m.key] && (
+                    <button
+                      onClick={() => analizarRevenue(m, { trueRevenue: m.trueRevenue, gastos: m.gastos, occPct, adr, revpar, goppar, revparEntre, revparFinde, oMat, oKing, oComp })}
+                      disabled={analyzingMonth === m.key}
+                      style={{
+                        background: '#EEF2FF', border: '1px solid #C7D2FE', color: '#4F46E5', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: analyzingMonth === m.key ? 'wait' : 'pointer', opacity: analyzingMonth === m.key ? 0.7 : 1
+                      }}
+                    >
+                      {analyzingMonth === m.key ? 'Analizando...' : 'Generar Diagnóstico'}
+                    </button>
+                  )}
+                </div>
+
+                {aiInsights[m.key] && (
+                  <div style={{ background: '#EEF2FF', padding: '14px', borderRadius: 8, border: '1px solid #C7D2FE', fontSize: 13, color: '#312E81', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                    {aiInsights[m.key]}
+                  </div>
+                )}
               </div>
             </div>
           );
