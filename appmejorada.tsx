@@ -617,6 +617,9 @@ function DocScanner({ onResult }) {
       setPreview(dataUrl);
       setScanning(true);
       try {
+        const apiKey = import.meta.env.VITE_CLAUDE_KEY;
+        if (!apiKey) throw new Error('Falta la API Key en Vercel');
+
         const base64 = dataUrl.split(',')[1];
         const mt =
           file.type && file.type.startsWith('image/')
@@ -624,9 +627,14 @@ function DocScanner({ onResult }) {
             : 'image/jpeg';
         const resp = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerously-allow-browser': 'true'
+          },
           body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-3-5-sonnet-20240620',
             max_tokens: 400,
             messages: [
               {
@@ -645,7 +653,10 @@ function DocScanner({ onResult }) {
             ],
           }),
         });
-        if (!resp.ok) throw new Error('API ' + resp.status);
+        if (!resp.ok) {
+          const errData = await resp.json();
+          throw new Error(errData.error?.message || 'API ' + resp.status);
+        }
         const data = await resp.json();
         const raw =
           (data.content && data.content[0] && data.content[0].text) || '{}';
@@ -664,7 +675,7 @@ function DocScanner({ onResult }) {
           setSuccess(true);
         }
       } catch (err) {
-        setError('Error al analizar. Intentá con imagen más clara.');
+        setError(`Error: ${err.message}`);
       } finally {
         setScanning(false);
       }
@@ -5412,6 +5423,13 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
   const analizarRevenue = async (m, metrics) => {
     setAnalyzingMonth(m.key);
     try {
+      const apiKey = import.meta.env.VITE_CLAUDE_KEY;
+      if (!apiKey) {
+        alert('⚠️ Vercel sigue sin cargar la llave. Hacé un "Commit" en GitHub para forzar a Vercel a actualizar su memoria.');
+        setAnalyzingMonth(null);
+        return;
+      }
+
       const prompt = `Actúa como Consultor Senior en Revenue Management Hotelero para "Itzé Hostel Boutique" en Progreso, Yucatán (destino de playa con demanda inelástica en fines de semana).
       Datos del mes (${m.label}):
       - Ingreso Base: $${metrics.trueRevenue}
@@ -5433,7 +5451,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'x-api-key': import.meta.env.VITE_CLAUDE_KEY, // <--- ¡PEGÁ TU CLAVE ACÁ!
+          'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',
           'anthropic-dangerously-allow-browser': 'true'
         },
@@ -5444,13 +5462,19 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
         }),
       });
 
-      if (!resp.ok) throw new Error('Error en API');
+      if (!resp.ok) {
+        const errData = await resp.json();
+        console.error('Error de Claude:', errData);
+        alert(`⚠️ Claude rechazó la conexión. Motivo: ${errData.error?.message || resp.status}`);
+        return;
+      }
       const data = await resp.json();
       const text = (data.content && data.content[0] && data.content[0].text) || 'No se pudo generar el diagnóstico.';
       
       setAiInsights(prev => ({ ...prev, [m.key]: text }));
     } catch (err) {
-      alert('Error al generar el diagnóstico de Revenue. Revisá si pegaste bien tu API Key en el código.');
+      console.error('Error de red o ejecución:', err);
+      alert('⚠️ Error de red al conectar con Claude. Revisa tu conexión a internet.');
     } finally {
       setAnalyzingMonth(null);
     }
