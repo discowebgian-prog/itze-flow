@@ -5425,7 +5425,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
     try {
       const apiKey = import.meta.env.VITE_CLAUDE_KEY;
       if (!apiKey) {
-        alert('⚠️ Vercel sigue sin cargar la llave. Hacé un "Commit" en GitHub para forzar a Vercel a actualizar su memoria.');
+        alert('⚠️ Falta la API Key en Vercel.');
         setAnalyzingMonth(null);
         return;
       }
@@ -5447,7 +5447,8 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
       Brinda 2 consejos tácticos concretos (pricing, promociones, o restricciones MinLOS).
       Devuelve exactamente 3 viñetas cortas, directas y altamente profesionales. Sin introducciones.`;
 
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      // USAMOS UN "PUENTE" (PROXY) PARA SALTAR LA SEGURIDAD DEL NAVEGADOR
+      const resp = await fetch('https://corsproxy.io/?https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -5464,7 +5465,6 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
 
       if (!resp.ok) {
         const errData = await resp.json();
-        console.error('Error de Claude:', errData);
         alert(`⚠️ Claude rechazó la conexión. Motivo: ${errData.error?.message || resp.status}`);
         return;
       }
@@ -5474,7 +5474,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
       setAiInsights(prev => ({ ...prev, [m.key]: text }));
     } catch (err) {
       console.error('Error de red o ejecución:', err);
-      alert('⚠️ Error de red al conectar con Claude. Revisa tu conexión a internet.');
+      alert('⚠️ Error de red al conectar con Claude. Revisa tu conexión a internet o el Proxy.');
     } finally {
       setAnalyzingMonth(null);
     }
