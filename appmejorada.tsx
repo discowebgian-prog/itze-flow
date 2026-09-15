@@ -5702,7 +5702,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
                   <div style={{ textAlign: 'right' }}><span style={{ color: oKing > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oKing}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rKing)}</span></div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, alignItems: 'center' }}>
-                  <span style={{ color: '#4B5563', fontWeight: 600 }}>Compartidas <span style={{ opacity: 0.6 }}>(P1-2-3-5)</span></span>
+                  <span style={{ color: '#4B5563', fontWeight: 600 }}>Privadas grandes <span style={{ opacity: 0.6 }}>(P1-2-3-5)</span></span>
                   <div style={{ textAlign: 'right' }}><span style={{ color: oComp > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oComp}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rComp)}</span></div>
                 </div>
               </div>
