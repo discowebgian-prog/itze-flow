@@ -5363,143 +5363,166 @@ async function exportToExcel(reservations, properties) {
 // ── FINANCE PAGE ──────────────────────────────────────────────────────────────
 function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoTo }) {
   const [showTrash, setShowTrash] = useState(false);
+  const [gastos, setGastos] = useState([]);
+  const [formGasto, setFormGasto] = useState({ fecha: fmt(TODAY), monto: '', categoria: 'Insumos', notas: '' });
+  const [guardandoGasto, setGuardandoGasto] = useState(false);
+  
   const pending = reservations.filter(
     (r) => r.status !== 'cancelada' && r.paid < r.totalAmount
   );
   const deleted = (allRes || []).filter((r) => r.deleted);
+  const currentMonthKey = `${TODAY.getFullYear()}-${String(TODAY.getMonth() + 1).padStart(2, '0')}`;
 
-  // --- NUEVA LÓGICA: AGRUPACIÓN MENSUAL ---
+  useEffect(() => {
+    const fetchGastos = async () => {
+      const { data, error } = await supabase.from('gastos').select('*').order('fecha', { ascending: false });
+      if (!error && data) setGastos(data);
+    };
+    fetchGastos();
+  }, []);
+
+  const handleGuardarGasto = async (e) => {
+    e.preventDefault();
+    if (!formGasto.monto || Number(formGasto.monto) <= 0) return;
+    setGuardandoGasto(true);
+    const { data, error } = await supabase.from('gastos').insert([{
+      fecha: formGasto.fecha,
+      monto: Number(formGasto.monto),
+      categoria: formGasto.categoria,
+      notas: formGasto.notas
+    }]).select();
+    setGuardandoGasto(false);
+    
+    if (!error && data) {
+      setGastos([data[0], ...gastos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)));
+      setFormGasto({ ...formGasto, monto: '', notas: '' });
+    }
+  };
+
+  const eliminarGasto = async (id) => {
+    if(!window.confirm('¿Eliminar gasto?')) return;
+    await supabase.from('gastos').delete().eq('id', id);
+    setGastos(gastos.filter((g) => g.id !== id));
+  };
+
+  const initMonthObj = (keyStr) => {
+    const [y, m] = keyStr.split('-');
+    const mName = MONTHS[parseInt(m, 10) - 1] || m;
+    return {
+      key: keyStr, label: `${mName} ${y}`, total: 0, paid: 0, count: 0, occupiedNights: 0, trueRevenue: 0,
+      pmTotals: { efectivo: 0, transferencia: 0, debito: 0, credito: 0, otro: 0 },
+      srcTotals: { Booking: 0, 'Directo-Puerta': 0, 'Directo-Celular': 0 },
+      dow: { entre: { revenue: 0, nights: 0 }, finde: { revenue: 0, nights: 0 } },
+      rooms: { matrimonial: { revenue: 0, nights: 0 }, king: { revenue: 0, nights: 0 }, compartidas: { revenue: 0, nights: 0 } },
+      gastos: 0
+    };
+  };
+
+  const baseStats = {};
+  baseStats[currentMonthKey] = initMonthObj(currentMonthKey);
+
   const monthlyStats = reservations.reduce((acc, r) => {
-    // Ignoramos las canceladas para la contabilidad real
     if (r.status === 'cancelada' || !r.checkIn) return acc;
     
-    // Extraemos Año y Mes del Check-in (ej: "2026-06-12" -> y:"2026", m:"06")
     const [y, m] = r.checkIn.split('-');
     const key = `${y}-${m}`;
-    
-    if (!acc[key]) {
-      const mName = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][parseInt(m, 10) - 1];
-      acc[key] = { 
-        key, 
-        label: `${mName} ${y}`, 
-        total: 0, 
-        paid: 0, 
-        count: 0, 
-        occupiedNights: 0,
-        pmTotals: { efectivo: 0, transferencia: 0, debito: 0, credito: 0, otro: 0 },
-        srcTotals: { Booking: 0, 'Directo-Puerta': 0, 'Directo-Celular': 0 }
-      };
-    }
-    
+    if (!acc[key]) acc[key] = initMonthObj(key);
+
     const tAmt = r.totalAmount || 0;
-    acc[key].total += tAmt;
+    acc[key].total += tAmt; 
     acc[key].paid += (r.paid || 0);
     acc[key].count += 1;
 
-    // Sumamos las noches ocupadas físicamente por habitación
-    if (r.checkIn && r.checkOut) {
-      acc[key].occupiedNights += diffDays(r.checkIn, r.checkOut);
+    const nights = diffDays(r.checkIn, r.checkOut);
+    if (nights > 0) {
+      acc[key].occupiedNights += nights;
+      const avgDailyRate = tAmt / nights;
+
+      for (let i = 0; i < nights; i++) {
+        // CORRECCIÓN NINJA: Se usa parseD para evitar bug de zona horaria
+        const currentNight = addDays(parseD(r.checkIn), i); 
+        const nightMonthKey = `${currentNight.getFullYear()}-${String(currentNight.getMonth() + 1).padStart(2, '0')}`;
+        
+        if (!acc[nightMonthKey]) acc[nightMonthKey] = initMonthObj(nightMonthKey);
+        
+        acc[nightMonthKey].trueRevenue += avgDailyRate;
+
+        const dayOfWeek = currentNight.getDay();
+        const isWeekend = dayOfWeek >= 4 && dayOfWeek <= 6; 
+
+        if (isWeekend) {
+           acc[nightMonthKey].dow.finde.revenue += avgDailyRate;
+           acc[nightMonthKey].dow.finde.nights += 1;
+        } else {
+           acc[nightMonthKey].dow.entre.revenue += avgDailyRate;
+           acc[nightMonthKey].dow.entre.nights += 1;
+        }
+
+        if (r.room === 'P6') {
+           acc[nightMonthKey].rooms.matrimonial.revenue += avgDailyRate;
+           acc[nightMonthKey].rooms.matrimonial.nights += 1;
+        } else if (r.room === 'P4') {
+           acc[nightMonthKey].rooms.king.revenue += avgDailyRate;
+           acc[nightMonthKey].rooms.king.nights += 1;
+        } else if (['P1', 'P2', 'P3', 'P5'].includes(r.room)) {
+           acc[nightMonthKey].rooms.compartidas.revenue += avgDailyRate;
+           acc[nightMonthKey].rooms.compartidas.nights += 1;
+        }
+      }
     }
-    
-    // Agrupamos por Medio de Pago (Usamos totalAmount para reflejar el volumen facturado)
+
     const pm = r.paymentMethod || 'efectivo';
-    if (acc[key].pmTotals[pm] !== undefined) {
-      acc[key].pmTotals[pm] += tAmt;
-    } else {
-      acc[key].pmTotals['otro'] += tAmt;
-    }
+    if (acc[key].pmTotals[pm] !== undefined) acc[key].pmTotals[pm] += tAmt;
+    else acc[key].pmTotals['otro'] += tAmt;
 
-    // Agrupamos por Canal de Ingreso
     const src = r.source || 'Directo-Puerta';
-    if (acc[key].srcTotals[src] !== undefined) {
-      acc[key].srcTotals[src] += tAmt;
-    }
-    
+    if (acc[key].srcTotals[src] !== undefined) acc[key].srcTotals[src] += tAmt;
+
     return acc;
-  }, {});
+  }, baseStats);
 
-  // 1. ORDEN CRONOLÓGICO: Futuro arriba, Pasado abajo.
+  gastos.forEach(g => {
+    if (!g.fecha) return; // Preventivo por si algún gasto viejo no tiene fecha
+    const [y, m] = g.fecha.split('-');
+    const key = `${y}-${m}`;
+    if (!monthlyStats[key]) monthlyStats[key] = initMonthObj(key);
+    monthlyStats[key].gastos += Number(g.monto);
+  });
+
   const monthlyArray = Object.values(monthlyStats).sort((a, b) => b.key.localeCompare(a.key));
-  
-  // 2. IDENTIFICADOR DEL MES ACTUAL
-  const currentMonthKey = `${TODAY.getFullYear()}-${String(TODAY.getMonth() + 1).padStart(2, '0')}`;
 
-  // 3. AUTO-SCROLL AL MES ACTUAL
   useEffect(() => {
     setTimeout(() => {
       const el = document.getElementById(`month-${currentMonthKey}`);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 150);
   }, [currentMonthKey]);
-  // ----------------------------------------
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 20,
-          flexWrap: 'wrap',
-          gap: 10,
-        }}
-      >
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#111' }}>
-          Finanzas
-        </h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#111' }}>Finanzas</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {user?.role === 'admin' && deleted.length > 0 && (
             <button
               onClick={() => setShowTrash((x) => !x)}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '8px 14px',
+                display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
                 background: showTrash ? '#FEF2F2' : '#F3F4F6',
                 border: `1.5px solid ${showTrash ? '#FECACA' : '#E5E7EB'}`,
-                borderRadius: 8,
-                fontFamily: 'inherit',
-                fontWeight: 700,
-                fontSize: 12,
-                cursor: 'pointer',
-                color: showTrash ? '#DC2626' : '#6B7280',
+                borderRadius: 8, fontFamily: 'inherit', fontWeight: 700, fontSize: 12,
+                cursor: 'pointer', color: showTrash ? '#DC2626' : '#6B7280',
               }}
             >
-              🗑 Papelera{' '}
-              {deleted.length > 0 && (
-                <span
-                  style={{
-                    background: '#DC2626',
-                    color: '#fff',
-                    borderRadius: 10,
-                    padding: '1px 6px',
-                    fontSize: 10,
-                  }}
-                >
-                  {deleted.length}
-                </span>
-              )}
+              🗑 Papelera {deleted.length > 0 && ( <span style={{ background: '#DC2626', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10 }}>{deleted.length}</span> )}
             </button>
           )}
           <button
             onClick={() => exportToExcel(reservations, properties)}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '8px 14px',
-              background: '#ECFDF5',
-              border: '1.5px solid #6EE7B7',
-              borderRadius: 8,
-              fontFamily: 'inherit',
-              fontWeight: 700,
-              fontSize: 12,
-              cursor: 'pointer',
-              color: '#065F46',
+              display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+              background: '#ECFDF5', border: '1.5px solid #6EE7B7', borderRadius: 8,
+              fontFamily: 'inherit', fontWeight: 700, fontSize: 12, cursor: 'pointer', color: '#065F46',
             }}
           >
             📥 Exportar Excel
@@ -5507,428 +5530,247 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
         </div>
       </div>
 
-      {showTrash && user?.role === 'admin' && (
-        <div
-          style={{
-            marginBottom: 24,
-            background: '#FEF2F2',
-            borderRadius: 12,
-            padding: '16px 20px',
-            border: '1.5px solid #FECACA',
-          }}
-        >
-          <div
-            style={{
-              fontWeight: 700,
-              fontSize: 13,
-              color: '#991B1B',
-              marginBottom: 12,
-            }}
-          >
-            🗑 Reservas eliminadas — solo tú podés ver esto
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {deleted.map((r) => {
-              const prop = properties.find((p) => p.id === r.propertyId);
-              return (
-                <div
-                  key={r.id}
-                  style={{
-                    background: '#fff',
-                    borderRadius: 10,
-                    padding: '12px 16px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    border: '1px solid #FECACA',
-                    gap: 10,
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <div>
-                    <div
-                      style={{
-                        fontWeight: 700,
-                        fontSize: 13,
-                        color: '#374151',
-                      }}
-                    >
-                      {r.guestName}
-                    </div>
-                    <div style={{ fontSize: 11, color: '#9CA3AF' }}>
-                      {prop?.name}
-                      {r.room ? ` · Hab.${r.room}` : ''} · {fmtD(r.checkIn)} →{' '}
-                      {fmtD(r.checkOut)}
-                    </div>
-                    <div
-                      style={{ fontSize: 10, color: '#EF4444', marginTop: 2 }}
-                    >
-                      Eliminada por {r.deletedBy || '—'} el{' '}
-                      {r.deletedAt ? fmtDT(r.deletedAt) : '—'}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => restoreRes(r.id)}
-                    style={{
-                      padding: '7px 14px',
-                      background: '#ECFDF5',
-                      border: '1.5px solid #6EE7B7',
-                      borderRadius: 8,
-                      fontFamily: 'inherit',
-                      fontWeight: 700,
-                      fontSize: 12,
-                      cursor: 'pointer',
-                      color: '#065F46',
-                      flexShrink: 0,
-                    }}
-                  >
-                    ↩ Restaurar
-                  </button>
-                </div>
-              );
-            })}
-            {deleted.length === 0 && (
-              <div
-                style={{
-                  textAlign: 'center',
-                  color: '#9CA3AF',
-                  padding: 16,
-                  fontSize: 13,
-                }}
-              >
-                La papelera está vacía
+      {/* MÓDULO DE EGRESOS */}
+      <div style={{ background: '#fff', borderRadius: 12, padding: '16px 20px', border: '1px solid #E5E7EB', marginBottom: 24, boxShadow: '0 1px 3px rgba(0,0,0,.02)' }}>
+        <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 800, color: '#374151' }}>💸 Módulo de Egresos</h3>
+        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          
+          <form onSubmit={handleGuardarGasto} style={{ flex: '1 1 280px', display: 'flex', flexDirection: 'column', gap: 10, background: '#F8FAFC', padding: 14, borderRadius: 10, border: '1px solid #F0F0F0' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: 4 }}>Fecha</label>
+                <input type="date" value={formGasto.fecha} onChange={(e) => setFormGasto({ ...formGasto, fecha: e.target.value })} style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 12, fontFamily: 'inherit' }} required />
               </div>
-            )}
+              <div>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: 4 }}>Monto $</label>
+                <input type="number" placeholder="0.00" value={formGasto.monto} onChange={(e) => setFormGasto({ ...formGasto, monto: e.target.value })} style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 12, fontFamily: 'inherit' }} required />
+              </div>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: 4 }}>Categoría</label>
+              <select value={formGasto.categoria} onChange={(e) => setFormGasto({ ...formGasto, categoria: e.target.value })} style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 12, fontFamily: 'inherit', background: '#fff' }}>
+                <option value="Mantenimiento">Mantenimiento</option>
+                <option value="Sueldos">Sueldos</option>
+                <option value="Insumos">Insumos (Limpieza/Desayuno)</option>
+                <option value="Servicios">Servicios (Luz/Agua/Internet)</option>
+                <option value="Impuestos">Impuestos</option>
+                <option value="Comisiones">Comisiones (Booking/OTA)</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: 4 }}>Concepto / Notas</label>
+              <input type="text" placeholder="Ej. Pintura pasillo..." value={formGasto.notas} onChange={(e) => setFormGasto({ ...formGasto, notas: e.target.value })} style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 12, fontFamily: 'inherit' }} required />
+            </div>
+            <button disabled={guardandoGasto} type="submit" style={{ marginTop: 4, width: '100%', padding: '10px', background: '#EF4444', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: guardandoGasto ? 'not-allowed' : 'pointer', opacity: guardandoGasto ? 0.7 : 1 }}>
+              {guardandoGasto ? 'Cargando...' : '+ Registrar Gasto'}
+            </button>
+          </form>
+
+          <div style={{ flex: '2 1 350px', maxHeight: 240, overflowY: 'auto', paddingRight: 4 }}>
+             {gastos.length === 0 ? (
+               <div style={{ textAlign: 'center', color: '#9CA3AF', padding: '40px 0', fontSize: 12 }}>No hay egresos registrados.</div>
+             ) : (
+               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                 {gastos.map(g => (
+                   <div key={g.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FAFAFA', border: '1px solid #F0F0F0', borderRadius: 8, padding: '10px 12px' }}>
+                     <div>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                         <span style={{ fontSize: 11, fontWeight: 800, color: '#991B1B', background: '#FEE2E2', padding: '2px 6px', borderRadius: 4 }}>{g.categoria}</span>
+                         <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>{fmtD(g.fecha)}</span>
+                       </div>
+                       <div style={{ fontSize: 13, fontWeight: 600, color: '#111' }}>{g.notas}</div>
+                     </div>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                       <span style={{ fontWeight: 800, color: '#EF4444', fontSize: 14 }}>-{currency(g.monto)}</span>
+                       <button onClick={() => eliminarGasto(g.id)} style={{ background: 'transparent', border: 'none', color: '#9CA3AF', cursor: 'pointer', fontSize: 16, padding: '2px 6px' }}>×</button>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             )}
           </div>
         </div>
-      )}
+      </div>
 
-      {/* SECCIÓN 1: DESGLOSE MENSUAL */}
-      <h3
-        style={{
-          margin: '0 0 12px',
-          fontSize: 15,
-          fontWeight: 700,
-          color: '#374151',
-        }}
-      >
-        Reporte Mensual
-      </h3>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))',
-          gap: 16,
-          marginBottom: 28,
-        }}
-      >
+      <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700, color: '#374151' }}>Reporte Mensual (Rendimiento y GOPPAR)</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: 16, marginBottom: 28 }}>
         {monthlyArray.map((m) => {
           const saldo = m.total - m.paid;
           const pct = m.total > 0 ? Math.round((m.paid / m.total) * 100) : 0;
           const isCurrent = m.key === currentMonthKey;
 
-          // ── CÁLCULO DE OCUPACIÓN FÍSICA Y MÉTRICAS (ADR / RevPAR) ──
           const [yStr, mStr] = m.key.split('-');
           const daysInMonth = new Date(parseInt(yStr), parseInt(mStr), 0).getDate();
           const passedDays = isCurrent ? TODAY.getDate() : daysInMonth;
+          
           const totalRooms = properties.reduce((s, p) => s + (p.rooms || 1), 0);
           const availableNights = totalRooms * passedDays;
-          
           const occPct = availableNights > 0 ? Math.min(100, Math.round((m.occupiedNights / availableNights) * 100)) : 0;
-          const adr = m.occupiedNights > 0 ? Math.round(m.total / m.occupiedNights) : 0;
-          const revpar = availableNights > 0 ? Math.round(m.total / availableNights) : 0;
+          const adr = m.occupiedNights > 0 ? Math.round(m.trueRevenue / m.occupiedNights) : 0;
+          const revpar = availableNights > 0 ? Math.round(m.trueRevenue / availableNights) : 0;
+
+          // Rentabilidad
+          const netProfit = m.trueRevenue - m.gastos;
+          const goppar = availableNights > 0 ? Math.round(netProfit / availableNights) : 0;
+
+          // Segmentación DoW
+          let availEntre = 0, availFinde = 0;
+          for (let i = 1; i <= passedDays; i++) {
+             const d = new Date(parseInt(yStr), parseInt(mStr) - 1, i).getDay();
+             if (d >= 4 && d <= 6) availFinde++; else availEntre++;
+          }
+          const availNightsEntre = totalRooms * availEntre;
+          const availNightsFinde = totalRooms * availFinde;
+          const revparEntre = availNightsEntre > 0 ? Math.round(m.dow.entre.revenue / availNightsEntre) : 0;
+          const revparFinde = availNightsFinde > 0 ? Math.round(m.dow.finde.revenue / availNightsFinde) : 0;
+
+          // Segmentación Tipos de Habitación
+          const aMat = 1 * passedDays, aKing = 1 * passedDays, aComp = 4 * passedDays;
+          const rMat = aMat > 0 ? Math.round(m.rooms.matrimonial.revenue / aMat) : 0;
+          const rKing = aKing > 0 ? Math.round(m.rooms.king.revenue / aKing) : 0;
+          const rComp = aComp > 0 ? Math.round(m.rooms.compartidas.revenue / aComp) : 0;
+          const oMat = aMat > 0 ? Math.min(100, Math.round((m.rooms.matrimonial.nights / aMat)*100)) : 0;
+          const oKing = aKing > 0 ? Math.min(100, Math.round((m.rooms.king.nights / aKing)*100)) : 0;
+          const oComp = aComp > 0 ? Math.min(100, Math.round((m.rooms.compartidas.nights / aComp)*100)) : 0;
 
           return (
-            <div
-              key={m.key}
-              id={`month-${m.key}`}
-              style={{
-                background: isCurrent ? '#EFF6FF' : '#fff',
-                borderRadius: 12,
-                padding: '16px',
-                border: isCurrent ? '2px solid #3B82F6' : '1px solid #F0F0F0',
-                boxShadow: isCurrent ? '0 4px 12px rgba(59,130,246,0.15)' : 'none',
-                position: 'relative',
-              }}
-            >
-              {isCurrent && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: -10,
-                    right: 16,
-                    background: '#3B82F6',
-                    color: '#fff',
-                    fontSize: 10,
-                    fontWeight: 800,
-                    padding: '4px 10px',
-                    borderRadius: 12,
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.5,
-                    boxShadow: '0 2px 4px rgba(59,130,246,0.3)',
-                  }}
-                >
-                  Mes Actual
-                </div>
-              )}
+            <div key={m.key} id={`month-${m.key}`} style={{ background: isCurrent ? '#EFF6FF' : '#fff', borderRadius: 12, padding: '16px', border: isCurrent ? '2px solid #3B82F6' : '1px solid #F0F0F0', boxShadow: isCurrent ? '0 4px 12px rgba(59,130,246,0.15)' : 'none', position: 'relative' }}>
+              {isCurrent && <div style={{ position: 'absolute', top: -10, right: 16, background: '#3B82F6', color: '#fff', fontSize: 10, fontWeight: 800, padding: '4px 10px', borderRadius: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>Mes Actual</div>}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <div style={{ fontWeight: 800, fontSize: 15, color: isCurrent ? '#1E40AF' : '#111', textTransform: 'capitalize' }}>
-                  {m.label}
-                </div>
-                <div style={{ fontSize: 11, color: isCurrent ? '#60A5FA' : '#9CA3AF', fontWeight: 600 }}>
-                  {m.count} reservas
-                </div>
+                <div style={{ fontWeight: 800, fontSize: 16, color: isCurrent ? '#1E40AF' : '#111', textTransform: 'capitalize' }}>{m.label}</div>
+                <div style={{ fontSize: 11, color: isCurrent ? '#60A5FA' : '#9CA3AF', fontWeight: 600 }}>{m.count} reservas</div>
               </div>
 
-             {/* ── KPI HOTELEROS: OCUPACIÓN, ADR, RevPAR ── */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 14, paddingBottom: 14, borderBottom: '1px solid #F3F4F6' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 14 }}>
                 <div style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 4px', borderRadius: 8 }}>
-                  <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#6B7280', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Ocup.</div>
+                  <div style={{ fontSize: 10, color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>Ocup.</div>
                   <div style={{ fontWeight: 800, fontSize: 13, color: occPct >= 70 ? '#10B981' : occPct >= 40 ? '#F59E0B' : '#EF4444' }}>{occPct}%</div>
-                  <div style={{ fontSize: 8, color: '#9CA3AF', marginTop: 2, fontWeight: 600, letterSpacing: -0.2 }}>Física</div>
                 </div>
-                <div title="Tarifa Promedio Diaria" style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 4px', borderRadius: 8, cursor: 'help' }}>
-                  <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#6B7280', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>ADR</div>
+                <div style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 4px', borderRadius: 8 }}>
+                  <div style={{ fontSize: 10, color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>ADR</div>
                   <div style={{ fontWeight: 800, fontSize: 13, color: '#374151' }}>{currency(adr)}</div>
-                  <div style={{ fontSize: 8, color: '#9CA3AF', marginTop: 2, fontWeight: 600, letterSpacing: -0.2 }}>Tarifa Promedio</div>
                 </div>
-                <div title="Ingreso por Habitación Disponible" style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 4px', borderRadius: 8, cursor: 'help' }}>
-                  <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#6B7280', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>RevPAR</div>
+                <div style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 4px', borderRadius: 8 }}>
+                  <div style={{ fontSize: 10, color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>RevPAR</div>
                   <div style={{ fontWeight: 800, fontSize: 13, color: '#3B82F6' }}>{currency(revpar)}</div>
-                  <div style={{ fontSize: 8, color: '#9CA3AF', marginTop: 2, fontWeight: 600, letterSpacing: -0.2 }}>Ingreso x Hab. Disponible</div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 13 }}>
-                <span style={{ color: '#6B7280' }}>Facturado:</span>
-                <span style={{ fontWeight: 700, color: '#111' }}>{currency(m.total)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, fontSize: 13 }}>
-                <span style={{ color: '#6B7280' }}>Cobrado:</span>
-                <span style={{ fontWeight: 700, color: '#10B981' }}>{currency(m.paid)}</span>
-              </div>
-
-              <div style={{ height: 4, background: isCurrent ? '#BFDBFE' : '#F3F4F6', borderRadius: 4, marginBottom: 10 }}>
-                <div style={{ height: '100%', background: '#10B981', borderRadius: 4, width: `${pct}%`, transition: 'width .3s' }} />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, borderTop: isCurrent ? '1px dashed #93C5FD' : '1px dashed #E5E7EB', fontSize: 13, marginBottom: 12 }}>
-                <span style={{ color: isCurrent ? '#3B82F6' : '#6B7280', fontWeight: 600 }}>Por cobrar:</span>
-                <span style={{ fontWeight: 800, color: saldo > 0 ? '#EF4444' : '#9CA3AF' }}>{currency(saldo)}</span>
-              </div>
-
-              {/* ── DESGLOSE DE PAGOS Y CANALES ── */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10, marginTop: 4 }}>
-                <div style={{ background: isCurrent ? '#DBEAFE' : '#F9FAFB', padding: '10px 12px', borderRadius: 8 }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: isCurrent ? '#1E40AF' : '#6B7280', textTransform: 'uppercase', marginBottom: 6 }}>
-                    {isCurrent ? 'Pagos hasta el momento' : 'Total por medio de pago'}
-                  </div>
-                  {Object.entries(m.pmTotals).map(([k, val]) => {
-                    if (val === 0) return null;
-                    const pmPct = m.total > 0 ? Math.round((val / m.total) * 100) : 0;
-                    const pmNames = { efectivo: 'Efectivo', transferencia: 'Transf.', debito: 'Débito', credito: 'Crédito', otro: 'Otro' };
-                    return (
-                      <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
-                        <span style={{ color: '#4B5563', fontWeight: 600 }}>{pmNames[k]} <span style={{ opacity: 0.6 }}>({pmPct}%)</span></span>
-                        <span style={{ fontWeight: 700, color: '#111' }}>{currency(val)}</span>
-                      </div>
-                    );
-                  })}
+              {/* RENTABILIDAD & GOPPAR */}
+              <div style={{ background: '#F8FAFC', borderRadius: 10, padding: 12, border: '1px solid #E5E7EB', marginBottom: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                  <span style={{ color: '#4B5563', fontWeight: 600 }}>Ingreso Base Real:</span>
+                  <span style={{ fontWeight: 800, color: '#111' }}>{currency(m.trueRevenue)}</span>
                 </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #E2E8F0' }}>
+                  <span style={{ color: '#4B5563', fontWeight: 600 }}>Egresos Operativos:</span>
+                  <span style={{ fontWeight: 800, color: '#EF4444' }}>-{currency(m.gastos)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: '#047857', background: '#D1FAE5', padding: '2px 8px', borderRadius: 6 }}>GANANCIA NETA</span>
+                  <span style={{ fontWeight: 900, fontSize: 15, color: '#065F46' }}>{currency(netProfit)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Ind. GOPPAR</span>
+                  <span style={{ fontWeight: 800, fontSize: 12, color: '#3B82F6' }}>{currency(goppar)}</span>
+                </div>
+              </div>
 
-                <div style={{ background: isCurrent ? '#DBEAFE' : '#F9FAFB', padding: '10px 12px', borderRadius: 8 }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: isCurrent ? '#1E40AF' : '#6B7280', textTransform: 'uppercase', marginBottom: 6 }}>
-                    {isCurrent ? 'Canales hasta el momento' : 'Total por canal'}
-                  </div>
-                  {Object.entries(m.srcTotals).map(([k, val]) => {
-                    if (val === 0) return null;
-                    const srcPct = m.total > 0 ? Math.round((val / m.total) * 100) : 0;
-                    const srcNames = { Booking: 'Booking', 'Directo-Puerta': 'Puerta', 'Directo-Celular': 'Celular' };
-                    return (
-                      <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
-                        <span style={{ color: '#4B5563', fontWeight: 600 }}>{srcNames[k] || k} <span style={{ opacity: 0.6 }}>({srcPct}%)</span></span>
-                        <span style={{ fontWeight: 700, color: '#111' }}>{currency(val)}</span>
-                      </div>
-                    );
-                  })}
+              {/* REVPAR SEGMENTADO TEMPORAL */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+                <div style={{ background: '#FFFBEB', border: '1px solid #FEF3C7', padding: '8px 10px', borderRadius: 8 }}>
+                  <div style={{ fontSize: 10, color: '#D97706', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Dom a Mié</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#92400E' }}>RevPAR {currency(revparEntre)}</div>
+                </div>
+                <div style={{ background: '#F5F3FF', border: '1px solid #EDE9FE', padding: '8px 10px', borderRadius: 8 }}>
+                  <div style={{ fontSize: 10, color: '#7C3AED', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Jue a Sáb</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#5B21B6' }}>RevPAR {currency(revparFinde)}</div>
+                </div>
+              </div>
+
+              {/* DESGLOSE DE INVENTARIO */}
+              <div style={{ background: '#F8FAFC', borderRadius: 10, padding: '10px 12px', border: '1px solid #E5E7EB', marginBottom: 14 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: 8 }}>Segmentación Física</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4, alignItems: 'center' }}>
+                  <span style={{ color: '#4B5563', fontWeight: 600 }}>Matrimonial <span style={{ opacity: 0.6 }}>(P6)</span></span>
+                  <div style={{ textAlign: 'right' }}><span style={{ color: oMat > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oMat}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rMat)}</span></div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4, alignItems: 'center' }}>
+                  <span style={{ color: '#4B5563', fontWeight: 600 }}>King <span style={{ opacity: 0.6 }}>(P4)</span></span>
+                  <div style={{ textAlign: 'right' }}><span style={{ color: oKing > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oKing}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rKing)}</span></div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, alignItems: 'center' }}>
+                  <span style={{ color: '#4B5563', fontWeight: 600 }}>Compartidas <span style={{ opacity: 0.6 }}>(P1-2-3-5)</span></span>
+                  <div style={{ textAlign: 'right' }}><span style={{ color: oComp > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oComp}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rComp)}</span></div>
+                </div>
+              </div>
+
+              {/* FLUJO DE CAJA (FACTURADO) */}
+              <div style={{ borderTop: '1px dashed #CBD5E1', paddingTop: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 12 }}>
+                  <span style={{ color: '#6B7280', fontWeight: 600 }}>Flujo Facturado:</span>
+                  <span style={{ fontWeight: 700, color: '#111' }}>{currency(m.total)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 12 }}>
+                  <span style={{ color: '#6B7280', fontWeight: 600 }}>Cobrado:</span>
+                  <span style={{ fontWeight: 700, color: '#10B981' }}>{currency(m.paid)}</span>
+                </div>
+                <div style={{ height: 4, background: '#F3F4F6', borderRadius: 4, marginBottom: 8 }}>
+                  <div style={{ height: '100%', background: '#10B981', borderRadius: 4, width: `${pct}%` }} />
                 </div>
               </div>
             </div>
           );
         })}
-        {monthlyArray.length === 0 && (
-          <div
-            style={{
-              gridColumn: '1 / -1',
-              textAlign: 'center',
-              color: '#D1D5DB',
-              padding: 20,
-              fontSize: 13,
-            }}
-          >
-            No hay reservas registradas.
-          </div>
-        )}
       </div>
 
-      {/* SECCIÓN 2: DESGLOSE POR PROPIEDAD */}
-      <h3
-        style={{
-          margin: '0 0 12px',
-          fontSize: 15,
-          fontWeight: 700,
-          color: '#374151',
-        }}
-      >
-        Totales por Propiedad
-      </h3>
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-          marginBottom: 28,
-        }}
-      >
+      <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700, color: '#374151' }}>Totales por Propiedad</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 28 }}>
         {properties.map((prop) => {
-          const pRes = reservations.filter(
-            (r) => r.propertyId === prop.id && r.status !== 'cancelada'
-          );
+          const pRes = reservations.filter((r) => r.propertyId === prop.id && r.status !== 'cancelada');
           const total = pRes.reduce((s, r) => s + r.totalAmount, 0);
           const paid = pRes.reduce((s, r) => s + r.paid, 0);
           const pct = total > 0 ? Math.round((paid / total) * 100) : 0;
           return (
-            <div
-              key={prop.id}
-              style={{
-                background: '#fff',
-                borderRadius: 12,
-                padding: '18px 20px',
-                border: '1px solid #F0F0F0',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginBottom: 12,
-                }}
-              >
+            <div key={prop.id} style={{ background: '#fff', borderRadius: 12, padding: '18px 20px', border: '1px solid #F0F0F0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                   <span style={{ fontSize: 22 }}>{prop.emoji}</span>
                   <div>
-                    <div
-                      style={{ fontWeight: 700, fontSize: 14, color: '#111' }}
-                    >
-                      {prop.name}
-                    </div>
-                    <div style={{ fontSize: 11, color: '#9CA3AF' }}>
-                      {pRes.length} reservas históricas
-                    </div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: '#111' }}>{prop.name}</div>
+                    <div style={{ fontSize: 11, color: '#9CA3AF' }}>{pRes.length} reservas históricas</div>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 800, fontSize: 17, color: '#111' }}>
-                    {currency(total)}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: total - paid > 0 ? '#EF4444' : '#10B981',
-                    }}
-                  >
-                    Pendiente: {currency(total - paid)}
-                  </div>
+                  <div style={{ fontWeight: 800, fontSize: 17, color: '#111' }}>{currency(total)}</div>
+                  <div style={{ fontSize: 11, color: total - paid > 0 ? '#EF4444' : '#10B981' }}>Pendiente: {currency(total - paid)}</div>
                 </div>
               </div>
-              <div
-                style={{ height: 6, background: '#F3F4F6', borderRadius: 4 }}
-              >
-                <div
-                  style={{
-                    height: '100%',
-                    background: prop.color,
-                    borderRadius: 4,
-                    width: pct + '%',
-                    transition: 'width .3s',
-                  }}
-                />
-              </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: '#9CA3AF',
-                  marginTop: 5,
-                  textAlign: 'right',
-                }}
-              >
-                {pct}% cobrado general
+              <div style={{ height: 6, background: '#F3F4F6', borderRadius: 4 }}>
+                <div style={{ height: '100%', background: prop.color, borderRadius: 4, width: pct + '%', transition: 'width .3s' }} />
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* SECCIÓN 3: SALDOS PENDIENTES */}
-      <h3
-        id="seccion-saldos-pendientes"
-        style={{
-          margin: '0 0 12px',
-          fontSize: 15,
-          fontWeight: 700,
-          color: '#374151',
-        }}
-      >
-        Huéspedes con saldos pendientes
-      </h3>
+      <h3 id="seccion-saldos-pendientes" style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700, color: '#374151' }}>Huéspedes con saldos pendientes</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {pending.map((r) => {
           const prop = properties.find((p) => p.id === r.propertyId);
           return (
-            <div
-              key={r.id}
-              onClick={() => onGoTo && onGoTo('abrir_reserva', r)} // <--- ¡ABRE LA RESERVA AL HACER CLIC!
-              style={{
-                background: '#fff',
-                borderRadius: 10,
-                padding: '12px 16px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                border: '1px solid #F0F0F0',
-                cursor: 'pointer', // <--- PONE LA MANITO INTERACTIVA
-                transition: 'all 0.2s',
-              }}
-              onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,.06)')}
-              onMouseOut={(e) => (e.currentTarget.style.boxShadow = 'none')}
-            >
+            <div key={r.id} onClick={() => onGoTo && onGoTo('abrir_reserva', r)} style={{ background: '#fff', borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #F0F0F0', cursor: 'pointer' }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 13, color: '#111' }}>
-                  {r.guestName}
-                </div>
-                <div style={{ fontSize: 11, color: '#9CA3AF' }}>
-                  {prop?.name} · CI: {fmtD(r.checkIn)}
-                </div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#111' }}>{r.guestName}</div>
+                <div style={{ fontSize: 11, color: '#9CA3AF' }}>{prop?.name} · CI: {fmtD(r.checkIn)}</div>
               </div>
-              <div style={{ fontWeight: 800, color: '#EF4444', fontSize: 16 }}>
-                {currency(r.totalAmount - r.paid)}
-              </div>
+              <div style={{ fontWeight: 800, color: '#EF4444', fontSize: 16 }}>{currency(r.totalAmount - r.paid)}</div>
             </div>
           );
         })}
-        {pending.length === 0 && (
-          <div
-            style={{
-              textAlign: 'center',
-              color: '#D1D5DB',
-              padding: 30,
-              fontSize: 13,
-            }}
-          >
-            ✅ Sin saldos pendientes
-          </div>
-        )}
+        {pending.length === 0 && <div style={{ textAlign: 'center', color: '#D1D5DB', padding: 30, fontSize: 13 }}>✅ Sin saldos pendientes</div>}
       </div>
     </div>
   );
