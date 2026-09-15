@@ -5366,53 +5366,11 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
   const [gastos, setGastos] = useState([]);
   const [formGasto, setFormGasto] = useState({ fecha: fmt(TODAY), monto: '', categoria: 'Insumos', notas: '' });
   const [guardandoGasto, setGuardandoGasto] = useState(false);
+
   // ── ESTADOS PARA REVENUE INTELLIGENCE ──
   const [analyzingMonth, setAnalyzingMonth] = useState(null);
   const [aiInsights, setAiInsights] = useState({});
 
-  const analizarRevenue = async (m, metrics) => {
-    setAnalyzingMonth(m.key);
-    try {
-      const prompt = `Actúa como Consultor Senior en Revenue Management Hotelero para "Itzé Hostel Boutique" en Progreso, Yucatán (destino de playa con demanda inelástica en fines de semana).
-      Datos del mes (${m.label}):
-      - Ingreso Base: $${metrics.trueRevenue}
-      - Egresos Operativos: $${metrics.gastos}
-      - Ocupación Física: ${metrics.occPct}%
-      - ADR: $${metrics.adr}
-      - RevPAR Global: $${metrics.revpar}
-      - GOPPAR: $${metrics.goppar}
-      - RevPAR (Dom-Mié): $${metrics.revparEntre}
-      - RevPAR (Jue-Sáb): $${metrics.revparFinde}
-      - Ocup. Matrimonial (P6): ${metrics.oMat}% | King (P4): ${metrics.oKing}% | Compartidas: ${metrics.oComp}%
-
-      REGLA DE ORO: Si los "Egresos Operativos" son $0, tu primer punto DEBE ser una advertencia estricta indicando que el GOPPAR es una ilusión y deben cargar los gastos.
-      Luego, analiza el contraste entre el RevPAR de entresemana vs fin de semana, y el rendimiento por tipo de cuarto.
-      Brinda 2 consejos tácticos concretos (pricing, promociones, o restricciones MinLOS).
-      Devuelve exactamente 3 viñetas cortas, directas y altamente profesionales. Sin introducciones.`;
-
-      // Replicamos la conexión exacta que ya usás en el DocScanner
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20240620',
-          max_tokens: 400,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
-
-      if (!resp.ok) throw new Error('Error en API');
-      const data = await resp.json();
-      const text = (data.content && data.content[0] && data.content[0].text) || 'No se pudo generar el diagnóstico.';
-      
-      setAiInsights(prev => ({ ...prev, [m.key]: text }));
-    } catch (err) {
-      alert('Error al generar el diagnóstico de Revenue.');
-    } finally {
-      setAnalyzingMonth(null);
-    }
-  };
-  
   const pending = reservations.filter(
     (r) => r.status !== 'cancelada' && r.paid < r.totalAmount
   );
@@ -5451,6 +5409,53 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
     setGastos(gastos.filter((g) => g.id !== id));
   };
 
+  const analizarRevenue = async (m, metrics) => {
+    setAnalyzingMonth(m.key);
+    try {
+      const prompt = `Actúa como Consultor Senior en Revenue Management Hotelero para "Itzé Hostel Boutique" en Progreso, Yucatán (destino de playa con demanda inelástica en fines de semana).
+      Datos del mes (${m.label}):
+      - Ingreso Base: $${metrics.trueRevenue}
+      - Egresos Operativos: $${metrics.gastos}
+      - Ocupación Física: ${metrics.occPct}%
+      - ADR: $${metrics.adr}
+      - RevPAR Global: $${metrics.revpar}
+      - GOPPAR: $${metrics.goppar}
+      - RevPAR (Dom-Mié): $${metrics.revparEntre}
+      - RevPAR (Jue-Sáb): $${metrics.revparFinde}
+      - Ocup. Matrimonial (P6): ${metrics.oMat}% | King (P4): ${metrics.oKing}% | Privadas: ${metrics.oComp}%
+
+      REGLA DE ORO: Si los "Egresos Operativos" son $0, tu primer punto DEBE ser una advertencia estricta indicando que el GOPPAR es una ilusión y deben cargar los gastos.
+      Luego, analiza el contraste entre el RevPAR de entresemana vs fin de semana, y el rendimiento por tipo de cuarto.
+      Brinda 2 consejos tácticos concretos (pricing, promociones, o restricciones MinLOS).
+      Devuelve exactamente 3 viñetas cortas, directas y altamente profesionales. Sin introducciones.`;
+
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-api-key': import.meta.env.VITE_CLAUDE_KEY, // <--- ¡PEGÁ TU CLAVE ACÁ!
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerously-allow-browser': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20240620',
+          max_tokens: 400,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+
+      if (!resp.ok) throw new Error('Error en API');
+      const data = await resp.json();
+      const text = (data.content && data.content[0] && data.content[0].text) || 'No se pudo generar el diagnóstico.';
+      
+      setAiInsights(prev => ({ ...prev, [m.key]: text }));
+    } catch (err) {
+      alert('Error al generar el diagnóstico de Revenue. Revisá si pegaste bien tu API Key en el código.');
+    } finally {
+      setAnalyzingMonth(null);
+    }
+  };
+
   const initMonthObj = (keyStr) => {
     const [y, m] = keyStr.split('-');
     const mName = MONTHS[parseInt(m, 10) - 1] || m;
@@ -5485,7 +5490,6 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
       const avgDailyRate = tAmt / nights;
 
       for (let i = 0; i < nights; i++) {
-        // CORRECCIÓN NINJA: Se usa parseD para evitar bug de zona horaria
         const currentNight = addDays(parseD(r.checkIn), i); 
         const nightMonthKey = `${currentNight.getFullYear()}-${String(currentNight.getMonth() + 1).padStart(2, '0')}`;
         
@@ -5528,7 +5532,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
   }, baseStats);
 
   gastos.forEach(g => {
-    if (!g.fecha) return; // Preventivo por si algún gasto viejo no tiene fecha
+    if (!g.fecha) return; 
     const [y, m] = g.fecha.split('-');
     const key = `${y}-${m}`;
     if (!monthlyStats[key]) monthlyStats[key] = initMonthObj(key);
@@ -5757,7 +5761,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
                   <div style={{ textAlign: 'right' }}><span style={{ color: oKing > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oKing}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rKing)}</span></div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, alignItems: 'center' }}>
-                  <span style={{ color: '#4B5563', fontWeight: 600 }}>Privadas grandes <span style={{ opacity: 0.6 }}>(P1-2-3-5)</span></span>
+                  <span style={{ color: '#4B5563', fontWeight: 600 }}>Privadas <span style={{ opacity: 0.6 }}>(P1, P2, P3, P5)</span></span>
                   <div style={{ textAlign: 'right' }}><span style={{ color: oComp > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oComp}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rComp)}</span></div>
                 </div>
               </div>
@@ -5776,6 +5780,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
                   <div style={{ height: '100%', background: '#10B981', borderRadius: 4, width: `${pct}%` }} />
                 </div>
               </div>
+
               {/* ── REVENUE INTELLIGENCE (IA) ── */}
               <div style={{ borderTop: '1px dashed #CBD5E1', paddingTop: 14, marginTop: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: aiInsights[m.key] ? 12 : 0 }}>
@@ -5801,6 +5806,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
                   </div>
                 )}
               </div>
+
             </div>
           );
         })}
