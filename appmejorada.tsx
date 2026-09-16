@@ -5411,7 +5411,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
     setGastos(gastos.filter((g) => g.id !== id));
   };
 
-  const analizarRevenue = async (m, metrics) => {
+ const analizarRevenue = async (m, metrics) => {
     setAnalyzingMonth(m.key);
     try {
       const apiKey = import.meta.env.VITE_CLAUDE_KEY;
@@ -5438,8 +5438,8 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
       Brinda 2 consejos tácticos concretos (pricing, promociones, o restricciones MinLOS).
       Devuelve exactamente 3 viñetas cortas, directas y altamente profesionales. Sin introducciones.`;
 
-      // USAMOS UN "PUENTE" (PROXY) PARA SALTAR LA SEGURIDAD DEL NAVEGADOR
-      const resp = await fetch('https://corsproxy.io/?https://api.anthropic.com/v1/messages', {
+      // LLAMADA SEGURA A TRAVÉS DEL TÚNEL DE VERCEL
+      const resp = await fetch('/api/claude', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -5465,7 +5465,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
       setAiInsights(prev => ({ ...prev, [m.key]: text }));
     } catch (err) {
       console.error('Error de red o ejecución:', err);
-      alert('⚠️ Error de red al conectar con Claude. Revisa tu conexión a internet o el Proxy.');
+      alert('⚠️ Error de red. No se pudo conectar. Verifica que creaste el archivo vercel.json correctamente.');
     } finally {
       setAnalyzingMonth(null);
     }
