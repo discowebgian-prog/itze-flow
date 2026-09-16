@@ -5446,7 +5446,7 @@ const analizarRevenue = async (m, metrics) => {
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-5',
+          model: 'claude-3-5-sonnet-20240620',
           max_tokens: 400,
           messages: [{ role: 'user', content: prompt }],
         }),
@@ -5460,12 +5460,23 @@ const analizarRevenue = async (m, metrics) => {
       }
       
       const data = await resp.json();
-      const text = (data.content && data.content[0] && data.content[0].text) || 'No se pudo generar el diagnóstico.';
+      console.log("Respuesta de Claude:", data);
+      
+      // Extracción blindada del texto
+      let text = 'No se pudo generar el diagnóstico.';
+      if (data.content) {
+        if (Array.isArray(data.content)) {
+          const textBlock = data.content.find(b => b.type === 'text');
+          if (textBlock && textBlock.text) text = textBlock.text;
+        } else if (typeof data.content === 'string') {
+          text = data.content;
+        }
+      }
       
       setAiInsights(prev => ({ ...prev, [m.key]: text }));
     } catch (err) {
       console.error('Error:', err);
-      alert('⚠️ Error de red al conectar con Claude. Revisa tu conexión a internet.');
+      alert('⚠️ Error al procesar la respuesta de Claude: ' + err.message);
     } finally {
       setAnalyzingMonth(null);
     }
