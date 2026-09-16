@@ -623,7 +623,7 @@ function DocScanner({ onResult }) {
         const base64 = dataUrl.split(',')[1];
         const mt = file.type && file.type.startsWith('image/') ? file.type : 'image/jpeg';
         
-        const resp = await fetch('/api/claude', {
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -632,7 +632,7 @@ function DocScanner({ onResult }) {
             'anthropic-dangerous-direct-browser-access': 'true'
           },
           body: JSON.stringify({
-            model: 'claude-3-sonnet-20240229', // <--- CAMBIADO AL SONNET DESBLOQUEADO
+            model: 'claude-sonnet-5',
             max_tokens: 400,
             messages: [
               {
@@ -658,7 +658,7 @@ function DocScanner({ onResult }) {
         const parsed = JSON.parse(clean);
         
         if (!parsed.docNumber && !parsed.firstName && !parsed.fullName) {
-          setError('No se detectaron datos. Usa buena iluminación.');
+          setError('No se detectaron datos. Usá buena iluminación.');
         } else {
           onResult(parsed);
           setSuccess(true);
@@ -5437,7 +5437,7 @@ const analizarRevenue = async (m, metrics) => {
       Brinda 2 consejos tácticos concretos (pricing, promociones, o restricciones MinLOS).
       Devuelve exactamente 3 viñetas cortas, directas y altamente profesionales. Sin introducciones.`;
 
-      const resp = await fetch('/api/claude', {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -5446,7 +5446,7 @@ const analizarRevenue = async (m, metrics) => {
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-3-sonnet-20240229', // <--- CAMBIADO AL SONNET DESBLOQUEADO
+          model: 'claude-sonnet-5',
           max_tokens: 400,
           messages: [{ role: 'user', content: prompt }],
         }),
