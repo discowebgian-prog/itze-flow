@@ -632,7 +632,7 @@ function DocScanner({ onResult }) {
             'anthropic-dangerous-direct-browser-access': 'true'
           },
           body: JSON.stringify({
-            model: 'claude-3-5-sonnet-20240620',
+            model: 'claude-3-5-sonnet-20240229',
             max_tokens: 400,
             messages: [
               {
@@ -5446,7 +5446,7 @@ const analizarRevenue = async (m, metrics) => {
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20240620',
+          model: 'claude-3-5-sonnet-20240229',
           max_tokens: 400,
           messages: [{ role: 'user', content: prompt }],
         }),
