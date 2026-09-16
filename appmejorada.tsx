@@ -632,7 +632,7 @@ function DocScanner({ onResult }) {
             'anthropic-dangerous-direct-browser-access': 'true'
           },
           body: JSON.stringify({
-            model: 'claude-3-5-sonnet-20240620',
+            model: 'claude-3-sonnet-20240229', // <--- CAMBIADO AL SONNET DESBLOQUEADO
             max_tokens: 400,
             messages: [
               {
@@ -658,7 +658,7 @@ function DocScanner({ onResult }) {
         const parsed = JSON.parse(clean);
         
         if (!parsed.docNumber && !parsed.firstName && !parsed.fullName) {
-          setError('No se detectaron datos. Usá buena iluminación.');
+          setError('No se detectaron datos. Usa buena iluminación.');
         } else {
           onResult(parsed);
           setSuccess(true);
@@ -5446,7 +5446,7 @@ const analizarRevenue = async (m, metrics) => {
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20240620',
+          model: 'claude-3-sonnet-20240229', // <--- CAMBIADO AL SONNET DESBLOQUEADO
           max_tokens: 400,
           messages: [{ role: 'user', content: prompt }],
         }),
@@ -5464,6 +5464,7 @@ const analizarRevenue = async (m, metrics) => {
       
       setAiInsights(prev => ({ ...prev, [m.key]: text }));
     } catch (err) {
+      console.error('Error:', err);
       alert('⚠️ Error de red al conectar con Claude. Revisa tu conexión a internet.');
     } finally {
       setAnalyzingMonth(null);
