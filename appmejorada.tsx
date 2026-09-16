@@ -623,7 +623,7 @@ function DocScanner({ onResult }) {
         const base64 = dataUrl.split(',')[1];
         const mt = file.type && file.type.startsWith('image/') ? file.type : 'image/jpeg';
         
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        const resp = await fetch('/api/claude', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -5437,7 +5437,7 @@ const analizarRevenue = async (m, metrics) => {
       Brinda 2 consejos tácticos concretos (pricing, promociones, o restricciones MinLOS).
       Devuelve exactamente 3 viñetas cortas, directas y altamente profesionales. Sin introducciones.`;
 
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      const resp = await fetch('/api/claude', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
