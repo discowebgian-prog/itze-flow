@@ -623,8 +623,8 @@ function DocScanner({ onResult }) {
         const base64 = dataUrl.split(',')[1];
         const mt = file.type && file.type.startsWith('image/') ? file.type : 'image/jpeg';
         
-        // USAMOS EL MISMO "PUENTE" (PROXY) AQUÍ
-        const resp = await fetch('https://corsproxy.io/?https://api.anthropic.com/v1/messages', {
+        // LLAMADA SEGURA A TRAVÉS DEL TÚNEL DE VERCEL
+        const resp = await fetch('/api/claude', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
