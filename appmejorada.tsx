@@ -5446,7 +5446,7 @@ const analizarRevenue = async (m, metrics) => {
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20240620',
+          model: 'claude-sonnet-5',
           max_tokens: 400,
           messages: [{ role: 'user', content: prompt }],
         }),
