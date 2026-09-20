@@ -5421,22 +5421,91 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
         return;
       }
 
-      const prompt = `Actúa como Consultor Senior en Revenue Management Hotelero para "Itzé Hostel Boutique" en Progreso, Yucatán (destino de playa con demanda inelástica en fines de semana).
-      Datos del mes (${m.label}):
-      - Ingreso Base: $${metrics.trueRevenue}
-      - Egresos Operativos: $${metrics.gastos}
-      - Ocupación Física: ${metrics.occPct}%
-      - ADR: $${metrics.adr}
-      - RevPAR Global: $${metrics.revpar}
-      - GOPPAR: $${metrics.goppar}
-      - RevPAR (Dom-Mié): $${metrics.revparEntre}
-      - RevPAR (Jue-Sáb): $${metrics.revparFinde}
-      - Ocup. Matrimonial (P6): ${metrics.oMat}% | King (P4): ${metrics.oKing}% | Privadas: ${metrics.oComp}%
+      // ============================================================
+      // 1) VARIABLES DE REVENUE MANAGEMENT (EDITABLES MES A MES)
+      // ============================================================
+      const rmMetaOcupacion = 70; // Tu meta de ocupación, en %
 
-      REGLA DE ORO: Si los "Egresos Operativos" son $0, tu primer punto DEBE ser una advertencia estricta indicando que el GOPPAR es una ilusión y deben cargar los gastos.
-      Luego, analiza el contraste entre el RevPAR de entresemana vs fin de semana, y el rendimiento por tipo de cuarto.
-      Brinda 2 consejos tácticos concretos (pricing, promociones, o restricciones MinLOS).
-      Devuelve exactamente 3 viñetas cortas, directas y altamente profesionales. Sin introducciones.`;
+      // Completar si hay eventos especiales (ej: [{ fecha: "2026-10-31", nombre: "Kitesurf Fest", tipo: "deportivo" }])
+      const rmEventos = [];
+      
+      // Completar si tenés relevamiento de la zona (ej: [{ nombre: "Hostal X", tarifaEntreSemana: 500, tarifaFinde: 900 }])
+      const rmCompetencia = [];
+
+      // Datos extra. Lo que quede vacío o en 0, Claude lo marcará como dato faltante.
+      const rmExtra = {
+        distribucionEstadia: "", // Ej: "80% 1 noche, 20% 2 noches"
+        ocupacionPorDiaSemana: "", // Ej: "Dom 12%, Lun 10%, Vie 60%, Sáb 70%"
+        adrPorDiaSemana: "", 
+        mixCanales: "", // Ej: "Booking 55%, Airbnb 20%, Directo 25%"
+        anticipacionReservas: "", 
+        reservasYaTomadas: "", 
+        costoVariablePorNocheOcupada: 0, 
+        comisionPromedioPct: 0, 
+      };
+
+      // ============================================================
+      // 2) FUNCIONES AUXILIARES PARA EL PROMPT
+      // ============================================================
+      const rmHoy = new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
+      const rmBloque = (titulo, dato) => {
+        const tieneDato = Array.isArray(dato) ? dato.length > 0 : (dato !== "" && dato !== 0 && dato != null);
+        const texto = typeof dato === "string" || typeof dato === "number" ? dato : JSON.stringify(dato);
+        return `${titulo}: ${tieneDato ? texto : "SIN DATOS (inclúyelo en DATOS QUE FALTAN)"}`;
+      };
+
+      // ============================================================
+      // 3) EL PROMPT MAESTRO
+      // ============================================================
+      const prompt = `Actúa como Consultor Senior en Revenue Management (gestión de ingresos hoteleros) de "Itzé Hostel Boutique": 6 habitaciones privadas en Progreso, Yucatán (P6 matrimonial, P4 king, P1-P3 y P5 privadas).
+Tu objetivo es maximizar la ganancia operativa por habitación disponible (GOPPAR), no solo la ocupación, y llenar los días flojos (Dom-Mié) sin bajar el precio de Jue-Sáb.
+Meta del dueño: acercar la ocupación a ${rmMetaOcupacion}%. En temporada baja hoy está por debajo de 30%.
+Fecha de hoy: ${rmHoy}. Si el mes analizado ya terminó, haz un análisis retrospectivo y proyecta el plan al mes siguiente.
+
+REGLAS ESTRICTAS:
+1. No repitas ni describas los números que te envío; el dueño ya los ve en pantalla. Úsalos solo como evidencia dentro de una conclusión.
+2. Cruza los datos del hotel con el contexto de mercado: cada recomendación debe conectar un número del hotel con un patrón del mercado.
+3. Etiqueta lo importante como [DATO HOTEL], [DATO MERCADO] o [HIPÓTESIS A PROBAR].
+4. No inventes precios de competidores, eventos ni cifras. Si falta un dato, dilo en DATOS QUE FALTAN.
+5. NO propongas estadía mínima (MinLOS) de 2 o más noches para fines de semana. Asume que la inmensa mayoría del turismo en Progreso es de 1 sola noche. Sí puedes proponer incentivos opcionales (ej. 2da noche con descuento Dom-Jue).
+6. Un descuento solo es válido si está "vallado" (limitado a un día, canal, mismo día, solo directo, etc.) para que no lo aproveche quien pagaría el precio completo.
+7. REGLA DE ORO: Si los Egresos Operativos son $0, empieza obligatoriamente con una advertencia crítica indicando que el GOPPAR es una ilusión financiera.
+
+CONTEXTO DE MERCADO: PROGRESO, YUCATÁN (datos 2026):
+- La mayoría de quienes visitan el malecón es local/regional (Mérida está a 30 min) y buena parte va y vuelve el mismo día. El que pernocta, suele hacerlo solo por UNA noche.
+- Oferta informal (rentas vacacionales) es altísima y presiona las tarifas hacia abajo.
+- Picos de demanda: Fines de semana, Carnaval, Semana Santa, Julio-Agosto. Valles: Dom-Mié y meses de Sep-Nov.
+
+PALANCAS DISPONIBLES (Elige solo las que apliquen):
+- Tarifa "escapada entre semana" para residentes de Yucatán (Dom-Mié), vallada con ID.
+- Paquete trabajo remoto de Dom a Jue (orientado a contratistas del puerto).
+- Precio de último minuto (mismo día) entre semana por canales directos.
+- Jue-Sáb: subir tarifa o cerrar promociones; upselling (late check-out, experiencias).
+
+DATOS DEL HOTEL (${m.label}):
+- Ingreso Base Real: $${metrics.trueRevenue} | Egresos Operativos: $${metrics.gastos}
+- Ocupación Física: ${metrics.occPct}% | ADR: $${metrics.adr} | RevPAR Global: $${metrics.revpar} | GOPPAR: $${metrics.goppar}
+- RevPAR (Dom-Mié): $${metrics.revparEntre} vs RevPAR (Jue-Sáb): $${metrics.revparFinde}
+- Ocup. Matrimonial (P6): ${metrics.oMat}% | King (P4): ${metrics.oKing}% | Privadas (P1-P3, P5): ${metrics.oComp}%
+${rmBloque("- Distribución de estadía", rmExtra.distribucionEstadia)}
+${rmBloque("- Ocupación por día de la semana", rmExtra.ocupacionPorDiaSemana)}
+${rmBloque("- ADR por día de la semana", rmExtra.adrPorDiaSemana)}
+${rmBloque("- Mix de canales de venta", rmExtra.mixCanales)}
+${rmBloque("- Anticipación de reservas", rmExtra.anticipacionReservas)}
+${rmBloque("- Reservas tomadas a futuro", rmExtra.reservasYaTomadas)}
+${rmBloque("- Costo variable por noche", rmExtra.costoVariablePorNocheOcupada)}
+${rmBloque("- Comisión promedio", rmExtra.comisionPromedioPct)}
+${rmBloque("- Eventos locales", rmEventos)}
+${rmBloque("- Competencia", rmCompetencia)}
+
+TU TAREA:
+Responde en texto plano (sin asteriscos, sin markdown, usa MAYÚSCULAS para títulos y guiones para listas), máximo 800 palabras, sin introducciones. Usa estas secciones:
+ALERTAS CRÍTICAS: (Solo si egresos son $0 o hay datos vitales faltantes).
+LO QUE NO SE VE A SIMPLE VISTA: 3 hallazgos estratégicos cruzando datos y mercado.
+¿ES REALISTA LA META?: Veredicto sobre la meta del ${rmMetaOcupacion}% con los datos actuales.
+PLAN DE ACCIÓN: 4 acciones concretas (A quién, Qué ofrecer, A qué precio, Cuándo, Por qué canal).
+EXPERIMENTOS: 1 prueba ágil de 2 semanas con métrica de éxito.
+DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar el próximo análisis.`;
 
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -5447,8 +5516,8 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-5',
-          max_tokens: 4000,
+          model: 'claude-3-5-sonnet-20240620',
+          max_tokens: 1500, // Subido para que no se corte este análisis tan completo
           messages: [{ role: 'user', content: prompt }],
         }),
       });
@@ -5461,20 +5530,10 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
       }
       
       const data = await resp.json();
-      
-      // Extractor blindado para asegurar que lea la respuesta correcta
-      let text = 'No se pudo leer la respuesta de la IA.';
-      if (data.content) {
-        if (Array.isArray(data.content)) {
-          const textBlock = data.content.find(b => b.type === 'text');
-          if (textBlock && textBlock.text) text = textBlock.text;
-        } else if (typeof data.content === 'string') {
-          text = data.content;
-        }
-      }
+      const text = (data.content && data.content[0] && data.content[0].text) || 'No se pudo generar el diagnóstico.';
       
       setAiInsights(prev => ({ ...prev, [m.key]: text }));
-      setInsightModal({ title: `Diagnóstico de ${m.label}`, content: text });
+      setInsightModal({ title: `Diagnóstico Estratégico: ${m.label}`, content: text });
     } catch (err) {
       console.error('Error:', err);
       alert('⚠️ Error de red al conectar con Claude. Revisa tu conexión a internet.');
