@@ -5891,23 +5891,23 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
       {/* ── POP-UP DEL DIAGNÓSTICO IA ── */}
       {insightModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 500, maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.3)' }}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 500, overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.3)' }}>
             
             {/* ENCABEZADO FIJO */}
-            <div style={{ background: '#EEF2FF', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #C7D2FE', flexShrink: 0 }}>
+            <div style={{ background: '#EEF2FF', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #C7D2FE' }}>
               <div style={{ fontSize: 16, fontWeight: 900, color: '#312E81', display: 'flex', alignItems: 'center', gap: 8 }}>
                 ✨ {insightModal.title}
               </div>
               <button onClick={() => setInsightModal(null)} style={{ background: 'transparent', border: 'none', fontSize: 24, cursor: 'pointer', color: '#4F46E5', lineHeight: 1 }}>×</button>
             </div>
             
-            {/* ÁREA DE LECTURA CON SCROLL ACTIVADO */}
-            <div style={{ padding: '24px 20px', overflowY: 'auto', flex: 1, minHeight: 0, fontSize: 14, color: '#374151', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+            {/* ÁREA DE LECTURA CON SCROLL BLINDADO */}
+            <div style={{ padding: '24px 20px', overflowY: 'auto', maxHeight: '60vh', WebkitOverflowScrolling: 'touch', fontSize: 14, color: '#374151', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
               {insightModal.content}
             </div>
             
             {/* PIE DE PÁGINA FIJO */}
-            <div style={{ padding: '16px 20px', borderTop: '1px solid #F0F0F0', display: 'flex', justifyContent: 'flex-end', background: '#F8FAFC', flexShrink: 0 }}>
+            <div style={{ padding: '16px 20px', borderTop: '1px solid #F0F0F0', display: 'flex', justifyContent: 'flex-end', background: '#F8FAFC' }}>
               <button onClick={() => setInsightModal(null)} style={{ background: '#4F46E5', color: '#fff', padding: '10px 24px', borderRadius: 8, border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 14, boxShadow: '0 2px 4px rgba(79,70,229,.2)' }}>
                 Entendido
               </button>
