@@ -5368,9 +5368,10 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
   const [formGasto, setFormGasto] = useState({ fecha: fmt(TODAY), monto: '', categoria: 'Insumos', notas: '' });
   const [guardandoGasto, setGuardandoGasto] = useState(false);
 
-  // ── ESTADOS PARA REVENUE INTELLIGENCE ──
+  // ── ESTADOS PARA REVENUE INTELLIGENCE Y EL POP-UP ──
   const [analyzingMonth, setAnalyzingMonth] = useState(null);
   const [aiInsights, setAiInsights] = useState({});
+  const [insightModal, setInsightModal] = useState(null);
 
   const pending = reservations.filter(
     (r) => r.status !== 'cancelada' && r.paid < r.totalAmount
@@ -5410,7 +5411,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
     setGastos(gastos.filter((g) => g.id !== id));
   };
 
-const analizarRevenue = async (m, metrics) => {
+  const analizarRevenue = async (m, metrics) => {
     setAnalyzingMonth(m.key);
     try {
       const apiKey = import.meta.env.VITE_CLAUDE_KEY;
@@ -5460,10 +5461,9 @@ const analizarRevenue = async (m, metrics) => {
       }
       
       const data = await resp.json();
-      console.log("Respuesta de Claude:", data);
       
-      // Extracción blindada del texto
-      let text = 'No se pudo generar el diagnóstico.';
+      // Extractor blindado para asegurar que lea la respuesta correcta
+      let text = 'No se pudo leer la respuesta de la IA.';
       if (data.content) {
         if (Array.isArray(data.content)) {
           const textBlock = data.content.find(b => b.type === 'text');
@@ -5474,9 +5474,10 @@ const analizarRevenue = async (m, metrics) => {
       }
       
       setAiInsights(prev => ({ ...prev, [m.key]: text }));
+      setInsightModal({ title: `Diagnóstico de ${m.label}`, content: text });
     } catch (err) {
       console.error('Error:', err);
-      alert('⚠️ Error al procesar la respuesta de Claude: ' + err.message);
+      alert('⚠️ Error de red al conectar con Claude. Revisa tu conexión a internet.');
     } finally {
       setAnalyzingMonth(null);
     }
@@ -5809,11 +5810,11 @@ const analizarRevenue = async (m, metrics) => {
 
               {/* ── REVENUE INTELLIGENCE (IA) ── */}
               <div style={{ borderTop: '1px dashed #CBD5E1', paddingTop: 14, marginTop: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: aiInsights[m.key] ? 12 : 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: '#4F46E5', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
                     ✨ Asesor Estratégico IA
                   </div>
-                  {!aiInsights[m.key] && (
+                  {!aiInsights[m.key] ? (
                     <button
                       onClick={() => analizarRevenue(m, { trueRevenue: m.trueRevenue, gastos: m.gastos, occPct, adr, revpar, goppar, revparEntre, revparFinde, oMat, oKing, oComp })}
                       disabled={analyzingMonth === m.key}
@@ -5823,16 +5824,18 @@ const analizarRevenue = async (m, metrics) => {
                     >
                       {analyzingMonth === m.key ? 'Analizando...' : 'Generar Diagnóstico'}
                     </button>
+                  ) : (
+                    <button
+                      onClick={() => setInsightModal({ title: `Diagnóstico de ${m.label}`, content: aiInsights[m.key] })}
+                      style={{
+                        background: '#4F46E5', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 4px rgba(79,70,229,.3)'
+                      }}
+                    >
+                      📖 Leer Diagnóstico
+                    </button>
                   )}
                 </div>
-
-                {aiInsights[m.key] && (
-                  <div style={{ background: '#EEF2FF', padding: '14px', borderRadius: 8, border: '1px solid #C7D2FE', fontSize: 13, color: '#312E81', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                    {aiInsights[m.key]}
-                  </div>
-                )}
               </div>
-
             </div>
           );
         })}
@@ -5884,6 +5887,28 @@ const analizarRevenue = async (m, metrics) => {
         })}
         {pending.length === 0 && <div style={{ textAlign: 'center', color: '#D1D5DB', padding: 30, fontSize: 13 }}>✅ Sin saldos pendientes</div>}
       </div>
+
+      {/* ── POP-UP DEL DIAGNÓSTICO IA ── */}
+      {insightModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 500, maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.3)' }}>
+            <div style={{ background: '#EEF2FF', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #C7D2FE' }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: '#312E81', display: 'flex', alignItems: 'center', gap: 8 }}>
+                ✨ {insightModal.title}
+              </div>
+              <button onClick={() => setInsightModal(null)} style={{ background: 'transparent', border: 'none', fontSize: 24, cursor: 'pointer', color: '#4F46E5', lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ padding: '24px 20px', overflowY: 'auto', fontSize: 14, color: '#374151', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+              {insightModal.content}
+            </div>
+            <div style={{ padding: '16px 20px', borderTop: '1px solid #F0F0F0', display: 'flex', justifyContent: 'flex-end', background: '#F8FAFC' }}>
+              <button onClick={() => setInsightModal(null)} style={{ background: '#4F46E5', color: '#fff', padding: '10px 24px', borderRadius: 8, border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 14, boxShadow: '0 2px 4px rgba(79,70,229,.2)' }}>
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
