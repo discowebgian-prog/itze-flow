@@ -633,7 +633,7 @@ function DocScanner({ onResult }) {
           },
           body: JSON.stringify({
             model: 'claude-sonnet-5',
-            max_tokens: 400,
+            max_tokens: 4000,
             messages: [
               {
                 role: 'user',
@@ -5448,7 +5448,7 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
         },
         body: JSON.stringify({
           model: 'claude-sonnet-5',
-          max_tokens: 400,
+          max_tokens: 4000,
           messages: [{ role: 'user', content: prompt }],
         }),
       });
