@@ -5888,6 +5888,23 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
         {pending.length === 0 && <div style={{ textAlign: 'center', color: '#D1D5DB', padding: 30, fontSize: 13 }}>✅ Sin saldos pendientes</div>}
       </div>
 
+     <h3 id="seccion-saldos-pendientes" style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700, color: '#374151' }}>Huéspedes con saldos pendientes</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {pending.map((r) => {
+          const prop = properties.find((p) => p.id === r.propertyId);
+          return (
+            <div key={r.id} onClick={() => onGoTo && onGoTo('abrir_reserva', r)} style={{ background: '#fff', borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #F0F0F0', cursor: 'pointer' }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#111' }}>{r.guestName}</div>
+                <div style={{ fontSize: 11, color: '#9CA3AF' }}>{prop?.name} · CI: {fmtD(r.checkIn)}</div>
+              </div>
+              <div style={{ fontWeight: 800, color: '#EF4444', fontSize: 16 }}>{currency(r.totalAmount - r.paid)}</div>
+            </div>
+          );
+        })}
+        {pending.length === 0 && <div style={{ textAlign: 'center', color: '#D1D5DB', padding: 30, fontSize: 13 }}>✅ Sin saldos pendientes</div>}
+      </div>
+
       {/* ── POP-UP DEL DIAGNÓSTICO IA ── */}
       {insightModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
