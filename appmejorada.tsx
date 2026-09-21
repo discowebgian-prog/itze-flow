@@ -5516,8 +5516,8 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-5',
-          max_tokens: 4000,
+          model: 'claude-3-5-sonnet-latest', // Identificador técnico exacto y válido
+          max_tokens: 1500,
           messages: [{ role: 'user', content: prompt }],
         }),
       });
