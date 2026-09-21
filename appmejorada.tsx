@@ -5517,7 +5517,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
         },
         body: JSON.stringify({
           model: 'claude-sonnet-5', // Identificador técnico exacto y válido
-          max_tokens: 3000,
+          max_tokens: 5000,
           messages: [{ role: 'user', content: prompt }],
         }),
       });
@@ -5530,7 +5530,8 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
       }
       
       const data = await resp.json();
-      const text = (data.content && data.content[0] && data.content[0].text) || 'No se pudo generar el diagnóstico.';
+            const textBlock = (data.content || []).find(block => block.type === 'text');
+      const text = textBlock?.text || 'No se pudo generar el diagnóstico.';
       
       setAiInsights(prev => ({ ...prev, [m.key]: text }));
       setInsightModal({ title: `Diagnóstico Estratégico: ${m.label}`, content: text });
