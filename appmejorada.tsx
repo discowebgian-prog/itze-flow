@@ -5570,7 +5570,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
         },
         body: JSON.stringify({
           model: 'claude-sonnet-5',
-          max_tokens: 20000,
+          max_tokens: 40000,
           output_config: { effort: 'medium' },
           messages: nuevoHistorial,
         }),
