@@ -5371,7 +5371,10 @@ function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoT
   // ── ESTADOS PARA REVENUE INTELLIGENCE Y EL POP-UP ──
   const [analyzingMonth, setAnalyzingMonth] = useState(null);
   const [aiInsights, setAiInsights] = useState({});
-  const [insightModal, setInsightModal] = useState(null);
+    const [insightModal, setInsightModal] = useState(null);
+  const [chatMessages, setChatMessages] = useState({});
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
 
   const pending = reservations.filter(
     (r) => r.status !== 'cancelada' && r.paid < r.totalAmount
@@ -5533,13 +5536,62 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
             const textBlock = (data.content || []).find(block => block.type === 'text');
       const text = textBlock?.text || 'No se pudo generar el diagnóstico.';
       
-      setAiInsights(prev => ({ ...prev, [m.key]: text }));
-      setInsightModal({ title: `Diagnóstico Estratégico: ${m.label}`, content: text });
-    } catch (err) {
+            setAiInsights(prev => ({ ...prev, [m.key]: text }));
+      setChatMessages(prev => ({ ...prev, [m.key]: [{ role: 'user', content: prompt }, { role: 'assistant', content: text }] }));
+      setInsightModal({ title: `Diagnóstico Estratégico: ${m.label}`, content: text, monthKey: m.key });
+        } catch (err) {
       console.error('Error:', err);
       alert('⚠️ Error de red al conectar con Claude. Revisa tu conexión a internet.');
     } finally {
       setAnalyzingMonth(null);
+    }
+  };
+
+  const enviarPregunta = async () => {
+    if (!chatInput.trim() || !insightModal) return;
+    const monthKey = insightModal.monthKey;
+    const pregunta = chatInput.trim();
+    const historialPrevio = chatMessages[monthKey] || [];
+    const nuevoHistorial = [...historialPrevio, { role: 'user', content: pregunta }];
+
+    setChatMessages(prev => ({ ...prev, [monthKey]: nuevoHistorial }));
+    setChatInput('');
+    setChatLoading(true);
+
+    try {
+      const apiKey = import.meta.env.VITE_CLAUDE_KEY;
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-5',
+          max_tokens: 2000,
+          messages: nuevoHistorial,
+        }),
+      });
+
+      if (!resp.ok) {
+        const errData = await resp.json();
+        alert(`⚠️ Claude rechazó la conexión. Motivo: ${errData.error?.message || resp.status}`);
+        setChatLoading(false);
+        return;
+      }
+
+      const data = await resp.json();
+      const textBlock = (data.content || []).find(block => block.type === 'text');
+      const respuesta = textBlock?.text || 'No se pudo generar una respuesta.';
+
+      setChatMessages(prev => ({ ...prev, [monthKey]: [...nuevoHistorial, { role: 'assistant', content: respuesta }] }));
+    } catch (err) {
+      console.error('Error:', err);
+      alert('⚠️ Error de red al conectar con Claude.');
+    } finally {
+      setChatLoading(false);
     }
   };
 
@@ -5886,7 +5938,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                     </button>
                   ) : (
                     <button
-                      onClick={() => setInsightModal({ title: `Diagnóstico de ${m.label}`, content: aiInsights[m.key] })}
+                    onClick={() => setInsightModal({ title: `Diagnóstico de ${m.label}`, content: aiInsights[m.key], monthKey: m.key })}
                       style={{
                         background: '#4F46E5', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 4px rgba(79,70,229,.3)'
                       }}
@@ -5961,16 +6013,50 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
               <button onClick={() => setInsightModal(null)} style={{ background: 'transparent', border: 'none', fontSize: 24, cursor: 'pointer', color: '#4F46E5', lineHeight: 1 }}>×</button>
             </div>
             
-            {/* ÁREA DE LECTURA CON SCROLL BLINDADO */}
+                        {/* ÁREA DE LECTURA CON SCROLL BLINDADO */}
             <div style={{ padding: '24px 20px', overflowY: 'auto', WebkitOverflowScrolling: 'touch', fontSize: 14, color: '#374151', lineHeight: 1.6, whiteSpace: 'pre-wrap', flex: 1 }}>
               {insightModal.content}
+
+              {(chatMessages[insightModal.monthKey] || []).slice(2).map((msg, i) => (
+                <div key={i} style={{ marginTop: 16, paddingTop: 16, borderTop: '1px dashed #E5E7EB' }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: msg.role === 'user' ? '#4F46E5' : '#059669', textTransform: 'uppercase', marginBottom: 4 }}>
+                    {msg.role === 'user' ? 'Tu pregunta' : 'Respuesta'}
+                  </div>
+                  <div>{msg.content}</div>
+                </div>
+              ))}
+
+              {chatLoading && (
+                <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px dashed #E5E7EB', color: '#9CA3AF', fontStyle: 'italic' }}>
+                  Pensando...
+                </div>
+              )}
             </div>
-            
+
             {/* PIE DE PÁGINA FIJO */}
-            <div style={{ padding: '16px 20px', borderTop: '1px solid #F0F0F0', display: 'flex', justifyContent: 'flex-end', background: '#F8FAFC', flexShrink: 0 }}>
-              <button onClick={() => setInsightModal(null)} style={{ background: '#4F46E5', color: '#fff', padding: '10px 24px', borderRadius: 8, border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 14, boxShadow: '0 2px 4px rgba(79,70,229,.2)' }}>
-                Entendido
-              </button>
+            <div style={{ padding: '16px 20px', borderTop: '1px solid #F0F0F0', background: '#F8FAFC', flexShrink: 0 }}>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                <input
+                  type="text"
+                  placeholder="Preguntale algo a Claude sobre este diagnóstico..."
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !chatLoading) enviarPregunta(); }}
+                  style={{ flex: 1, padding: '10px 12px', borderRadius: 8, border: '1px solid #CBD5E1', fontSize: 13, fontFamily: 'inherit' }}
+                />
+                <button
+                  onClick={enviarPregunta}
+                  disabled={chatLoading || !chatInput.trim()}
+                  style={{ background: '#4F46E5', color: '#fff', padding: '10px 16px', borderRadius: 8, border: 'none', fontWeight: 700, cursor: chatLoading ? 'wait' : 'pointer', fontSize: 13, opacity: (chatLoading || !chatInput.trim()) ? 0.6 : 1 }}
+                >
+                  Preguntar
+                </button>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button onClick={() => setInsightModal(null)} style={{ background: 'transparent', color: '#6B7280', padding: '8px 16px', borderRadius: 8, border: '1px solid #E5E7EB', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+                  Cerrar
+                </button>
+              </div>
             </div>
 
           </div>
