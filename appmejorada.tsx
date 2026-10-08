@@ -1472,7 +1472,6 @@ function ResForm({
         </div>
       </div>
 
-      <Inp
         <Inp
         label="Email"
         value={f.guestEmail}
@@ -1486,16 +1485,16 @@ function ResForm({
             label="PIN Puerta (TTLock)"
             value={f.pin_acceso || ''}
             onChange={(e) => sv('pin_acceso', e.target.value)}
-            placeholder="Ej. 4829"
-            maxLength={8}
+            placeholder="Ej. 145892"
+            maxLength={9}
           />
         </div>
         <button
           type="button"
           onClick={() => {
-            // Extrae los últimos 4 números del celular, o genera uno al azar si no hay
+            // Extrae los últimos 6 números del celular, o genera uno al azar si no hay
             const digits = (f.guestPhone || '').replace(/\D/g, '');
-            const pin = digits.length >= 4 ? digits.slice(-4) : String(Math.floor(1000 + Math.random() * 9000));
+            const pin = digits.length >= 6 ? digits.slice(-6) : String(Math.floor(100000 + Math.random() * 900000));
             sv('pin_acceso', pin);
           }}
           style={{
