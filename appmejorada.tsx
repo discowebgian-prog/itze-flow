@@ -6758,6 +6758,7 @@ export default function AppMejorada() {
           totalGuests: Number(item.cantidad_huespedes) || 1,
           companions: item.acompanantes || [],
           paymentMethod: item.forma_pago || 'Efectivo',
+          pin_acceso: item.pin_acceso || '',
           url_ine_frente: item.url_ine_frente || null,
           url_ine_dorso: item.url_ine_dorso || null,
           pricing: {
