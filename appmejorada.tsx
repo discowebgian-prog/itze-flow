@@ -2330,17 +2330,52 @@ function ResDrawer({
                 {res.room && (
                   <span 
                     style={{ 
-                      background: 'rgba(255, 255, 255, 0.25)', // Fondo blanco translúcido cristal
+                      background: 'rgba(255, 255, 255, 0.25)',
                       color: '#fff', 
                       padding: '3px 9px', 
                       borderRadius: 6, 
                       fontSize: 13, 
-                      fontWeight: 900, // Súper negrita
+                      fontWeight: 900,
                       border: '1px solid rgba(255, 255, 255, 0.2)',
                       lineHeight: 1
                     }}
                   >
                     {res.room}
+                  </span>
+                )}
+                {/* ── NUEVA ETIQUETA PAX ── */}
+                <span 
+                  style={{ 
+                    background: 'rgba(0, 0, 0, 0.2)',
+                    color: '#fff', 
+                    padding: '3px 9px', 
+                    borderRadius: 6, 
+                    fontSize: 13, 
+                    fontWeight: 700,
+                    border: '1px solid rgba(0, 0, 0, 0.1)',
+                    lineHeight: 1
+                  }}
+                >
+                  👥 {res.totalGuests || 1} Pax
+                </span>
+                {/* ── NUEVA ETIQUETA PIN TTLOCK ── */}
+                {res.pin_acceso && (
+                  <span 
+                    style={{ 
+                      background: '#10B981', 
+                      color: '#fff', 
+                      padding: '3px 9px', 
+                      borderRadius: 6, 
+                      fontSize: 13, 
+                      fontWeight: 900,
+                      border: '1px solid #059669',
+                      lineHeight: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}
+                  >
+                    🔑 {res.pin_acceso}
                   </span>
                 )}
               </div>
@@ -2702,23 +2737,54 @@ function ResDrawer({
               >
                 Acompañantes ({res.companions.length})
               </div>
-              {res.companions.map((c, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    padding: '4px 0',
-                    borderBottom: '1px solid #F0F0F0',
-                    fontSize: 13,
-                  }}
-                >
-                  <span style={{ fontWeight: 600 }}>
-                    {c.name || `Acompañante ${i + 1}`}
-                  </span>
-                  <span style={{ color: '#9CA3AF' }}>{c.doc || '—'}</span>
-                </div>
-              ))}
+              {res.companions.map((c, i) => {
+                // Preparamos el mensaje de WhatsApp para el acompañante
+                const mensajeAcomp = encodeURIComponent(`¡Hola ${c.name ? c.name.split(' ')[0] : ''}! Bienvenido a Itzé Hostel. 🌴 Tu grupo está en la habitación ${res.room || 'asignada'}. El código de acceso a la puerta principal es *${res.pin_acceso || '---'}*. ¡Te esperamos!`);
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '6px 0',
+                      borderBottom: '1px solid #F0F0F0',
+                      fontSize: 13,
+                    }}
+                  >
+                    <span style={{ fontWeight: 600, color: '#374151' }}>
+                      {c.name || `Acompañante ${i + 1}`}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {c.phone && (
+                        <a
+                          href={`${waLink(c.phone, res.guestPhonePrefix, res.guestNationality)}?text=${mensajeAcomp}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            padding: '3px 8px',
+                            borderRadius: 6,
+                            background: '#ECFDF5',
+                            color: '#059669',
+                            textDecoration: 'none',
+                            fontWeight: 700,
+                            fontSize: 11,
+                            border: '1px solid #A7F3D0'
+                          }}
+                          title="WhatsApp Acompañante"
+                        >
+                          <Icon name="whatsapp" size={12} /> {c.phone}
+                        </a>
+                      )}
+                      <span style={{ color: '#9CA3AF', fontSize: 12 }}>{c.doc || 'Sin doc'}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
           
