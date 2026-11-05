@@ -9,7 +9,7 @@ const JPEG_QUALITY = 0.8;
 const SCAN_PROMPT = `Extract identity document data. Return ONLY valid JSON:
 {"firstName":"","lastName":"","fullName":"","docNumber":"","docType":"INE","nationality":"MX"}
 fullName = given names first, then surnames (a Mexican INE prints surnames first, so reorder them).
-docNumber = for a Mexican INE use the 18-character CURP (not the CLAVE DE ELECTOR); for a passport from any country use the passport number exactly as printed in its "Passport No." or "Pasaporte No." field, keeping its letters, and never a personal ID number.
+docNumber = for a Mexican INE use the 18-character CURP (not the CLAVE DE ELECTOR); for a passport from any country use the passport number, keeping its letters. Its label varies by country ("Número/Number", "Passport No.", "Pasaporte No.", "No."). If the label is missing or unclear, take it from the first 9 characters of the second line of the machine-readable zone at the bottom of the page (the lines with <<<), dropping any < filler. Never use a personal ID number such as a DNI.
 docType = INE|Pasaporte|Otro. nationality = 2-letter ISO code. Leave a field empty if unclear.`;
 
 // Las fotos de celular pesan varios MB y Vercel acepta hasta 4.5 MB por pedido.
