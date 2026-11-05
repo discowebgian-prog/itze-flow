@@ -16,6 +16,7 @@ import { Login } from './pages/Login';
 import { PropertiesPage } from './pages/PropertiesPage';
 import { ResList } from './pages/ResList';
 import { Timeline } from './pages/Timeline';
+import appLayoutCss from './styles/app-layout.css?raw';
 
 
 // ── APP ───────────────────────────────────────────────────────────────────────
@@ -496,94 +497,7 @@ const toggleBlacklist = async (id, currentStatus) => {
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
-      <style>{`
-        /* Reset y Tipografía Global */
-        *, *::before, *::after { box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif !important; }
-        html, body, #root { margin: 0 !important; padding: 0 !important; max-width: 100% !important; width: 100%; background: #F8FAFC; color: #111; overflow: hidden; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
-        input[type=date]::-webkit-calendar-picker-indicator { opacity: .4; }
-        button, input, select, textarea { font-family: inherit; }
-        
-        /* Sistema de Layout Responsivo (CSS Puro) */
-        .app-layout { display: flex; width: 100%; height: calc(100vh - 54px); }
-        .sidebar { display: flex; flex-direction: column; flex-shrink: 0; background: #fff; border-right: 1px solid #F0F0F0; height: 100%; overflow-y: auto; transition: width 0.2s ease; }
-        
-        /* Contenido principal ocupando 100% con scroll independiente */
-        .main-content { flex: 1; min-width: 0; padding: 16px; height: 100%; overflow-y: auto; transition: padding 0.2s ease; }
-        
-        /* Ocultar menú inferior en escritorio */
-        .bn { display: none; } 
-        
-        /* Animación Modal Bottom Sheet para Mobile */
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-        /* Desktop Amplio (>1280px) */
-        @media (min-width: 1281px) { .sidebar { width: 220px; padding: 24px 16px; } }
-
-        /* Desktop Regular y Tablet (769px - 1280px) */
-        @media (min-width: 769px) and (max-width: 1280px) {
-          .sidebar { width: 64px; padding: 20px 8px; align-items: center; }
-          .sl, .sa { display: none !important; }
-        }
-
-        /* Mobile (<768px) */
-        @media (max-width: 768px) {
-          html, body, #root { overflow-y: auto !important; overflow-x: hidden !important; }
-          .app-layout { height: auto; min-height: calc(100vh - 54px); }
-          .sidebar { display: none !important; }
-          .main-content { padding: 16px 12px 100px !important; overflow-y: visible; }
-          .bn { display: flex !important; position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #E5E7EB; z-index: 99; padding-bottom: env(safe-area-inset-bottom, 12px); box-shadow: 0 -2px 10px rgba(0,0,0,0.03); }
-        }
-
-      /* 📱 OPTIMIZACIÓN MOBILE LANDSCAPE (CELULAR ACOSTADO) */
-        @media (orientation: landscape) and (max-width: 950px) {
-          /* 1. Ocultamos barra blanca superior y el menú inferior */
-          .top-nav { display: none !important; } 
-          .bn { display: none !important; } 
-          
-          /* 2. Forzamos la barra lateral izquierda (versión mini con iconos) */
-          .sidebar { 
-            display: flex !important; 
-            width: 70px !important; 
-            padding: 10px 8px !important;
-            padding-left: env(safe-area-inset-left, 12px) !important; 
-            align-items: center !important; 
-          }
-          .sl, .sa { display: none !important; } 
-          
-          html, body, #root, .app-layout { 
-            padding: 0 !important; 
-            margin: 0 !important; 
-            min-height: 100vh !important; 
-            background: #fff !important; 
-          }
-          
-          /* 3. SEPARAMOS LOS MÁRGENES PARA QUE SAFARI NO LOS IGNORE */
-          .main-content { 
-            padding-top: 0 !important; 
-            padding-bottom: 0 !important;
-            padding-left: 0 !important;
-            padding-right: env(safe-area-inset-right, 16px) !important;
-            margin: 0 !important; 
-            border: none !important; 
-          } 
-          
-          /* 4. Aplasta el contenedor principal contra el techo */
-          .main-content > div { 
-            margin-top: 0 !important; 
-            padding-top: 10px !important; /* Apenas 10px para que no choque el título */
-            border-radius: 0 !important; 
-            border: none !important; 
-            box-shadow: none !important; 
-          }
-
-          /* 5. Comprime el encabezado (Título "Calendario" y botones) */
-          .main-content > div > div:first-child {
-            margin-bottom: 8px !important; 
-          }
-        }
-      `}</style>
+      <style>{appLayoutCss}</style>
 
       {/* Navbar Superior */}
       <div

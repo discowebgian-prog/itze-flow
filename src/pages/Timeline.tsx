@@ -5,6 +5,7 @@ import { ROOMS, srcShort, RS, PS, BLOCK_COLORS, ALERTS, getAlerts } from '../lib
 import { TODAY, fmt, fmtD, addDays, diffDays, parseD, currency, MONTHS, DAYS } from '../lib/dates';
 import { findConflicts } from '../lib/reservations';
 import { TimelineMobile } from './TimelineMobile';
+import timelineCss from '../styles/timeline.css?raw';
 
 // ── TIMELINE DESKTOP ──────────────────────────────────────────────────────────
 export function Timeline({
@@ -287,16 +288,7 @@ export function Timeline({
       style={{ userSelect: 'none' }}
     >
       {/* ESTILOS DE ANIMACIÓN DE PULSO VERDE */}
-      <style>{`
-        @keyframes pulseGreenBlock {
-          0%, 100% { transform: scale(1); filter: drop-shadow(0 1px 3px rgba(0,0,0,.18)); }
-          50% { transform: scale(1.1); filter: drop-shadow(0 0 14px rgba(16,185,129,0.95)); }
-        }
-        @keyframes pulseGreenCard {
-          0%, 100% { box-shadow: none; border-color: #F8FAFC; }
-          50% { box-shadow: 0 4px 16px rgba(16,185,129,0.4); border-color: #10B981; background-color: #ECFDF5; }
-        }
-      `}</style>
+      <style>{timelineCss}</style>
 
       <div
         style={{

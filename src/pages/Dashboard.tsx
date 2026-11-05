@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Badge } from '../components/ui/Badge';
 import { PROPS } from '../lib/constants';
 import { TODAY, fmt, parseD } from '../lib/dates';
+import dashboardCss from '../styles/dashboard.css?raw';
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 export function Dashboard({
@@ -29,16 +30,7 @@ export function Dashboard({
   return (
     <div>
       {/* NUEVO: ESTILOS DE ANIMACIÓN DE PULSO */}
-      <style>{`
-        @keyframes pulseBlue {
-          0%, 100% { box-shadow: 0 1px 3px rgba(0,0,0,.05); border-color: #F0F0F0; background-color: #fff; }
-          50% { box-shadow: 0 4px 16px rgba(59,130,246,0.4); border-color: #3B82F6; background-color: #EFF6FF; }
-        }
-        @keyframes pulseOrange {
-          0%, 100% { box-shadow: 0 1px 3px rgba(0,0,0,.05); border-color: #F0F0F0; background-color: #fff; }
-          50% { box-shadow: 0 4px 16px rgba(245,158,11,0.4); border-color: #F59E0B; background-color: #FFFBEB; }
-        }
-      `}</style>
+      <style>{dashboardCss}</style>
 
       <div style={{ marginBottom: 28, display: 'flex', flexDirection: 'column', gap: 4 }}>
         <div
