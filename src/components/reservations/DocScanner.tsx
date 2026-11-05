@@ -1,6 +1,38 @@
 /* eslint-disable */
 // @ts-nocheck
 import { useState } from 'react';
+import { askClaude } from '../../lib/claude';
+
+const MAX_LONG_EDGE = 1800;
+const JPEG_QUALITY = 0.8;
+
+const SCAN_PROMPT = `Extract identity document data. Return ONLY valid JSON:
+{"firstName":"","lastName":"","fullName":"","docNumber":"","docType":"INE","nationality":"MX"}
+fullName = given names first, then surnames (a Mexican INE prints surnames first, so reorder them).
+docNumber = for a Mexican INE use the CLAVE DE ELECTOR (not the CURP); for a passport use the passport number.
+docType = INE|Pasaporte|Otro. nationality = 2-letter ISO code. Leave a field empty if unclear.`;
+
+// Las fotos de celular pesan varios MB y Vercel acepta hasta 4.5 MB por pedido.
+const compressPhoto = async (file) => {
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = objectUrl;
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = () => reject(new Error('No se pudo leer la imagen. Probá con otra foto.'));
+    });
+
+    const scale = Math.min(1, MAX_LONG_EDGE / Math.max(img.width, img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', JPEG_QUALITY);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+};
 
 // ── DOC SCANNER ───────────────────────────────────────────────────────────────
 export function DocScanner({ onResult }) {
@@ -14,66 +46,41 @@ export function DocScanner({ onResult }) {
     if (!file) return;
     setError('');
     setSuccess(false);
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const dataUrl = ev.target.result;
+    setScanning(true);
+    try {
+      const dataUrl = await compressPhoto(file);
       setPreview(dataUrl);
-      setScanning(true);
-      try {
-        const apiKey = import.meta.env.VITE_CLAUDE_KEY;
-        if (!apiKey) throw new Error('Falta la API Key en Vercel');
 
-        const base64 = dataUrl.split(',')[1];
-        const mt = file.type && file.type.startsWith('image/') ? file.type : 'image/jpeg';
-        
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true'
+      const raw = await askClaude({
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: dataUrl.split(',')[1] } },
+              { type: 'text', text: SCAN_PROMPT },
+            ],
           },
-          body: JSON.stringify({
-            model: 'claude-sonnet-5',
-            max_tokens: 4000,
-            messages: [
-              {
-                role: 'user',
-                content: [
-                  { type: 'image', source: { type: 'base64', media_type: mt, data: base64 } },
-                  { type: 'text', text: 'Extract identity document data. Return ONLY valid JSON:\n{"firstName":"","lastName":"","fullName":"","docNumber":"","docType":"INE","nationality":"MX"}\ndocType=INE|Pasaporte|Otro. nationality=2-letter ISO code. Leave empty if unclear.' }
-                ]
-              }
-            ]
-          }),
-        });
+        ],
+        maxTokens: 4000,
+        effort: 'low',
+      });
 
-        if (!resp.ok) {
-          const errData = await resp.json();
-          throw new Error(errData.error?.message || 'API ' + resp.status);
-        }
+      const start = raw.indexOf('{');
+      const end = raw.lastIndexOf('}');
+      const parsed = start >= 0 && end > start ? JSON.parse(raw.slice(start, end + 1)) : {};
 
-        const data = await resp.json();
-        const raw = (data.content && data.content[0] && data.content[0].text) || '{}';
-        const FENCE = String.fromCharCode(96, 96, 96);
-        const clean = raw.split(FENCE + 'json').join('').split(FENCE).join('').trim();
-        const parsed = JSON.parse(clean);
-        
-        if (!parsed.docNumber && !parsed.firstName && !parsed.fullName) {
-          setError('No se detectaron datos. Usá buena iluminación.');
-        } else {
-          onResult(parsed);
-          setSuccess(true);
-        }
-      } catch (err) {
-        console.error('DocScanner Error:', err);
-        setError(`Error: ${err.message}`);
-      } finally {
-        setScanning(false);
+      if (!parsed.docNumber && !parsed.firstName && !parsed.fullName) {
+        setError('No se detectaron datos. Usá buena iluminación.');
+      } else {
+        onResult(parsed);
+        setSuccess(true);
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('DocScanner Error:', err.name);
+      setError(err instanceof SyntaxError ? 'No se pudo leer la respuesta. Probá de nuevo.' : err.message);
+    } finally {
+      setScanning(false);
+    }
   };
 
   return (
@@ -93,7 +100,9 @@ export function DocScanner({ onResult }) {
         capture="environment"
         style={{ display: 'none' }}
         onChange={(e) => {
-          if (e.target.files[0]) handleFile(e.target.files[0]);
+          const file = e.target.files[0];
+          e.target.value = ''; // Permite volver a elegir la misma foto
+          if (file) handleFile(file);
         }}
       />
       <div

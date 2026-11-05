@@ -1,8 +1,7 @@
 {
-  "rewrites": [
-    {
-      "source": "/api/claude",
-      "destination": "https://api.anthropic.com/v1/messages"
+  "functions": {
+    "api/claude.js": {
+      "maxDuration": 300
     }
-  ]
+  }
 }

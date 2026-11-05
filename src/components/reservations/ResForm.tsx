@@ -1,6 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 import { useState, useEffect } from 'react';
+import { DocScanner } from './DocScanner';
 import { IneUploader } from './IneUploader';
 import { ConflictWarn } from '../ui/ConflictWarn';
 import { CountrySelector } from '../ui/CountrySelector';
@@ -8,7 +9,7 @@ import { Icon } from '../ui/Icon';
 import { Inp } from '../ui/Inp';
 import { RangeCalendar } from '../ui/RangeCalendar';
 import { Sel } from '../ui/Sel';
-import { ROOMS, SOURCES, RS } from '../../lib/constants';
+import { ROOMS, SOURCES, RS, COUNTRIES } from '../../lib/constants';
 import { TODAY, fmt, addDays, diffDays, currency } from '../../lib/dates';
 import { findConflicts } from '../../lib/reservations';
 
@@ -83,6 +84,18 @@ export function ResForm({
     };
   });
   const sv = (k, v) => setF((x) => ({ ...x, [k]: v }));
+  const applyScan = (scan) => {
+    const name = (scan.fullName || [scan.firstName, scan.lastName].filter(Boolean).join(' ')).trim();
+    const country = COUNTRIES.find((c) => c.code === String(scan.nationality || '').toUpperCase());
+    setF((x) => ({
+      ...x,
+      guestName: name || x.guestName,
+      guestDoc: scan.docNumber || x.guestDoc,
+      guestDocType: ['INE', 'Pasaporte', 'Otro'].includes(scan.docType) ? scan.docType : x.guestDocType,
+      guestNationality: country ? country.code : x.guestNationality,
+      guestPhonePrefix: country && !x.guestPhone ? country.prefix : x.guestPhonePrefix,
+    }));
+  };
   const nights = f.checkIn && f.checkOut ? diffDays(f.checkIn, f.checkOut) : 0;
   const isHostel = f.propertyId === 'hostel';
   const selRoom = isHostel ? ROOMS.find((r) => r.id === f.room) : null;
@@ -245,6 +258,8 @@ export function ResForm({
           ]}
         />
       )}
+
+      <DocScanner onResult={applyScan} />
 
       <Inp
         label="Nombre completo"

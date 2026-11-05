@@ -2,6 +2,7 @@
 // @ts-nocheck
 import { useState, useEffect } from 'react';
 import { TODAY, fmt, fmtD, addDays, diffDays, parseD, currency, MONTHS } from '../lib/dates';
+import { askClaude } from '../lib/claude';
 import { exportToExcel } from '../lib/excel';
 import { supabase } from '../lib/supabase';
 
@@ -61,13 +62,6 @@ export function FinancePage({ reservations, allRes, properties, user, restoreRes
   const analizarRevenue = async (m, metrics) => {
     setAnalyzingMonth(m.key);
     try {
-      const apiKey = import.meta.env.VITE_CLAUDE_KEY;
-      if (!apiKey) {
-        alert('⚠️ Falta la API Key en Vercel.');
-        setAnalyzingMonth(null);
-        return;
-      }
-
       // ============================================================
       // 1) VARIABLES DE REVENUE MANAGEMENT (EDITABLES MES A MES)
       // ============================================================
@@ -154,38 +148,18 @@ PLAN DE ACCIÓN: 4 acciones concretas (A quién, Qué ofrecer, A qué precio, Cu
 EXPERIMENTOS: 1 prueba ágil de 2 semanas con métrica de éxito.
 DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar el próximo análisis.`;
 
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-5', // Identificador técnico exacto y válido
-          max_tokens: 5000,
-          messages: [{ role: 'user', content: prompt }],
-        }),
+      const respuesta = await askClaude({
+        messages: [{ role: 'user', content: prompt }],
+        maxTokens: 5000,
       });
+      const text = respuesta || 'No se pudo generar el diagnóstico.';
 
-      if (!resp.ok) {
-        const errData = await resp.json();
-        alert(`⚠️ Claude rechazó la conexión. Motivo: ${errData.error?.message || resp.status}`);
-        setAnalyzingMonth(null);
-        return;
-      }
-      
-      const data = await resp.json();
-            const textBlock = (data.content || []).find(block => block.type === 'text');
-      const text = textBlock?.text || 'No se pudo generar el diagnóstico.';
-      
-            setAiInsights(prev => ({ ...prev, [m.key]: text }));
+      setAiInsights(prev => ({ ...prev, [m.key]: text }));
       setChatMessages(prev => ({ ...prev, [m.key]: [{ role: 'user', content: prompt }, { role: 'assistant', content: text }] }));
       setInsightModal({ title: `Diagnóstico Estratégico: ${m.label}`, content: text, monthKey: m.key });
-        } catch (err) {
+    } catch (err) {
       console.error('Error:', err);
-      alert('⚠️ Error de red al conectar con Claude. Revisa tu conexión a internet.');
+      alert(`⚠️ ${err.message}`);
     } finally {
       setAnalyzingMonth(null);
     }
@@ -203,38 +177,17 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
     setChatLoading(true);
 
     try {
-      const apiKey = import.meta.env.VITE_CLAUDE_KEY;
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-5',
-          max_tokens: 40000,
-          output_config: { effort: 'medium' },
-          messages: nuevoHistorial,
-        }),
+      const texto = await askClaude({
+        messages: nuevoHistorial,
+        maxTokens: 40000,
+        effort: 'medium',
       });
-
-      if (!resp.ok) {
-        const errData = await resp.json();
-        alert(`⚠️ Claude rechazó la conexión. Motivo: ${errData.error?.message || resp.status}`);
-        setChatLoading(false);
-        return;
-      }
-
-      const data = await resp.json();
-      const textBlock = (data.content || []).find(block => block.type === 'text');
-      const respuesta = textBlock?.text || 'No se pudo generar una respuesta.';
+      const respuesta = texto || 'No se pudo generar una respuesta.';
 
       setChatMessages(prev => ({ ...prev, [monthKey]: [...nuevoHistorial, { role: 'assistant', content: respuesta }] }));
     } catch (err) {
       console.error('Error:', err);
-      alert('⚠️ Error de red al conectar con Claude.');
+      alert(`⚠️ ${err.message}`);
     } finally {
       setChatLoading(false);
     }
