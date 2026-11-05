@@ -1,13 +1,7 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React + TS</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
+# Itzé Flow
+
+PMS y CRM a medida para Itzé Hostel Boutique (Progreso, Yucatán).
+
+- **Stack:** React + Vite, Supabase (base de datos, auth, storage, tiempo real), deploy en Vercel.
+- **Variables de entorno (Vercel):** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_CLAUDE_KEY`.
+- **Desarrollo local:** `npm install` y luego `npm run dev`.
