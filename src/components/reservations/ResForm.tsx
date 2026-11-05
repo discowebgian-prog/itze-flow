@@ -1,7 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
 import { useState, useEffect } from 'react';
-import { DocScanner } from './DocScanner';
 import { IneUploader } from './IneUploader';
 import { ConflictWarn } from '../ui/ConflictWarn';
 import { CountrySelector } from '../ui/CountrySelector';
@@ -259,8 +258,6 @@ export function ResForm({
         />
       )}
 
-      <DocScanner onResult={applyScan} />
-
       <Inp
         label="Nombre completo"
         value={f.guestName}
@@ -307,6 +304,7 @@ export function ResForm({
         f={f} 
         onUploadFrente={(url) => sv('url_ine_frente', url)}
         onUploadDorso={(url) => sv('url_ine_dorso', url)}
+        onScan={applyScan}
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 10 }}>

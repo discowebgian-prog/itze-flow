@@ -1,19 +1,46 @@
 /* eslint-disable */
 // @ts-nocheck
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { scanDocument } from '../../lib/docScan';
 import { supabase } from '../../lib/supabase';
 
+const SCAN_FAILED = 'No se pudieron extraer los datos del documento.';
+
 // ── RESERVATION FORM ──────────────────────────────────────────────────────────
-// ── CARGADOR DE INE COMPRIMIDO (CORREGIDO) ───────────────────────────────────
-export function IneUploader({ f, onUploadFrente, onUploadDorso }) {
+// ── CARGADOR DE DOCUMENTO: GUARDA LA FOTO Y LEE LOS DATOS DEL FRENTE ─────────
+export function IneUploader({ f, onUploadFrente, onUploadDorso, onScan }) {
   const [loadingF, setLoadingF] = useState(false);
   const [loadingD, setLoadingD] = useState(false);
+  const [scan, setScan] = useState({ status: 'idle', detail: '' });
+  const lastScan = useRef(0);
+
+  // Corre aparte de la subida: si la lectura falla, la foto se guarda igual.
+  const readDocument = async (file) => {
+    const scanId = ++lastScan.current;
+    setScan({ status: 'reading', detail: '' });
+    try {
+      const data = await scanDocument(file);
+      if (scanId !== lastScan.current) return;
+      if (data) {
+        onScan(data);
+        setScan({ status: 'done', detail: '' });
+      } else {
+        setScan({ status: 'failed', detail: '' });
+      }
+    } catch (err) {
+      if (scanId !== lastScan.current) return;
+      console.error('Error al leer el documento:', err.message);
+      setScan({ status: 'failed', detail: err.message });
+    }
+  };
 
   const processFile = async (e, side) => {
     const file = e.target.files[0];
+    e.target.value = ''; // Permite volver a elegir la misma foto
     if (!file) return;
 
     side === 'frente' ? setLoadingF(true) : setLoadingD(true);
+    if (side === 'frente') readDocument(file);
 
     try {
       const img = new Image();
@@ -71,7 +98,7 @@ export function IneUploader({ f, onUploadFrente, onUploadDorso }) {
   return (
     <div style={{ padding: 16, background: '#F0F9FF', borderRadius: 10, border: '1px solid #BAE6FD', marginBottom: 16 }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: '#0369A1', textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5 }}>
-        Fotografías del INE
+        Fotos del documento
       </div>
       <div style={{ display: 'flex', gap: 10 }}>
         <label style={{ flex: 1, padding: '12px 10px', background: f.url_ine_frente ? '#10B981' : '#0284C7', color: '#fff', borderRadius: 8, textAlign: 'center', cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s' }}>
@@ -83,6 +110,22 @@ export function IneUploader({ f, onUploadFrente, onUploadDorso }) {
           <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => processFile(e, 'dorso')} />
         </label>
       </div>
+      {scan.status === 'reading' && (
+        <div style={{ marginTop: 10, fontSize: 12, color: '#0369A1' }}>
+          ✦ Claude está leyendo el documento...
+        </div>
+      )}
+      {scan.status === 'done' && (
+        <div style={{ marginTop: 10, fontSize: 12, color: '#059669', fontWeight: 700 }}>
+          ✓ Datos extraídos. Revisá y corregí si es necesario.
+        </div>
+      )}
+      {scan.status === 'failed' && (
+        <div style={{ marginTop: 10, fontSize: 12, color: '#DC2626' }}>
+          <b>⚠️ {SCAN_FAILED}</b>
+          {scan.detail && <div style={{ marginTop: 4 }}>Motivo: {scan.detail}</div>}
+        </div>
+      )}
     </div>
   );
 }
