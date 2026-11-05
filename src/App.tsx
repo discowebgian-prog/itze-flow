@@ -1,0 +1,1197 @@
+/* eslint-disable */
+// @ts-nocheck
+import { useState, useEffect } from 'react';
+import { ResDrawer } from './components/reservations/ResDrawer';
+import { ResForm } from './components/reservations/ResForm';
+import { Icon } from './components/ui/Icon';
+import { Modal } from './components/ui/Modal';
+import { useW } from './hooks/useW';
+import { PROPS, INIT_RES, COUNTRIES } from './lib/constants';
+import { TODAY, fmt, diffDays } from './lib/dates';
+import { supabase } from './lib/supabase';
+import { Dashboard } from './pages/Dashboard';
+import { FinancePage } from './pages/FinancePage';
+import { GuestsPage } from './pages/GuestsPage';
+import { Login } from './pages/Login';
+import { PropertiesPage } from './pages/PropertiesPage';
+import { ResList } from './pages/ResList';
+import { Timeline } from './pages/Timeline';
+import appLayoutCss from './styles/app-layout.css?raw';
+
+
+// ── APP ───────────────────────────────────────────────────────────────────────
+export default function AppMejorada() {
+  const [user, setUser] = useState(null);
+  const [res, setRes] = useState(INIT_RES);
+  const [tab, setTab] = useState('dashboard');
+  const [highlightStatus, setHighlightStatus] = useState(null);
+  const winW = useW();
+  const isMobile = winW < 769;
+  const isTablet = winW >= 769 && winW < 1280;
+
+  // 1. CARGA DE DATOS Y VIGILANTE DE INICIO
+  useEffect(() => {
+    const fetchReservas = async () => {
+      const { data, error } = await supabase
+        .from('reservas')
+        .select('*')
+        .is('fecha_eliminacion', null);
+
+      if (error) {
+        console.error('Error al cargar reservas:', error);
+        return;
+      }
+
+      // Hora actual estricta en Progreso, Yucatán
+      const nowMerida = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Merida" }));
+      const horaActual = nowMerida.getHours();
+      const hoyFmt = fmt(nowMerida);
+
+      const reservasCargadas = data.map((item) => {
+        const nacionalidad = item.nacionalidad || 'MX';
+        const pais = COUNTRIES.find((c) => c.code === nacionalidad);
+        const prefijo = pais ? pais.prefix : '+52';
+
+        let telefonoLimpio = item.telefono || '';
+        if (telefonoLimpio.startsWith(prefijo)) {
+          telefonoLimpio = telefonoLimpio.replace(prefijo, '').trim();
+        }
+
+        let estado = item.estado || 'por_llegar';
+        let fechaCheckout = item.fecha_salida || '';
+
+        // ── AUTO CHECK-OUT AL CARGAR LA APP (Si ya pasaron las 11:00 AM) ──
+        if (horaActual >= 14 && estado === 'hospedado' && fechaCheckout <= hoyFmt) {
+            estado = 'finalizada';
+            supabase.from('reservas').update({ estado: 'finalizada' }).eq('id', item.id).then();
+        }
+
+        return {
+          id: item.id,
+          propertyId: item.propiedad || 'hostel',
+          guestName: item.huesped || '',
+          room: item.habitacion || '',
+          checkIn: item.fecha_ingreso || '',
+          checkOut: fechaCheckout,
+          status: estado,
+          totalAmount: Number(item.monto) || 0,
+          paid: Number(item.monto_pagado) || 0,
+          source: item.canal || 'Directo — Puerta',
+          guestNationality: nacionalidad,
+          guestDocType: item.tipo_doc || '',
+          guestDoc: item.num_doc || '',
+          guestPhonePrefix: prefijo,
+          guestPhone: telefonoLimpio,
+          guestEmail: item.email || '',
+          totalGuests: Number(item.cantidad_huespedes) || 1,
+          companions: item.acompanantes || [],
+          paymentMethod: item.forma_pago || 'Efectivo',
+          pin_acceso: item.pin_acceso || '',
+          url_ine_frente: item.url_ine_frente || null,
+          url_ine_dorso: item.url_ine_dorso || null,
+          pricing: {
+                ratePerNight: Number(item.tarifa_base) || 0,
+                discountType: item.tipo_descuento || (Number(item.descuento) > 0 ? 'monto_fijo' : 'ninguno'),
+                discountValue: Number(item.descuento) || 0,
+                rateLabel: '',
+                discountReason: item.motivo_descuento || '',
+                additionals: Array.isArray(item.adicionales) ? item.adicionales : []
+              },
+          notes: item.notas || '',
+          notas: item.notas || '',
+          requiresInvoice: item.solicita_factura === 'true' || item.solicita_factura === true,
+          solicita_factura: item.solicita_factura === 'true' || item.solicita_factura === true, // <--- ¡AQUÍ ESTÁ LA COMA QUE FALTABA!
+          lista_negra: item.lista_negra === true || item.lista_negra === 'true'
+        };
+      });
+
+      setRes(reservasCargadas);
+    };
+
+    fetchReservas();
+
+    const canalReservas = supabase
+      .channel('cambios-en-vivo')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'reservas' },
+        (payload) => {
+          setTimeout(() => {
+            fetchReservas(); 
+          }, 500);
+        }
+      )
+      .subscribe();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchReservas();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      supabase.removeChannel(canalReservas);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
+
+  // 2. VIGILANTE SILENCIOSO EN TIEMPO REAL (Por si la App queda abierta)
+  useEffect(() => {
+    const vigilante = setInterval(() => {
+      const nowMerida = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Merida" }));
+      
+      if (nowMerida.getHours() >= 14) {
+        const hoyFmt = fmt(nowMerida);
+        
+        setRes((prevRes) => {
+          const paraHacerCheckout = prevRes.filter(r => r.status === 'hospedado' && r.checkOut <= hoyFmt);
+          
+          if (paraHacerCheckout.length === 0) return prevRes; // Todo en orden
+          
+          console.log(`⏰ 14:00 pm en Mérida: Haciendo check-out automático para ${paraHacerCheckout.length} reservas.`);
+          
+          // Actualiza en Supabase silenciosamente
+          paraHacerCheckout.forEach(r => {
+            supabase.from('reservas').update({ estado: 'finalizada' }).eq('id', r.id).then();
+          });
+
+          // Actualiza visualmente en tiempo real
+          return prevRes.map(r => 
+            paraHacerCheckout.some(pc => pc.id === r.id) 
+              ? { ...r, status: 'finalizada', checkOutAt: nowMerida.toISOString() } 
+              : r
+          );
+        });
+      }
+    }, 60000); // Revisa cada minuto
+
+    return () => clearInterval(vigilante);
+  }, []);
+
+  // Estados restaurados: Las "memorias" que controlan tu interfaz
+  const [drawer, setDrawer] = useState(null);
+  const [modal, setModal] = useState(null);
+  const [ciModal, setCiModal] = useState(null);
+  const [coModal, setCoModal] = useState(null);
+  const [propStatus, setPropStatus] = useState({});
+  const [notes, setNotes] = useState({});
+  // Estado dinámico para el Checklist Editable por propiedad
+  const [checklists, setChecklists] = useState({
+    hostel: {
+      items: [
+        'Cambio de sábanas y toallas',
+        'Limpieza profunda de baño',
+        'Barrido y trapeado de pisos',
+        'Vaciado de basureros',
+        'Reposición de papel y amenidades',
+        'Revisión de luces y aire acondicionado'
+      ],
+      checked: {} // Guarda las tareas que ya se completaron (índice: true/false)
+    }
+  });
+  const [calView, setCalView] = useState('timeline');
+  const [prefill, setPrefill] = useState({});
+  const [toastMsg, setToastMsg] = useState(null); 
+  const [calOffset, setCalOffset] = useState(-2);  
+
+  // 1. Verificación de Login
+  if (!user) return <Login onLogin={setUser} />;
+
+  // 2. Definición de permisos y datos
+  const visProps =
+    user.role === 'admin'
+      ? PROPS
+      : PROPS.filter((p) => user.ownedProps.includes(p.id));
+  const visRes = res.filter(
+    (r) => visProps.some((p) => p.id === r.propertyId) && !r.deleted
+  );
+  const propsWS = visProps;
+  const effectiveCalView = calView;
+  const initProp = visProps[0]?.id;
+
+  // 3. Pestañas permitidas
+  const TABS_ALL = [
+    { id: 'dashboard', label: 'Inicio', icon: 'home' },
+    { id: 'calendario', label: 'Calendario', icon: 'calendar' },
+    { id: 'reservas', label: 'Reservas', icon: 'list' },
+    { id: 'propiedades', label: 'Propiedades', icon: 'building' },
+    { id: 'huespedes', label: 'Huéspedes', icon: 'users' },
+    { id: 'finanzas', label: 'Finanzas', icon: 'finance' },
+  ];
+  const TABS =
+    user.role === 'staff'
+      ? TABS_ALL.filter((t) => t.id !== 'finanzas')
+      : TABS_ALL;
+
+  // Funciones operativas restauradas
+  const openAdd = (pid = '', date = '') => {
+    setPrefill({ pid, date });
+    setModal('new');
+  };
+  const goTo = (newTab, data) => {
+    if (newTab === 'abrir_reserva') {
+      setDrawer(data);
+    } else {
+      setTab(newTab);
+      if (typeof data === 'string') {
+        setHighlightStatus(data);
+        setTimeout(() => setHighlightStatus(null), 2700);
+      }
+    }
+  };
+  const saveRes = async (newRes) => {
+    try {
+      // Evaluamos si el tilde está activo en cualquiera de sus variantes
+      const tieneFactura = newRes.requiresInvoice === true || newRes.requiresInvoice === 'true' || newRes.solicita_factura === true || newRes.solicita_factura === 'true';
+      
+      // Limpieza preventiva antes de guardar por si el usuario repitió el prefijo a mano
+      let telefonoLimpioGuardar = (newRes.guestPhone || '').trim();
+      if (newRes.guestPhonePrefix && telefonoLimpioGuardar.startsWith(newRes.guestPhonePrefix)) {
+        telefonoLimpioGuardar = telefonoLimpioGuardar.replace(newRes.guestPhonePrefix, '').trim();
+      }
+
+      const datosLimpios = {
+          huesped: newRes.guestName || 'Sin nombre',
+          habitacion: newRes.room || null,
+          fecha_ingreso: newRes.checkIn,
+          fecha_salida: newRes.checkOut,
+          estado: newRes.status || 'por_llegar',
+          monto: String(newRes.totalAmount || ''),
+          monto_pagado: String(newRes.paid || ''),
+          canal: newRes.source || 'Directo — Puerta',
+          nacionalidad: newRes.guestNationality || '',
+          tipo_doc: newRes.guestDocType || '',
+          num_doc: newRes.guestDoc || '',
+          telefono: newRes.guestPhonePrefix ? `${newRes.guestPhonePrefix} ${telefonoLimpioGuardar}` : telefonoLimpioGuardar,
+          email: newRes.guestEmail || '',
+          cantidad_huespedes: String(newRes.totalGuests || 1),
+          acompanantes: newRes.companions || [],
+          forma_pago: newRes.paymentMethod || 'Efectivo',
+          notas: String(newRes.notes || newRes.notas || ''),
+          url_ine_frente: newRes.url_ine_frente || null,
+          url_ine_dorso: newRes.url_ine_dorso || null,
+          tarifa_base: String(newRes.pricing?.ratePerNight || ''),
+          descuento: String(newRes.pricing?.discountValue || 0),
+          tipo_descuento: newRes.pricing?.discountType || 'ninguno',
+          motivo_descuento: newRes.pricing?.discountReason || '',
+          adicionales: newRes.pricing?.additionals || [],
+            solicita_factura: tieneFactura ? 'true' : 'false',  
+            lista_negra: newRes.lista_negra || false,
+            pin_acceso: newRes.pin_acceso || ''
+          };
+
+        // Mantenemos duplicados los formatos en el estado de React para no romper las vistas
+        const reservaParaEstado = {
+          ...newRes,
+          notes: newRes.notes || newRes.notas || '',
+          notas: newRes.notes || newRes.notas || '',
+          requiresInvoice: tieneFactura,
+          solicita_factura: tieneFactura, 
+          lista_negra: newRes.lista_negra || false,
+          pin_acceso: newRes.pin_acceso || ''
+        };
+
+      if (newRes.id) {
+        // 1. EDICIÓN
+        const { error } = await supabase
+          .from('reservas')
+          .update(datosLimpios)
+          .eq('id', newRes.id);
+
+        if (error) throw error;
+        setRes(res.map((r) => (r.id === newRes.id ? reservaParaEstado : r)));
+
+      } else {
+        // 2. NUEVA RESERVA
+        const momentoExacto = new Date().toLocaleString('es-MX', {
+          timeZone: 'America/Merida',
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit'
+        });
+        const responsable = user?.name || 'Usuario desconocido';
+
+        datosLimpios.fecha_carga = momentoExacto;
+        datosLimpios.usuario_carga = responsable;
+
+        const { data, error } = await supabase
+          .from('reservas')
+          .insert([datosLimpios])
+          .select();
+
+        if (error) throw error;
+
+        reservaParaEstado.fecha_carga = momentoExacto;
+        reservaParaEstado.usuario_carga = responsable;
+
+       if (data && data.length > 0) {
+          setRes([...res, { ...reservaParaEstado, id: data[0].id }]);
+        } else {
+          setRes([...res, { ...reservaParaEstado, id: 'r' + Date.now() }]);
+        }
+      }
+
+      setModal(null);
+      
+      setModal(null);
+      
+      // ¡LA MAGIA DEL SALTO! Calculamos la distancia en días y movemos el calendario
+      const diasDistancia = diffDays(fmt(TODAY), newRes.checkIn);
+      setCalOffset(diasDistancia - 2); // Lo centramos dejando 2 días de margen a la izquierda
+      setTab('calendario'); // Forzamos ir a la pestaña del calendario para ver la reserva
+      
+      // Lanzamos el cartel flotante y lo borramos a los 2 segundos
+      setToastMsg('Reserva guardada');
+      setTimeout(() => setToastMsg(null), 2000);
+
+    } catch (err) {
+      console.error('Error al conectar con la base de datos:', err);
+      alert('Hubo un problema al guardar la reserva en la nube: ' + err.message);
+    }
+  };
+  const updateRes = async (id, changes) => {
+    // 1. Movemos la reserva visualmente al instante para que la app se sienta rápida
+    setRes(res.map((r) => (r.id === id ? { ...r, ...changes } : r)));
+
+    // 2. Le mandamos los datos a la nube para que las demás pantallas se enteren
+      const { error } = await supabase
+        .from('reservas')
+        .update({
+          fecha_ingreso: changes.checkIn,
+          fecha_salida: changes.checkOut,
+          habitacion: changes.room
+        })
+        .eq('id', id);
+
+    if (error) {
+      console.error('Error al sincronizar el movimiento:', error);
+      alert('Hubo un error al guardar el movimiento en la nube. Revisá tu conexión.');
+    }
+  };
+  const delRes = async (id) => {
+    // Capturamos la fecha y hora exacta con la zona horaria de Progreso, Yucatán
+    const momentoExacto = new Date().toLocaleString('es-MX', {
+      timeZone: 'America/Merida',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    });
+
+    const responsable = user?.name || 'Usuario desconocido';
+
+    // 1. Borrado Lógico en Supabase
+    const { error } = await supabase
+      .from('reservas')
+      .update({ 
+        estado: 'eliminada',
+        fecha_eliminacion: momentoExacto,
+        usuario_eliminacion: responsable
+      })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error al archivar en Supabase:', error);
+      alert('Hubo un problema al intentar borrar la reserva.');
+      return;
+    }
+
+    // 2. La sacamos de la vista inmediatamente
+    setRes(res.filter((r) => r.id !== id));
+    setDrawer(null);
+  };
+  const restoreRes = async (id) => {
+    // 1. Le avisamos a Supabase que la reserva vuelve a la vida
+    const { error } = await supabase
+      .from('reservas')
+      .update({ 
+        estado: 'por_llegar', 
+        fecha_eliminacion: null, 
+        usuario_eliminacion: null 
+      })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error al restaurar:', error);
+      alert('Hubo un problema al restaurar la reserva.');
+      return;
+    }
+
+    // 2. La revivimos en la pantalla
+    setRes(
+      res.map((r) =>
+        r.id === id
+          ? { ...r, deleted: false, status: 'por_llegar', deletedAt: null, deletedBy: null }
+          : r
+      )
+    );
+  };
+const toggleBlacklist = async (id, currentStatus) => {
+    const newStatus = !currentStatus;
+    const { error } = await supabase
+      .from('reservas')
+      .update({ lista_negra: newStatus })
+      .eq('id', id);
+
+    if (error) {
+      alert('Error al actualizar la lista negra en la nube.');
+      return;
+    }
+
+    // 1. Actualiza la lista general de reservas (el fondo y el calendario)
+    setRes(res.map(r => r.id === id ? { ...r, lista_negra: newStatus } : r));
+
+    // 2. ¡EL DETALLE VISUAL! Actualiza el panel abierto para que el botón reaccione al instante
+    setDrawer(prev => prev && prev.id === id ? { ...prev, lista_negra: newStatus } : prev);
+  };
+  const handleCI = (r) => {
+    setDrawer(null);
+    setCiModal(r);
+  };
+  const handleCO = (r) => {
+    setDrawer(null);
+    setCoModal(r);
+  };
+  const confCI = async (time) => {
+    if (!ciModal) return;
+    const targetId = ciModal.id;
+
+    // 1. Actualizamos la vista local de inmediato para una experiencia fluida
+    setRes(
+      res.map((x) =>
+        x.id === targetId ? { ...x, status: 'hospedado', checkInAt: time } : x
+      )
+    );
+    setCiModal(null);
+
+    // 2. Impactamos en la base de datos de Supabase de manera segura
+    await supabase.from('reservas').update({ estado: 'hospedado' }).eq('id', targetId);
+  };
+
+  const confCO = async (time) => {
+    if (!coModal) return;
+    const targetId = coModal.id;
+
+    // 1. Actualizamos la vista local
+    setRes(
+      res.map((x) =>
+        x.id === targetId
+          ? {
+              ...x,
+              status: 'finalizada',
+              checkOutAt: time,
+            }
+          : x
+      )
+    );
+    setCoModal(null);
+
+    // 2. Impactamos en la base de datos de Supabase
+    await supabase.from('reservas').update({ estado: 'finalizada' }).eq('id', targetId);
+  };
+
+  // 4. EL DISEÑO VISUAL (Ahora sí, adentro de la función principal)
+  return (
+    <div
+      style={{
+        minHeight: '100vh',
+        background: '#F8FAFC',
+        fontFamily: "'Inter',system-ui,sans-serif",
+      }}
+    >
+      <style>{appLayoutCss}</style>
+
+      {/* Navbar Superior */}
+      <div
+        className="top-nav"
+        style={{
+          background: '#fff',
+          borderBottom: '1px solid #F0F0F0',
+          padding: '0 16px',
+          height: 54,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          boxShadow: '0 1px 3px rgba(0,0,0,.04)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <img src="https://i.postimg.cc/3NDCCVdT/gecko2.png" alt="Itzé" style={{ width: 36, height: 36, objectFit: 'contain' }} />
+          </div>
+          <div>
+            <span style={{ fontWeight: 800, fontSize: 15, color: '#111' }}>
+              Itzé Flow Pro
+            </span>
+            {isMobile && (
+              <div
+                style={{
+                  fontSize: 10,
+                  color: '#9CA3AF',
+                  lineHeight: 1,
+                  marginTop: 1,
+                }}
+              >
+                Itzé Hostel Boutique
+              </div>
+            )}
+          </div>
+          {!isMobile && (
+            <>
+              {user.role === 'owner' && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    background: '#EDE9FE',
+                    color: '#7C3AED',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: 6,
+                  }}
+                >
+                  Propietario
+                </span>
+              )}
+              {user.role === 'admin' && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    background: '#DBEAFE',
+                    color: '#1E40AF',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: 6,
+                  }}
+                >
+                  Admin
+                </span>
+              )}
+            </>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {isMobile ? (
+            <button
+              onClick={() => openAdd()}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '7px 12px',
+                background: 'linear-gradient(135deg,#3B82F6,#6366F1)',
+                border: 'none',
+                borderRadius: 8,
+                color: '#fff',
+                fontFamily: 'inherit',
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: 'pointer',
+              }}
+            >
+              + Nueva
+            </button>
+          ) : (
+            <>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>
+                {user.name}
+              </span>
+              <button
+                onClick={() => setUser(null)}
+                style={{
+                  background: '#F3F4F6',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '6px 12px',
+                  fontFamily: 'inherit',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: '#6B7280',
+                  cursor: 'pointer',
+                }}
+              >
+                Salir
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="app-layout">
+        {/* Sidebar Lateral */}
+        <div className="sidebar">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                title={isTablet ? t.label : ''}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: isTablet ? '10px' : '9px 12px',
+                  borderRadius: 9,
+                  border: 'none',
+                  fontFamily: 'inherit',
+                  fontWeight: 600,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  background: tab === t.id ? '#EFF6FF' : 'transparent',
+                  color: tab === t.id ? '#2563EB' : '#6B7280',
+                  textAlign: 'left',
+                  justifyContent: isTablet ? 'center' : 'flex-start',
+                }}
+              >
+                <span style={{ display: 'flex', flexShrink: 0 }}>
+                  <Icon name={t.icon} size={20} />
+                </span>
+                <span
+                  className="sl"
+                  style={{ display: isTablet ? 'none' : 'inline' }}
+                >
+                  {t.label}
+                </span>
+              </button>
+            ))}
+            <div
+              style={{
+                borderTop: '1px solid #F0F0F0',
+                margin: '12px 0',
+                paddingTop: 12,
+              }}
+            >
+              <button
+                onClick={() => openAdd()}
+                title={isTablet ? 'Nueva reserva' : ''}
+                style={{
+                  width: '100%',
+                  padding: isTablet ? '10px' : '9px 12px',
+                  background: 'linear-gradient(135deg,#3B82F6,#6366F1)',
+                  border: 'none',
+                  borderRadius: 9,
+                  color: '#fff',
+                  fontFamily: 'inherit',
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  boxShadow: '0 2px 8px rgba(99,102,241,.3)',
+                }}
+              >
+                +{' '}
+                <span
+                  className="sa"
+                  style={{ display: isTablet ? 'none' : 'inline' }}
+                >
+                  Nueva reserva
+                </span>
+              </button>
+            </div>
+            {!isTablet && (
+              <button
+                onClick={() => setUser(null)}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  background: 'transparent',
+                  border: 'none',
+                  borderRadius: 9,
+                  fontFamily: 'inherit',
+                  fontWeight: 600,
+                  fontSize: 12,
+                  color: '#9CA3AF',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                ↩ Cerrar sesión
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Contenido Principal Dinámico */}
+        <div className="main-content" key={tab}>
+          {tab === 'dashboard' && (
+            <Dashboard
+              user={user}
+              reservations={visRes}
+              properties={propsWS}
+              propStatus={propStatus}
+              setPropStatus={setPropStatus}
+              onGoTo={goTo}
+            />
+          )}
+          {tab === 'calendario' && (
+            <Timeline
+              reservations={visRes}
+              properties={propsWS}
+              onClickRes={(r) => setDrawer(r)}
+              onAddRes={openAdd}
+              onUpdateRes={updateRes}
+              isMobile={isMobile}
+              calView={effectiveCalView}
+              setCalView={setCalView}
+              offset={calOffset}
+              setOffset={setCalOffset}
+              highlightStatus={highlightStatus}
+            />
+          )}
+          {tab === 'reservas' && (
+            <ResList
+              reservations={visRes}
+              properties={visProps}
+              onView={(r) => setDrawer(r)}
+              onAdd={openAdd}
+            />
+          )}
+          {tab === 'propiedades' && (
+            <PropertiesPage
+              properties={visProps}
+              reservations={visRes}
+              notes={notes}
+              setNotes={setNotes}
+              checklists={checklists}
+              setChecklists={setChecklists}
+              propStatus={propStatus}
+              setPropStatus={setPropStatus}
+              initProp={initProp}
+              onGoTo={goTo}
+            />
+          )}
+          {tab === 'huespedes' && (
+            <GuestsPage
+              reservations={visRes}
+              properties={visProps}
+              onView={(r) => setDrawer(r)}
+            />
+          )}
+          {tab === 'finanzas' && (
+            <FinancePage
+              reservations={visRes}
+              allRes={res}
+              properties={visProps}
+              user={user}
+              restoreRes={restoreRes}
+              onGoTo={goTo}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Menú inferior Mobile DESLIZABLE con filtro de seguridad */}
+      <div
+        className="bn"
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: '#fff',
+          borderTop: '1px solid #F0F0F0',
+          zIndex: 99,
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 8px) + 20px)',
+          display: 'flex',
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            style={{
+              flex: 1, // Ahora se distribuyen equitativamente sin salirse
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 1,
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              padding: '8px 2px 4px',
+              minHeight: 52,
+            }}
+          >
+            <span
+              style={{
+                display: 'flex',
+                color: tab === t.id ? '#2563EB' : '#9CA3AF',
+              }}
+            >
+              <Icon name={t.icon} size={22} />
+            </span>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+                color: tab === t.id ? '#2563EB' : '#9CA3AF',
+                marginTop: 1,
+              }}
+            >
+              {t.label}
+            </span>
+            {tab === t.id && (
+              <div
+                className="nav-indicator"
+                style={{
+                  width: 20,
+                  height: 2.5,
+                  background: '#2563EB',
+                  borderRadius: 4,
+                  marginTop: 2,
+                }}
+              />
+            )}
+          </button>
+        ))}
+      </div>
+
+     {/* Modales y Paneles flotantes */}
+      {drawer && (
+        <ResDrawer
+          res={drawer}
+          onClose={() => setDrawer(null)}
+          onEdit={(r) => {
+            setModal({ type: 'edit', data: r });
+            setDrawer(null);
+          }}
+          onDelete={(id) => setModal({ type: 'confirmDel', id })}
+          onToggleBlacklist={toggleBlacklist}
+          properties={visProps}
+          allRes={res}
+          isMobile={isMobile}
+          onCheckIn={handleCI}
+          onCheckOut={handleCO}
+        />
+      )}
+      {modal?.type === 'confirmDel' && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,.5)',
+            zIndex: 400,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 16,
+              maxWidth: 360,
+              width: '100%',
+              overflow: 'hidden',
+              boxShadow: '0 24px 64px rgba(0,0,0,.25)',
+            }}
+          >
+            <div
+              style={{
+                background: '#FEF2F2',
+                padding: '18px 22px',
+                borderBottom: '1px solid #FECACA',
+              }}
+            >
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#991B1B' }}>
+                🗑 ¿Eliminar reserva?
+              </div>
+            </div>
+            <div style={{ padding: '18px 22px' }}>
+              <p style={{ margin: '0 0 8px', fontSize: 13, color: '#374151' }}>
+                La reserva <b>no se borrará definitivamente</b>. Quedará en la
+                papelera y solo el administrador podrá recuperarla.
+              </p>
+              <p style={{ margin: '0 0 20px', fontSize: 12, color: '#9CA3AF' }}>
+                Para eliminar permanentemente, contactá al administrador.
+              </p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => setModal(null)}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: '#F3F4F6',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontFamily: 'inherit',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    color: '#374151',
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    delRes(modal.id);
+                    setModal(null);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: '#FEF2F2',
+                    border: '1.5px solid #FECACA',
+                    borderRadius: 8,
+                    fontFamily: 'inherit',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    color: '#DC2626',
+                  }}
+                >
+                  Mover a papelera
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {modal === 'new' && (
+        <Modal
+          title="Nueva reserva"
+          onClose={() => setModal(null)}
+          isMobile={isMobile}
+        >
+          <ResForm
+            visibleProps={visProps}
+            onSave={saveRes}
+            onClose={() => setModal(null)}
+            prefillProp={prefill.pid}
+            prefillDate={prefill.date}
+            allRes={res}
+          />
+        </Modal>
+      )}
+      {modal?.type === 'edit' && (
+        <Modal
+          title="Editar reserva"
+          onClose={() => setModal(null)}
+          isMobile={isMobile}
+        >
+          <ResForm
+            initial={modal.data}
+            visibleProps={visProps}
+            onSave={saveRes}
+            onClose={() => setModal(null)}
+            allRes={res}
+          />
+        </Modal>
+      )}
+     {/* MODAL DE CONFIRMACIÓN CHECK-IN */}
+      {ciModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,.5)',
+            zIndex: 400,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 16,
+              maxWidth: 380,
+              width: '100%',
+              overflow: 'hidden',
+              boxShadow: '0 24px 64px rgba(0,0,0,.25)',
+            }}
+          >
+            <div
+              style={{
+                background: '#10B981',
+                padding: '16px 22px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>
+                Confirmar Check-in
+              </div>
+            </div>
+            <div style={{ padding: '20px 22px' }}>
+              <p style={{ fontSize: 14, color: '#374151', marginBottom: 6 }}>
+                ¿Confirmas el ingreso de <b>{ciModal.guestName}</b>?
+              </p>
+              <p style={{ fontSize: 12, color: '#6B7280', marginBottom: 20 }}>
+                Esta acción marcará la reserva como "Hospedado" y registrará la hora de entrada.
+              </p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => setCiModal(null)}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: '#F3F4F6',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontFamily: 'inherit',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    color: '#4B5563',
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => confCI(new Date().toISOString())}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: '#10B981',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontFamily: 'inherit',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    color: '#fff',
+                  }}
+                >
+                  ✓ Check-in
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE CONFIRMACIÓN CHECK-OUT */}
+      {coModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,.5)',
+            zIndex: 400,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 16,
+              maxWidth: 380,
+              width: '100%',
+              overflow: 'hidden',
+              boxShadow: '0 24px 64px rgba(0,0,0,.25)',
+            }}
+          >
+            <div
+              style={{
+                background: '#F59E0B',
+                padding: '16px 22px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>
+                Confirmar Check-out
+              </div>
+            </div>
+            <div style={{ padding: '20px 22px' }}>
+              <p style={{ fontSize: 14, color: '#374151', marginBottom: 6 }}>
+                ¿Confirmas la salida de <b>{coModal.guestName}</b>?
+              </p>
+              <p style={{ fontSize: 12, color: '#6B7280', marginBottom: 20 }}>
+                La estadía pasará a "Finalizada" y se liberará la propiedad en el calendario.
+              </p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => setCoModal(null)}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: '#F3F4F6',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontFamily: 'inherit',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    color: '#4B5563',
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => confCO(new Date().toISOString())}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: '#F59E0B',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontFamily: 'inherit',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    color: '#fff',
+                  }}
+                >
+                  📤 Check-out
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* DISEÑO DEL CARTEL FLOTANTE (TOAST) */}
+      {toastMsg && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: isMobile ? 90 : 40,
+            left: 0,
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            zIndex: 9999,
+            pointerEvents: 'none',
+          }}
+        >
+          <div
+            style={{
+              background: '#10B981',
+              color: '#fff',
+              padding: '12px 24px',
+              borderRadius: 30,
+              fontSize: 14,
+              fontWeight: 800,
+              boxShadow: '0 8px 16px rgba(16,185,129,.25)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              animation: 'slideUp 0.2s ease-out'
+            }}
+          >
+            <span style={{ fontSize: 16 }}>✓</span> {toastMsg}
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
