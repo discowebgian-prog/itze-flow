@@ -30,7 +30,10 @@ export default function AppMejorada() {
   const isTablet = winW >= 769 && winW < 1280;
 
   // 1. CARGA DE DATOS Y VIGILANTE DE INICIO
+  // Espera al login: con RLS activo, sin sesión la base no devuelve datos.
   useEffect(() => {
+    if (!user?.id) return undefined;
+
     const fetchReservas = async () => {
       const { data, error } = await supabase
         .from('reservas')
@@ -134,7 +137,7 @@ export default function AppMejorada() {
       supabase.removeChannel(canalReservas);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, []);
+  }, [user?.id]);
 
   // 2. VIGILANTE SILENCIOSO EN TIEMPO REAL (Por si la App queda abierta)
   useEffect(() => {
@@ -194,6 +197,13 @@ export default function AppMejorada() {
   const [prefill, setPrefill] = useState({});
   const [toastMsg, setToastMsg] = useState(null); 
   const [calOffset, setCalOffset] = useState(-2);  
+
+  // Cierra la sesión de este dispositivo; el resto del equipo sigue conectado.
+  const handleLogout = async () => {
+    await supabase.auth.signOut({ scope: 'local' });
+    setRes([]);
+    setUser(null);
+  };
 
   // 1. Verificación de Login
   if (!user) return <Login onLogin={setUser} />;
@@ -604,7 +614,7 @@ const toggleBlacklist = async (id, currentStatus) => {
                 {user.name}
               </span>
               <button
-                onClick={() => setUser(null)}
+                onClick={handleLogout}
                 style={{
                   background: '#F3F4F6',
                   border: 'none',
@@ -700,7 +710,7 @@ const toggleBlacklist = async (id, currentStatus) => {
             </div>
             {!isTablet && (
               <button
-                onClick={() => setUser(null)}
+                onClick={handleLogout}
                 style={{
                   width: '100%',
                   padding: '8px 12px',
