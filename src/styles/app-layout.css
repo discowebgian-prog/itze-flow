@@ -4,6 +4,8 @@
         html, body, #root { margin: 0 !important; padding: 0 !important; max-width: 100% !important; width: 100%; background: #F8FAFC; color: #111; overflow: hidden; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+        .hide-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
         input[type=date]::-webkit-calendar-picker-indicator { opacity: .4; }
         button, input, select, textarea { font-family: inherit; }
         
