@@ -123,8 +123,9 @@ PALANCAS DISPONIBLES (Elige solo las que apliquen):
 - Precio de último minuto (mismo día) entre semana por canales directos.
 - Jue-Sáb: subir tarifa o cerrar promociones; upselling (late check-out, experiencias).
 
-DATOS DEL HOTEL (${m.label}):
+DATOS DEL HOTEL (${m.label}). Ingresos, ocupación, ADR, RevPAR y GOPPAR consideran solo las noches transcurridas hasta hoy:
 - Ingreso Base Real: $${metrics.trueRevenue} | Egresos Operativos: $${metrics.gastos}
+- Reservado del mes completo, incluyendo noches futuras: ${metrics.bookedPct}% de ocupación | $${metrics.bookedRevenue}
 - Ocupación Física: ${metrics.occPct}% | ADR: $${metrics.adr} | RevPAR Global: $${metrics.revpar} | GOPPAR: $${metrics.goppar}
 - RevPAR (Dom-Mié): $${metrics.revparEntre} vs RevPAR (Jue-Sáb): $${metrics.revparFinde}
 - Ocup. Matrimonial (P6): ${metrics.oMat}% | King (P4): ${metrics.oKing}% | Privadas (P1-P3, P5): ${metrics.oComp}%
@@ -198,6 +199,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
     const mName = MONTHS[parseInt(m, 10) - 1] || m;
     return {
       key: keyStr, label: `${mName} ${y}`, total: 0, paid: 0, count: 0, occupiedNights: 0, trueRevenue: 0,
+      bookedNights: 0, bookedRevenue: 0,
       pmTotals: { efectivo: 0, transferencia: 0, debito: 0, credito: 0, otro: 0 },
       srcTotals: { Booking: 0, 'Directo-Puerta': 0, 'Directo-Celular': 0 },
       dow: { entre: { revenue: 0, nights: 0 }, finde: { revenue: 0, nights: 0 } },
@@ -209,6 +211,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
   const baseStats = {};
   baseStats[currentMonthKey] = initMonthObj(currentMonthKey);
 
+  const todayKey = fmt(TODAY);
   const monthlyStats = reservations.reduce((acc, r) => {
     if (r.status === 'cancelada' || !r.checkIn) return acc;
     
@@ -223,7 +226,6 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
 
     const nights = diffDays(r.checkIn, r.checkOut);
     if (nights > 0) {
-      acc[key].occupiedNights += nights;
       const avgDailyRate = tAmt / nights;
 
       for (let i = 0; i < nights; i++) {
@@ -232,6 +234,12 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
         
         if (!acc[nightMonthKey]) acc[nightMonthKey] = initMonthObj(nightMonthKey);
         
+        // Lo reservado cuenta para todo el mes; las métricas, solo hasta hoy.
+        acc[nightMonthKey].bookedNights += 1;
+        acc[nightMonthKey].bookedRevenue += avgDailyRate;
+        if (fmt(currentNight) > todayKey) continue;
+
+        acc[nightMonthKey].occupiedNights += 1;
         acc[nightMonthKey].trueRevenue += avgDailyRate;
 
         const dayOfWeek = currentNight.getDay();
@@ -389,11 +397,13 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
 
           const [yStr, mStr] = m.key.split('-');
           const daysInMonth = new Date(parseInt(yStr), parseInt(mStr), 0).getDate();
-          const passedDays = isCurrent ? TODAY.getDate() : daysInMonth;
+          const isFuture = m.key > currentMonthKey;
+          const passedDays = isFuture ? 0 : isCurrent ? TODAY.getDate() : daysInMonth;
           
           const totalRooms = properties.reduce((s, p) => s + (p.rooms || 1), 0);
           const availableNights = totalRooms * passedDays;
           const occPct = availableNights > 0 ? Math.min(100, Math.round((m.occupiedNights / availableNights) * 100)) : 0;
+          const bookedPct = Math.min(100, Math.round((m.bookedNights / (totalRooms * daysInMonth)) * 100));
           const adr = m.occupiedNights > 0 ? Math.round(m.trueRevenue / m.occupiedNights) : 0;
           const revpar = availableNights > 0 ? Math.round(m.trueRevenue / availableNights) : 0;
 
@@ -433,8 +443,8 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
               {/* ── KPI HOTELEROS: OCUPACIÓN Y ADR ── */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
                 <div style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '10px 6px', borderRadius: 8 }}>
-                  <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#64748B', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Ocupación</div>
-                  <div style={{ fontWeight: 800, fontSize: 14, color: occPct >= 70 ? '#10B981' : occPct >= 40 ? '#F59E0B' : '#EF4444' }}>{occPct}%</div>
+                  <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#64748B', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>{isCurrent ? 'Ocupación a hoy' : 'Ocupación'}</div>
+                  <div style={{ fontWeight: 800, fontSize: 14, color: isFuture ? '#9CA3AF' : occPct >= 70 ? '#10B981' : occPct >= 40 ? '#F59E0B' : '#EF4444' }}>{isFuture ? '—' : `${occPct}%`}</div>
                   <div style={{ fontSize: 9, color: '#9CA3AF', marginTop: 2, fontWeight: 600 }}>Física</div>
                 </div>
                 <div title="Tarifa Promedio Diaria" style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '10px 6px', borderRadius: 8, cursor: 'help' }}>
@@ -444,10 +454,17 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                 </div>
               </div>
 
+              {(isCurrent || isFuture) && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 12px', borderRadius: 8, marginBottom: 14 }}>
+                  <span style={{ color: isCurrent ? '#1E40AF' : '#4B5563', fontWeight: 700 }}>Reservado del mes:</span>
+                  <span style={{ fontWeight: 800, color: '#111' }}>{bookedPct}% · {currency(m.bookedRevenue)}</span>
+                </div>
+              )}
+
               {/* RENTABILIDAD & GOPPAR */}
               <div style={{ background: '#F8FAFC', borderRadius: 10, padding: 12, border: '1px solid #E5E7EB', marginBottom: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                  <span style={{ color: '#4B5563', fontWeight: 600 }}>Ingreso Base Real:</span>
+                  <span style={{ color: '#4B5563', fontWeight: 600 }}>{isCurrent ? 'Ingreso a Hoy:' : 'Ingreso Base Real:'}</span>
                   <span style={{ fontWeight: 800, color: '#111' }}>{currency(m.trueRevenue)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #E2E8F0' }}>
@@ -526,7 +543,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                   </div>
                   {!aiInsights[m.key] ? (
                     <button
-                      onClick={() => analizarRevenue(m, { trueRevenue: m.trueRevenue, gastos: m.gastos, occPct, adr, revpar, goppar, revparEntre, revparFinde, oMat, oKing, oComp })}
+                      onClick={() => analizarRevenue(m, { trueRevenue: Math.round(m.trueRevenue), bookedRevenue: Math.round(m.bookedRevenue), bookedPct, gastos: m.gastos, occPct, adr, revpar, goppar, revparEntre, revparFinde, oMat, oKing, oComp })}
                       disabled={analyzingMonth === m.key}
                       style={{
                         background: '#EEF2FF', border: '1px solid #C7D2FE', color: '#4F46E5', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: analyzingMonth === m.key ? 'wait' : 'pointer', opacity: analyzingMonth === m.key ? 0.7 : 1
