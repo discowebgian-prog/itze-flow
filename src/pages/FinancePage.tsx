@@ -6,6 +6,8 @@ import { askClaude } from '../lib/claude';
 import { exportToExcel } from '../lib/excel';
 import { supabase } from '../lib/supabase';
 
+const PROJECTION_START_DAY = 8; // Antes hay muy pocos días para estimar
+
 // ── FINANCE PAGE ──────────────────────────────────────────────────────────────
 export function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoTo }) {
   const [showTrash, setShowTrash] = useState(false);
@@ -125,7 +127,8 @@ PALANCAS DISPONIBLES (Elige solo las que apliquen):
 
 DATOS DEL HOTEL (${m.label}). Ingresos, ocupación, ADR, RevPAR y GOPPAR consideran solo las noches transcurridas hasta hoy:
 - Ingreso Base Real: $${metrics.trueRevenue} | Egresos Operativos: $${metrics.gastos}
-- Reservado del mes completo, incluyendo noches futuras: ${metrics.bookedPct}% de ocupación | $${metrics.bookedRevenue}
+- Reservado del mes completo, incluyendo noches futuras: ${metrics.bookedPct}% de ocupación | $${metrics.bookedRevenue}${metrics.projectedPct !== null ? `
+- Proyectado del mes [HIPÓTESIS A PROBAR: estimación según el ritmo de Dom-Mié y Jue-Sáb hasta hoy, no incluye eventos futuros]: ${metrics.projectedPct}% de ocupación | $${metrics.projectedRevenue}` : ''}
 - Ocupación Física: ${metrics.occPct}% | ADR: $${metrics.adr} | RevPAR Global: $${metrics.revpar} | GOPPAR: $${metrics.goppar}
 - RevPAR (Dom-Mié): $${metrics.revparEntre} vs RevPAR (Jue-Sáb): $${metrics.revparFinde}
 - Ocup. Matrimonial (P6): ${metrics.oMat}% | King (P4): ${metrics.oKing}% | Privadas (P1-P3, P5): ${metrics.oComp}%
@@ -422,6 +425,27 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
           const revparEntre = availNightsEntre > 0 ? Math.round(m.dow.entre.revenue / availNightsEntre) : 0;
           const revparFinde = availNightsFinde > 0 ? Math.round(m.dow.finde.revenue / availNightsFinde) : 0;
 
+          // Proyección del mes actual: cada tipo de día sigue a su ritmo hasta hoy.
+          const showProjection = isCurrent && passedDays >= PROJECTION_START_DAY;
+          let projectedPct = null, projectedRevenue = null;
+          if (showProjection) {
+            let restEntre = 0, restFinde = 0;
+            for (let i = passedDays + 1; i <= daysInMonth; i++) {
+              const d = new Date(parseInt(yStr), parseInt(mStr) - 1, i).getDay();
+              if (d >= 4 && d <= 6) restFinde++; else restEntre++;
+            }
+            const extraNights =
+              (restEntre * totalRooms * m.dow.entre.nights) / availNightsEntre +
+              (restFinde * totalRooms * m.dow.finde.nights) / availNightsFinde;
+            const extraRevenue =
+              (restEntre * totalRooms * m.dow.entre.revenue) / availNightsEntre +
+              (restFinde * totalRooms * m.dow.finde.revenue) / availNightsFinde;
+
+            const projectedNights = Math.max(m.bookedNights, m.occupiedNights + extraNights);
+            projectedPct = Math.min(100, Math.round((projectedNights / (totalRooms * daysInMonth)) * 100));
+            projectedRevenue = Math.round(Math.max(m.bookedRevenue, m.trueRevenue + extraRevenue));
+          }
+
           // Segmentación Tipos de Habitación
           const aMat = 1 * passedDays, aKing = 1 * passedDays, aComp = 4 * passedDays;
           const rMat = aMat > 0 ? Math.round(m.rooms.matrimonial.revenue / aMat) : 0;
@@ -455,9 +479,19 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
               </div>
 
               {(isCurrent || isFuture) && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 12px', borderRadius: 8, marginBottom: 14 }}>
-                  <span style={{ color: isCurrent ? '#1E40AF' : '#4B5563', fontWeight: 700 }}>Reservado del mes:</span>
-                  <span style={{ fontWeight: 800, color: '#111' }}>{bookedPct}% · {currency(m.bookedRevenue)}</span>
+                <div style={{ fontSize: 12, background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 12px', borderRadius: 8, marginBottom: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: isCurrent ? '#1E40AF' : '#4B5563', fontWeight: 700 }}>Reservado del mes:</span>
+                    <span style={{ fontWeight: 800, color: '#111' }}>{bookedPct}% · {currency(m.bookedRevenue)}</span>
+                  </div>
+                  {isCurrent && (
+                    <div title="Estimación según el ritmo de Dom-Mié y Jue-Sáb hasta hoy" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                      <span style={{ color: '#1E40AF', fontWeight: 700 }}>Proyectado del mes:</span>
+                      {showProjection
+                        ? <span style={{ fontWeight: 800, color: '#111' }}>{projectedPct}% · {currency(projectedRevenue)}</span>
+                        : <span style={{ fontSize: 10, fontWeight: 600, color: '#64748B', textAlign: 'right' }}>Disponible desde el día {PROJECTION_START_DAY}</span>}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -543,7 +577,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                   </div>
                   {!aiInsights[m.key] ? (
                     <button
-                      onClick={() => analizarRevenue(m, { trueRevenue: Math.round(m.trueRevenue), bookedRevenue: Math.round(m.bookedRevenue), bookedPct, gastos: m.gastos, occPct, adr, revpar, goppar, revparEntre, revparFinde, oMat, oKing, oComp })}
+                      onClick={() => analizarRevenue(m, { trueRevenue: Math.round(m.trueRevenue), bookedRevenue: Math.round(m.bookedRevenue), bookedPct, projectedPct, projectedRevenue, gastos: m.gastos, occPct, adr, revpar, goppar, revparEntre, revparFinde, oMat, oKing, oComp })}
                       disabled={analyzingMonth === m.key}
                       style={{
                         background: '#EEF2FF', border: '1px solid #C7D2FE', color: '#4F46E5', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: analyzingMonth === m.key ? 'wait' : 'pointer', opacity: analyzingMonth === m.key ? 0.7 : 1
