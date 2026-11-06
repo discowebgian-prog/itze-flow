@@ -283,22 +283,71 @@ export function ResForm({
       />
 
       {isHostel && (
-        <Sel
-          label="Habitación"
-          value={f.room}
-          onChange={(e) => {
-            sv('room', e.target.value);
-            sv('companions', []);
-            sv('totalGuests', 1);
-          }}
-          options={[
-            { value: '', label: '— Seleccionar habitación —' },
-            ...ROOMS.map((r) => ({
-              value: r.id,
-              label: `${r.name} (hasta ${r.maxGuests} personas)`,
-            })),
-          ]}
-        />
+        <div style={{ marginBottom: 12 }}>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: '#888',
+              marginBottom: 6,
+              textTransform: 'uppercase',
+              letterSpacing: 0.4,
+            }}
+          >
+            Habitación
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+            {ROOMS.map((r) => {
+              const on = f.room === r.id;
+              // Ocupada en estas fechas (se puede elegir igual: aparece el aviso de conflicto)
+              const busy =
+                findConflicts(allRes, f.propertyId, r.id, f.checkIn, f.checkOut, initial?.id).length > 0;
+              const border = on ? (busy ? '#DC2626' : '#3B82F6') : '#E5E7EB';
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => {
+                    if (on) return;
+                    sv('room', r.id);
+                    sv('companions', []);
+                    sv('totalGuests', 1);
+                  }}
+                  style={{
+                    padding: '7px 4px',
+                    borderRadius: 10,
+                    border: `${on ? 2 : 1.5}px solid ${border}`,
+                    background: on ? (busy ? '#FEF2F2' : '#EFF6FF') : busy ? '#F3F4F6' : '#fff',
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    lineHeight: 1.2,
+                    opacity: busy && !on ? 0.75 : 1,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 800,
+                      color: on ? (busy ? '#B91C1C' : '#1E40AF') : busy ? '#9CA3AF' : '#374151',
+                    }}
+                  >
+                    {on ? '✓ ' : ''}
+                    {r.name}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: busy ? 700 : 500,
+                      color: busy ? (on ? '#B91C1C' : '#9CA3AF') : '#9CA3AF',
+                    }}
+                  >
+                    {busy ? 'Ocupada' : `hasta ${r.maxGuests}`}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       <ConflictWarn conflicts={conflicts} properties={visibleProps} />
@@ -323,6 +372,8 @@ export function ResForm({
           label: s.short || s.label,
           ...(s.value === 'Booking'
             ? { bg: '#DBEAFE', txt: '#1E40AF' }
+            : s.value === 'Redes'
+            ? { bg: '#FCE7F3', txt: '#9D174D' }
             : { bg: '#D1FAE5', txt: '#065F46' }),
         }))}
       />
