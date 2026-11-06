@@ -138,6 +138,48 @@ export function buildGuestDB(reservations, decisions = []) {
   return db;
 }
 
+// ── SUGERENCIA DE HUÉSPED AL ESCRIBIR EL NOMBRE ───────────────────────────────
+// Busca huéspedes anteriores cuyo nombre coincida con lo que se está escribiendo.
+// Cada palabra escrita tiene que ser el comienzo de alguna palabra del nombre
+// (sin tildes ni mayúsculas): "juan per" encuentra a "Juan Pérez".
+export function suggestGuests(allRes, query, decisions = [], excludeId = null, max = 4) {
+  const words = normName(query).split(' ').filter(Boolean);
+  if (normName(query).replace(/ /g, '').length < 3) return [];
+  const list = (allRes || []).filter((r) => r.id !== excludeId);
+  const db = buildGuestDB(list, decisions);
+  const matches = Object.values(db).filter((g) =>
+    [...g.names].some((n) => {
+      const parts = n.split(' ');
+      return words.every((w) => parts.some((p) => p.startsWith(w)));
+    })
+  );
+  return matches
+    .sort((a, b) => b.visits - a.visits || b.lastStay.localeCompare(a.lastStay))
+    .slice(0, max)
+    .map((g) => {
+      // Datos más recientes que tenga cargados (cada campo por separado)
+      const recent = [...g.resList].sort((a, b) => b.checkIn.localeCompare(a.checkIn));
+      const pick = (k) => (recent.find((r) => String(r[k] || '').trim()) || {})[k] || '';
+      const withDoc = recent.find((r) => String(r.guestDoc || '').trim());
+      return {
+        key: g.key,
+        visits: g.visits,
+        lastStay: g.lastStay,
+        lastRoom: recent[0]?.room || '',
+        blacklisted: g.resList.some((r) => r.lista_negra),
+        data: {
+          guestName: g.name,
+          guestDoc: withDoc ? withDoc.guestDoc : '',
+          guestDocType: withDoc ? withDoc.guestDocType || 'INE' : '',
+          guestNationality: pick('guestNationality'),
+          guestPhonePrefix: (recent.find((r) => r.guestPhone) || {}).guestPhonePrefix || '',
+          guestPhone: pick('guestPhone'),
+          guestEmail: pick('guestEmail'),
+        },
+      };
+    });
+}
+
 export function freqBadge(n) {
   if (n >= 5) return { label: '⭐⭐ VIP', color: '#7C3AED', bg: '#EDE9FE' };
   if (n >= 3) return { label: '⭐ Frecuente', color: '#B45309', bg: '#FEF3C7' };
