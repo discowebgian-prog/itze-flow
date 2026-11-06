@@ -575,7 +575,9 @@ export function ResDrawer({
                           <Icon name="whatsapp" size={12} /> {c.phone}
                         </a>
                       )}
-                      <span style={{ color: '#9CA3AF', fontSize: 12 }}>{c.doc || 'Sin doc'}</span>
+                      {c.doc && (
+                        <span style={{ color: '#9CA3AF', fontSize: 12 }}>{c.doc}</span>
+                      )}
                     </div>
                   </div>
                 );

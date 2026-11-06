@@ -131,7 +131,7 @@ export function ResForm({
     if (cur.length < need)
       sv('companions', [
         ...cur,
-        ...Array(need - cur.length).fill({ name: '', doc: '' }),
+        ...Array(need - cur.length).fill({ name: '', phone: '' }),
       ]);
     else sv('companions', cur.slice(0, need));
     const adds = Math.max(0, n - 2);
@@ -521,12 +521,25 @@ export function ResForm({
             <div
               key={i}
               style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr 1fr',
-                gap: 8,
-                marginBottom: 8,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
+                marginBottom: 10,
+                padding: 10,
+                background: '#F9FAFB',
+                border: '1px solid #EEF0F2',
+                borderRadius: 10,
               }}
             >
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: '#6B7280',
+                }}
+              >
+                Acompañante {i + 1}
+              </div>
               <input
                 value={c.name}
                 onChange={(e) =>
@@ -537,8 +550,10 @@ export function ResForm({
                     )
                   )
                 }
-                placeholder={`Nombre ${i + 1}`}
+                placeholder="Nombre"
                 style={{
+                  width: '100%',
+                  minWidth: 0,
                   padding: '9px 12px',
                   border: '1.5px solid #E5E7EB',
                   borderRadius: 8,
@@ -549,6 +564,8 @@ export function ResForm({
                 }}
               />
               <input
+                type="tel"
+                inputMode="tel"
                 value={c.phone || ''}
                 onChange={(e) =>
                   sv(
@@ -560,27 +577,8 @@ export function ResForm({
                 }
                 placeholder="WhatsApp (ej. 55...)"
                 style={{
-                  padding: '9px 12px',
-                  border: '1.5px solid #E5E7EB',
-                  borderRadius: 8,
-                  fontSize: 13,
-                  fontFamily: 'inherit',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              />
-              <input
-                value={c.doc}
-                onChange={(e) =>
-                  sv(
-                    'companions',
-                    f.companions.map((x, j) =>
-                      j === i ? { ...x, doc: e.target.value } : x
-                    )
-                  )
-                }
-                placeholder="Documento"
-                style={{
+                  width: '100%',
+                  minWidth: 0,
                   padding: '9px 12px',
                   border: '1.5px solid #E5E7EB',
                   borderRadius: 8,
