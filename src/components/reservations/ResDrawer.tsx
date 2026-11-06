@@ -734,8 +734,12 @@ export function ResDrawer({
                 🔗 Saldo del grupo: <b>{currency(groupSaldo)}</b>
               </span>
               {groupSaldo > 0 && onPay && (
-                <button type="button" onClick={() => openPay('group')} style={{ ...blLink(GROUP_COLORS.txt), fontSize: 12, fontWeight: 800 }}>
-                  Cobrar saldo del grupo
+                <button
+                  type="button"
+                  onClick={() => openPay('group')}
+                  style={{ ...mainBtn, minHeight: 34, padding: '4px 14px', fontSize: 12, background: GROUP_COLORS.txt, color: '#fff', whiteSpace: 'nowrap' }}
+                >
+                  🔗 Cobrar saldo del grupo
                 </button>
               )}
             </div>

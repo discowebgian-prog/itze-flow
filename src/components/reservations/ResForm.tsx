@@ -1448,21 +1448,22 @@ export function ResForm({
                 setSplitPay(!splitPay);
               }}
               style={{
-                background: 'none',
-                border: 'none',
-                padding: '2px 0',
+                minHeight: 34,
+                padding: '5px 14px',
+                borderRadius: 20,
+                border: `1.5px solid ${GROUP_COLORS.txt}`,
+                background: splitPay ? GROUP_COLORS.txt : '#fff',
                 fontFamily: 'inherit',
                 fontSize: 12,
-                fontWeight: 700,
-                color: GROUP_COLORS.txt,
+                fontWeight: 800,
+                color: splitPay ? '#fff' : GROUP_COLORS.txt,
                 cursor: 'pointer',
-                textDecoration: 'underline',
               }}
             >
-              {splitPay ? 'Cobrar junto (un solo pago del grupo)' : 'Cobrar por separado (cada habitación)'}
+              {splitPay ? '✓ Cobro por separado · volver a junto' : '🔗 Cobrar por separado (cada habitación)'}
             </button>
             {!splitPay && (
-              <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>
+              <div style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>
                 Lo pagado se reparte entre las habitaciones según lo que cuesta cada una.
               </div>
             )}
