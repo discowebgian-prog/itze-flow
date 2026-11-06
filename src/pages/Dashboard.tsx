@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Badge } from '../components/ui/Badge';
 import { PROPS } from '../lib/constants';
-import { TODAY, fmt, parseD, addDays, currency } from '../lib/dates';
+import { TODAY, fmt, parseD, addDays, currency, diffDays } from '../lib/dates';
 import dashboardCss from '../styles/dashboard.css?raw';
 import { LateBadge } from '../components/ui/LateBadge';
 
@@ -27,15 +27,18 @@ export function Dashboard({
   const pending = reservations.filter(
     (r) => r.status !== 'cancelada' && r.paid < r.totalAmount
   );
-  // Booking que ya llegaron (o debían llegar) y todavía no tienen la tarjeta virtual cobrada.
-  // Solo los últimos 30 días, para no arrastrar reservas viejas.
+  // Booking sin la tarjeta virtual cobrada, desde una semana antes del check-in
+  // (política de Gian: a 7 días de la llegada la reserva pasa a no reembolsable y se puede cobrar).
+  // Solo hasta 30 días después de la salida, para no arrastrar reservas viejas.
+  const VCC_DAYS_BEFORE = 7;
   const vccLimit = fmt(addDays(TODAY, -30));
+  const vccFrom = fmt(addDays(TODAY, VCC_DAYS_BEFORE));
   const vccPending = reservations
     .filter(
       (r) =>
         r.source === 'Booking' &&
         r.status !== 'cancelada' &&
-        r.checkIn <= fmt(TODAY) &&
+        r.checkIn <= vccFrom &&
         r.checkOut >= vccLimit &&
         r.paymentMethod !== 'vcc' &&
         Number(r.paid) < Number(r.totalAmount)
@@ -418,7 +421,12 @@ export function Dashboard({
                     )}
                   </div>
                   <div style={{ fontSize: 11, color: '#64748B', marginTop: 3 }}>
-                    Ingreso {parseD(r.checkIn).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                    {r.checkIn > fmt(TODAY) ? 'Llega el ' : 'Ingreso '}
+                    {parseD(r.checkIn).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                    {r.checkIn > fmt(TODAY) && (() => {
+                      const d = diffDays(fmt(TODAY), r.checkIn);
+                      return ` · en ${d} ${d === 1 ? 'día' : 'días'} (ya no reembolsable)`;
+                    })()}
                   </div>
                 </div>
                 <div style={{ fontWeight: 800, fontSize: 14, color: '#1E40AF', whiteSpace: 'nowrap' }}>
