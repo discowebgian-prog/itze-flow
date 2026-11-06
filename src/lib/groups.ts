@@ -29,7 +29,27 @@ export function groupOf(all, r) {
     );
 }
 
-export const groupTitular = (members) => members.find((m) => m.grupoTitular) || members[0] || null;
+// Habitación donde duerme el titular (null si eligió "Ninguna": quien reservó no se aloja)
+export const groupTitular = (members) => members.find((m) => m.grupoTitular) || null;
+
+// Datos de quien reservó el grupo. Se guardan en todas las habitaciones (grupoReservante).
+// Grupos anteriores a esa columna: se toman de la habitación del titular.
+export const bookerOf = (r) => ({
+  name: r.guestName || '',
+  doc: r.guestDoc || '',
+  docType: r.guestDocType || '',
+  nationality: r.guestNationality || '',
+  phonePrefix: r.guestPhonePrefix || '',
+  phone: r.guestPhone || '',
+  email: r.guestEmail || '',
+});
+export function groupBooker(members) {
+  const withSnap = members.find((m) => m.grupoReservante && m.grupoReservante.name);
+  if (withSnap) return withSnap.grupoReservante;
+  const tit = members.find((m) => m.grupoTitular) || members[0];
+  return tit ? bookerOf(tit) : null;
+}
+export const groupName = (members) => groupBooker(members)?.name || '';
 
 // Datos de la persona de contacto de una habitación
 export const PERSON_FIELDS = [
@@ -58,11 +78,14 @@ export const SHARED_LABELS = {
 const val = (v) => (v === true ? 'true' : v === false ? 'false' : String(v ?? '').trim());
 export const changedFields = (a, b, fields) => fields.filter((k) => val(a?.[k]) !== val(b?.[k]));
 
-// ¿Esta habitación ya tiene su propio contacto, o sigue con los datos del titular?
-export function hasOwnContact(r, titular) {
-  if (!titular || !r || r.id === titular.id) return true;
-  if (!sameName(r.guestName, titular.guestName)) return true;
-  return val(r.guestDoc) !== val(titular.guestDoc);
+// ¿Esta habitación ya tiene su propio contacto, o sigue con los datos de quien reservó?
+// La habitación del titular siempre tiene su contacto (es el titular).
+export function hasOwnContact(r, members) {
+  if (!r || r.grupoTitular) return true;
+  const b = groupBooker(members || []);
+  if (!b) return true;
+  if (!sameName(r.guestName, b.name)) return true;
+  return val(r.guestDoc) !== val(b.doc);
 }
 
 // Reparte un pago entre habitaciones según el total de cada una (redondeado al peso).

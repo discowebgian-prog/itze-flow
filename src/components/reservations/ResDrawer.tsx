@@ -3,14 +3,14 @@
 import { useState, useEffect } from 'react';
 import { Badge } from '../ui/Badge';
 import { Icon } from '../ui/Icon';
-import { srcLabel, srcColor, BLOCK_COLORS } from '../../lib/constants';
+import { srcLabel, srcColor, BLOCK_COLORS, ROOMS } from '../../lib/constants';
 import { fmtD, fmtDT, diffDays, currency } from '../../lib/dates';
 import { waLink, stayInfo, stayBadge } from '../../lib/guests';
 import { DocLink } from '../ui/DocLink';
 import { LATE_COLORS } from '../ui/LateBadge';
 import { LatePicker } from './LatePicker';
-import { lateHour, lateCostOf } from '../../lib/reservations';
-import { groupOf, groupTitular, hasOwnContact, balanceOf } from '../../lib/groups';
+import { lateHour, lateCostOf, findConflicts, calcStayTotal } from '../../lib/reservations';
+import { groupOf, groupTitular, groupName, hasOwnContact, balanceOf } from '../../lib/groups';
 import { GROUP_COLORS } from '../ui/GroupBadge';
 
 // ── DRAWER ────────────────────────────────────────────────────────────────────
@@ -29,6 +29,8 @@ export function ResDrawer({
   onSetLate,
   onOpenRes,
   onPay,
+  onAddRoom,
+  onUngroup,
 }) {
   // "No grato" es un caso raro: enlace chico al pie y pide confirmar antes de marcar
   const [askBlacklist, setAskBlacklist] = useState(false);
@@ -54,10 +56,51 @@ export function ResDrawer({
   // ── GRUPO: varias habitaciones del mismo titular ──
   const members = groupOf(allRes, res).map((m) => (m.id === res.id ? res : m));
   const inGroup = members.length > 1;
-  const titular = inGroup ? groupTitular(members) : null;
-  const isTit = inGroup && titular.id === res.id;
-  const needsContact =
-    inGroup && !isTit && !hasOwnContact(res, titular) && (res.status === 'por_llegar' || res.status === 'hospedado');
+  const titular = inGroup ? groupTitular(members) : null; // null = quien reservó no se aloja
+  const isTit = inGroup && titular?.id === res.id;
+  const bookerName = inGroup ? groupName(members) : '';
+  const isActive = res.status === 'por_llegar' || res.status === 'hospedado';
+  const needsContact = inGroup && !hasOwnContact(res, members) && isActive;
+
+  // ── SUMAR HABITACIÓN (al grupo, o arma un grupo desde una reserva común) ──
+  const canAddRoom = !!onAddRoom && res.propertyId === 'hostel' && isActive;
+  const [addOpen, setAddOpen] = useState(false);
+  const [addRoom, setAddRoom] = useState('');
+  const [addGuests, setAddGuests] = useState(1);
+  const [addRate, setAddRate] = useState('');
+  const [addExtra, setAddExtra] = useState('');
+  const [addSaving, setAddSaving] = useState(false);
+  const [askUngroup, setAskUngroup] = useState(false);
+  useEffect(() => {
+    setAddOpen(false);
+    setAskUngroup(false);
+  }, [res?.id]);
+  const addNights = diffDays(res.checkIn, res.checkOut);
+  const addMax = (ROOMS.find((r) => r.id === addRoom) || {}).maxGuests || 6;
+  const addPricing = {
+    ratePerNight: addRate,
+    discountType: 'ninguno',
+    discountValue: 0,
+    rateLabel: '',
+    additionals: Array.from({ length: Math.max(0, addGuests - 2) }, () => ({ ratePerNight: Number(addExtra) || 0, bonificada: false })),
+  };
+  const addTotal = calcStayTotal(addPricing, addNights, 0);
+  const openAdd = () => {
+    setAddOpen(true);
+    setAddRoom('');
+    setAddGuests(1);
+    setAddRate('');
+    setAddExtra('');
+    // El panel aparece arriba (debajo del grupo): lo llevamos a la vista
+    setTimeout(() => document.getElementById('add-room-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  };
+  const saveAdd = async () => {
+    if (!addRoom || addRate === '' || addSaving) return;
+    setAddSaving(true);
+    const ok = await onAddRoom(res, { room: addRoom, totalGuests: addGuests, pricing: addPricing, totalAmount: addTotal });
+    setAddSaving(false);
+    if (ok) setAddOpen(false);
+  };
   const groupSaldo = inGroup ? balanceOf(members) : 0;
   const toCheckIn = members.filter((m) => m.status === 'por_llegar');
   const toCheckOut = members.filter((m) => m.status === 'hospedado');
@@ -337,6 +380,7 @@ export function ResDrawer({
           </div>
           {inGroup && (
             <div
+              data-group-band
               style={{
                 background: GROUP_COLORS.bg,
                 border: `1.5px solid ${GROUP_COLORS.border}`,
@@ -346,7 +390,8 @@ export function ResDrawer({
               }}
             >
               <div style={{ fontSize: 12, fontWeight: 800, color: GROUP_COLORS.txt, marginBottom: 8 }}>
-                🔗 Grupo de {titular.guestName}
+                🔗 Grupo de {bookerName}
+                {!titular && <span style={{ fontWeight: 600, color: '#4B5563' }}> · no se aloja</span>}
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {members.map((m) => {
@@ -395,8 +440,165 @@ export function ResDrawer({
                   📷 Cargar contacto de esta habitación
                 </button>
               )}
+              {canAddRoom && !addOpen && (
+                <button
+                  type="button"
+                  onClick={openAdd}
+                  style={{
+                    ...mainBtn,
+                    width: '100%',
+                    marginTop: 8,
+                    minHeight: 38,
+                    fontSize: 13,
+                    background: 'transparent',
+                    border: `1.5px dashed ${GROUP_COLORS.txt}`,
+                    color: GROUP_COLORS.txt,
+                  }}
+                >
+                  ➕ Sumar habitación al grupo
+                </button>
+              )}
             </div>
           )}
+
+          {addOpen && (() => {
+            const lbl = { display: 'block', fontSize: 10.5, fontWeight: 700, color: '#888', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.4 };
+            const inp = { width: '100%', padding: '9px 12px', border: '1.5px solid #E5E7EB', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff' };
+            const mine = new Set(members.length ? members.map((m) => m.room) : [res.room]);
+            return (
+              <div id="add-room-panel" style={{ background: '#fff', border: `1.5px solid ${GROUP_COLORS.border}`, borderRadius: 12, padding: 12, marginBottom: 12, scrollMarginTop: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: GROUP_COLORS.txt, marginBottom: 4 }}>
+                  ➕ Sumar habitación {inGroup ? 'al grupo' : `a la reserva de ${res.guestName}`}
+                </div>
+                <div style={{ fontSize: 11.5, color: '#6B7280', marginBottom: 10 }}>
+                  Mismas fechas: {fmtD(res.checkIn)} → {fmtD(res.checkOut)} ({addNights} {addNights === 1 ? 'noche' : 'noches'}).
+                  {!inGroup && ' Se arma un grupo con esta reserva.'} El contacto de la nueva habitación se carga al llegar.
+                </div>
+                <label style={lbl}>Habitación</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 10 }}>
+                  {ROOMS.map((r) => {
+                    const taken = mine.has(r.id);
+                    const busy = !taken && findConflicts(allRes, 'hostel', r.id, res.checkIn, res.checkOut, null).length > 0;
+                    const off = taken || busy;
+                    const on = addRoom === r.id;
+                    return (
+                      <button
+                        key={r.id}
+                        type="button"
+                        disabled={off}
+                        onClick={() => {
+                          setAddRoom(r.id);
+                          setAddGuests(1);
+                        }}
+                        style={{
+                          padding: '8px 4px',
+                          minHeight: 44,
+                          borderRadius: 8,
+                          border: `1.5px solid ${on ? '#3B82F6' : '#E5E7EB'}`,
+                          background: off ? '#F3F4F6' : on ? '#EFF6FF' : '#fff',
+                          color: off ? '#9CA3AF' : on ? '#1E40AF' : '#111',
+                          fontFamily: 'inherit',
+                          fontWeight: 800,
+                          fontSize: 13,
+                          cursor: off ? 'default' : 'pointer',
+                        }}
+                      >
+                        {on ? '✓ ' : ''}
+                        {r.id}
+                        <div style={{ fontSize: 10, fontWeight: 600 }}>
+                          {taken ? 'En el grupo' : busy ? 'Ocupada' : `hasta ${r.maxGuests}`}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                {addRoom && (
+                  <>
+                    <label style={lbl}>Huéspedes</label>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                      {Array.from({ length: addMax }, (_, i) => i + 1).map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setAddGuests(n)}
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 8,
+                            border: `2px solid ${addGuests === n ? '#3B82F6' : '#E5E7EB'}`,
+                            background: addGuests === n ? '#EFF6FF' : '#fff',
+                            fontFamily: 'inherit',
+                            fontWeight: 700,
+                            fontSize: 14,
+                            cursor: 'pointer',
+                            color: addGuests === n ? '#1E40AF' : '#6B7280',
+                          }}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                    <label style={lbl}>Tarifa/noche $</label>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={addRate}
+                      placeholder="Tarifa de esta habitación"
+                      onChange={(e) => setAddRate(e.target.value === '' ? '' : Number(e.target.value))}
+                      style={{ ...inp, marginBottom: 8 }}
+                    />
+                    {addGuests > 2 && (
+                      <>
+                        <label style={lbl}>Costo x noche por persona extra $</label>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={addExtra}
+                          placeholder="0"
+                          onChange={(e) => setAddExtra(e.target.value === '' ? '' : Number(e.target.value))}
+                          style={inp}
+                        />
+                        <div style={{ fontSize: 11, color: '#6B7280', marginTop: 4, marginBottom: 8 }}>
+                          {addGuests - 2 === 1 ? '1 persona extra' : `${addGuests - 2} personas extra`} (la tarifa incluye 2)
+                        </div>
+                      </>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, margin: '6px 0 10px' }}>
+                      <span style={{ color: '#6B7280', fontWeight: 600 }}>Total {addRoom}</span>
+                      <b>{currency(addTotal)}</b>
+                    </div>
+                    <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 10 }}>
+                      Queda por llegar y sin pagar. Acompañantes, descuento o late check-out los cargás después con Editar.
+                    </div>
+                  </>
+                )}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={saveAdd}
+                    disabled={!addRoom || addRate === '' || addSaving}
+                    style={{
+                      ...mainBtn,
+                      flex: 2,
+                      minHeight: 42,
+                      fontSize: 13,
+                      background: addRoom && addRate !== '' ? GROUP_COLORS.txt : '#99D5CC',
+                      color: '#fff',
+                    }}
+                  >
+                    {addSaving ? 'Guardando…' : addRoom ? `Sumar ${addRoom}` : 'Elegí una habitación'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAddOpen(false)}
+                    style={{ ...mainBtn, flex: 1, minHeight: 42, fontSize: 13, background: '#fff', border: '1px solid #E5E7EB', color: '#374151' }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* FILA SUPERIOR: Tiempos de la estadía (3 columnas en línea) */}
           <div
@@ -1083,8 +1285,45 @@ export function ResDrawer({
             </button>
           )}
 
+          {/* Reserva común del hostel: armar un grupo sumando otra habitación */}
+          {!inGroup && canAddRoom && !addOpen && (
+            <button
+              type="button"
+              onClick={openAdd}
+              style={{
+                ...mainBtn,
+                minHeight: 38,
+                fontSize: 13,
+                background: '#fff',
+                border: `1.5px dashed ${GROUP_COLORS.txt}`,
+                color: GROUP_COLORS.txt,
+              }}
+            >
+              ➕ Sumar otra habitación (grupo)
+            </button>
+          )}
+
           {/* Acciones poco frecuentes, discretas al pie: Eliminar (pide confirmar en ventana) y No grato */}
-          {askBlacklist ? (
+          {askUngroup ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontSize: 11, color: '#6B7280', marginTop: 4, flexWrap: 'wrap' }}>
+              <span>
+                ¿Separar {res.room} del grupo?{members.length === 2 ? ' (el grupo deja de existir)' : ''}
+              </span>
+              <button
+                type="button"
+                onClick={async () => {
+                  setAskUngroup(false);
+                  await onUngroup(res);
+                }}
+                style={{ ...blLink(GROUP_COLORS.txt), fontWeight: 800, padding: 0 }}
+              >
+                Sí, separar
+              </button>
+              <button type="button" onClick={() => setAskUngroup(false)} style={{ ...blLink('#6B7280'), padding: 0 }}>
+                Cancelar
+              </button>
+            </div>
+          ) : askBlacklist ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontSize: 11, color: '#6B7280', marginTop: 4 }}>
               <span>¿Marcar como no grato?</span>
               <button
@@ -1106,11 +1345,19 @@ export function ResDrawer({
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
               <button type="button" onClick={() => onDelete(res.id)} style={blLink('#9CA3AF')}>
                 Eliminar reserva
               </button>
               <span style={{ color: '#D1D5DB', fontSize: 11 }}>·</span>
+              {inGroup && onUngroup && (
+                <>
+                  <button type="button" onClick={() => setAskUngroup(true)} style={blLink('#9CA3AF')}>
+                    Separar del grupo
+                  </button>
+                  <span style={{ color: '#D1D5DB', fontSize: 11 }}>·</span>
+                </>
+              )}
               {res.lista_negra ? (
                 <button
                   type="button"
