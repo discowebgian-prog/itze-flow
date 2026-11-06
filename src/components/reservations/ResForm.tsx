@@ -2115,32 +2115,34 @@ function RoomCards({ rooms, alloc, setA, titularRoom, setTitularRoom, baseRate, 
               </div>
             ))}
 
-            <div style={{ display: 'grid', gridTemplateColumns: a.guests > 2 ? '1fr 1fr' : '1fr', gap: 8, marginTop: 4 }}>
-              <div>
-                <label style={lbl}>Tarifa/noche $</label>
+            <div style={{ marginTop: 4 }}>
+              <label style={lbl}>Tarifa/noche $</label>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={a.rate}
+                placeholder={baseRate !== '' && baseRate !== null ? `${baseRate} (base)` : 'Tarifa'}
+                onChange={(e) => setA(id, { rate: e.target.value === '' ? '' : Number(e.target.value) })}
+                style={inputSt}
+              />
+            </div>
+            {a.guests > 2 && (
+              <div style={{ marginTop: 8 }}>
+                <label style={lbl}>Costo x noche por persona extra $</label>
                 <input
                   type="number"
                   inputMode="numeric"
-                  value={a.rate}
-                  placeholder={baseRate !== '' && baseRate !== null ? `${baseRate} (base)` : 'Tarifa'}
-                  onChange={(e) => setA(id, { rate: e.target.value === '' ? '' : Number(e.target.value) })}
+                  value={a.extra}
+                  placeholder="0"
+                  onChange={(e) => setA(id, { extra: e.target.value === '' ? '' : Number(e.target.value) })}
                   style={inputSt}
                 />
-              </div>
-              {a.guests > 2 && (
-                <div>
-                  <label style={lbl}>Extra 3ª+ $/noche c/u</label>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    value={a.extra}
-                    placeholder="0"
-                    onChange={(e) => setA(id, { extra: e.target.value === '' ? '' : Number(e.target.value) })}
-                    style={inputSt}
-                  />
+                <div style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>
+                  {a.guests - 2 === 1 ? '1 persona extra' : `${a.guests - 2} personas extra`} (la tarifa incluye 2)
+                  {Number(a.extra) > 0 ? ` · +${currency(Number(a.extra) * (a.guests - 2))} por noche` : ''}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, fontSize: 12.5 }}>
               <span style={{ color: '#6B7280', fontWeight: 600 }}>Total {id}</span>
