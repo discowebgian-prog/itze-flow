@@ -954,66 +954,73 @@ export function ResForm({
 
         <hr style={{ border: 'none', borderTop: '1px dashed #D1D5DB', margin: '16px 0 14px' }} />
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'end' }}>
-          <Inp
-            label="Total a cobrar $"
-            type="number"
-            value={f.totalAmount}
-            onChange={(e) =>
-              sv('totalAmount', e.target.value === '' ? '' : Number(e.target.value))
-            }
-          />
-          <div style={{ marginBottom: 12 }}>
-            <label
-              style={{
-                display: 'block',
-                fontSize: 11,
-                fontWeight: 700,
-                color: '#888',
-                marginBottom: 4,
-                textTransform: 'uppercase',
-                letterSpacing: 0.4,
-              }}
-            >
-              Pagado $
-            </label>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <input
+        {(() => {
+          // Botones rápidos de cobro: 50% (redondeado al peso) y Total (100%).
+          // El que coincide con lo pagado queda resaltado.
+          const totalNum = Number(f.totalAmount) || 0;
+          const half = Math.round(totalNum / 2);
+          const paidNum = f.paid === '' ? null : Number(f.paid);
+          const quick = [
+            { key: 'half', label: '50%', value: f.totalAmount === '' ? '' : half, active: totalNum > 0 && paidNum === half },
+            { key: 'full', label: 'Total', value: f.totalAmount, active: totalNum > 0 && paidNum === totalNum },
+          ];
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 10, alignItems: 'end' }}>
+              <Inp
+                label="Total a cobrar $"
+                type="number"
+                value={f.totalAmount}
+                onChange={(e) =>
+                  sv('totalAmount', e.target.value === '' ? '' : Number(e.target.value))
+                }
+              />
+              <Inp
+                label="Pagado $"
                 type="number"
                 value={f.paid}
                 onChange={(e) => sv('paid', e.target.value === '' ? '' : Number(e.target.value))}
-                style={{
-                  flex: 1,
-                  padding: '9px 12px',
-                  border: '1.5px solid #E5E7EB',
-                  borderRadius: 8,
-                  fontSize: 13,
-                  fontFamily: 'inherit',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
               />
-              <button
-                type="button"
-                onClick={() => sv('paid', f.totalAmount)}
-                style={{
-                  padding: '0 12px',
-                  background: '#D1FAE5',
-                  color: '#065F46',
-                  border: '1.5px solid #10B981',
-                  borderRadius: 8,
-                  fontWeight: 800,
-                  fontSize: 11,
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                Cobrar Total
-              </button>
+              <div style={{ marginBottom: 12 }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: '#888',
+                    marginBottom: 4,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.4,
+                  }}
+                >
+                  Cobrar
+                </label>
+                <div style={{ display: 'flex', gap: 4, height: 36 }}>
+                  {quick.map((q) => (
+                    <button
+                      key={q.key}
+                      type="button"
+                      onClick={() => sv('paid', q.value)}
+                      style={{
+                        padding: '0 10px',
+                        background: q.active ? '#10B981' : '#D1FAE5',
+                        color: q.active ? '#fff' : '#065F46',
+                        border: '1.5px solid #10B981',
+                        borderRadius: 8,
+                        fontWeight: 800,
+                        fontSize: 12,
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {q.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          );
+        })()}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 4 }}>
           <div style={{ flex: 1, marginRight: 14 }}>
