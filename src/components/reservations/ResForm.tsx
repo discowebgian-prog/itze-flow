@@ -176,7 +176,7 @@ export function ResForm({
             rate: f.pricing.ratePerNight ?? '',
           },
         });
-        setTitularRoom(f.room);
+        setTitularRoom(''); // se elige con la pregunta "¿En qué habitación duerme el titular?"
       }
       setMulti(true);
     } else {
@@ -203,7 +203,7 @@ export function ResForm({
     const next = selRooms.includes(id) ? selRooms.filter((x) => x !== id) : [...selRooms, id];
     setSelRooms(next);
     if (!alloc[id]) setA(id, {});
-    if (!next.includes(titularRoom)) setTitularRoom(next[0] || '');
+    if (!next.includes(titularRoom)) setTitularRoom('');
   };
   // Precio de cada habitación: su tarifa (o la general) y el extra por persona desde la 3ª
   const roomPricing = (id) => {
@@ -398,6 +398,10 @@ export function ResForm({
     if (multiOn) {
       if (!selRooms.length) {
         setValErr('Elegí al menos una habitación.');
+        return;
+      }
+      if (isGroupNew && !titularRoom) {
+        setValErr('Elegí en qué habitación duerme el titular (arriba, debajo de las habitaciones).');
         return;
       }
       const sinTarifa = selRooms.filter((id) => {
@@ -618,6 +622,57 @@ export function ResForm({
             >
               {multi ? '✓ 🔗 Varias habitaciones' : '🔗 Reservar varias habitaciones'}
             </button>
+          )}
+
+          {/* Paso siguiente al elegir las habitaciones: dónde se aloja el titular */}
+          {isGroupNew && (
+            <div
+              style={{
+                marginTop: 10,
+                padding: '10px 12px',
+                borderRadius: 10,
+                background: titularRoom ? GROUP_COLORS.bg : '#FFFBEB',
+                border: `1.5px solid ${titularRoom ? GROUP_COLORS.border : '#FCD34D'}`,
+              }}
+            >
+              <div style={{ fontSize: 12.5, fontWeight: 800, color: titularRoom ? GROUP_COLORS.txt : '#92400E', marginBottom: 8 }}>
+                ¿En qué habitación duerme el titular (quien reserva)?
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {selRooms.map((id) => {
+                  const on = titularRoom === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => {
+                        setTitularRoom(id);
+                        setValErr('');
+                      }}
+                      style={{
+                        minWidth: 56,
+                        minHeight: 36,
+                        padding: '4px 12px',
+                        borderRadius: 20,
+                        border: `1.5px solid ${on ? GROUP_COLORS.txt : '#E5E7EB'}`,
+                        background: on ? GROUP_COLORS.txt : '#fff',
+                        color: on ? '#fff' : '#374151',
+                        fontFamily: 'inherit',
+                        fontWeight: 800,
+                        fontSize: 13,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {on ? '★ ' : ''}
+                      {id}
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ fontSize: 11, color: '#6B7280', marginTop: 6 }}>
+                En las demás, el contacto de cada habitación se carga al llegar.
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -926,12 +981,11 @@ export function ResForm({
 
       {multiOn && selRooms.length > 0 && (
         <RoomCards
-          rooms={[titularRoom, ...selRooms.filter((x) => x !== titularRoom)].filter(Boolean)}
+          rooms={selRooms}
+          titularName={f.guestName}
           alloc={alloc}
           setA={setA}
           titularRoom={titularRoom}
-          setTitularRoom={setTitularRoom}
-          baseRate={f.pricing.ratePerNight}
           roomTotal={roomTotal}
           splitPay={splitPay}
           isGroup={isGroupNew}
@@ -1385,7 +1439,7 @@ export function ResForm({
               onClick={() => {
                 // Al separar, arranca con lo que tocaría a cada habitación del pago del grupo
                 if (!splitPay) {
-                  const ordered = [titularRoom, ...selRooms.filter((x) => x !== titularRoom)];
+                  const ordered = [titularRoom, ...selRooms.filter((x) => x !== titularRoom)].filter(Boolean);
                   const parts = splitPaid(f.paid, ordered.map(roomTotal));
                   ordered.forEach((id, i) => setA(id, { paid: f.paid === '' ? '' : parts[i] }));
                 } else {
@@ -1995,7 +2049,7 @@ function ReadBox({ label, value }) {
 // ── REPARTO POR HABITACIÓN (reserva de varias habitaciones) ──────────────────
 // Una tarjeta por habitación: dónde duerme el titular, huéspedes, acompañantes,
 // tarifa (si no se carga, usa la tarifa base) y, si se cobra por separado, su Pagado.
-function RoomCards({ rooms, alloc, setA, titularRoom, setTitularRoom, baseRate, roomTotal, splitPay, isGroup }) {
+function RoomCards({ rooms, alloc, setA, titularRoom, titularName, roomTotal, splitPay, isGroup }) {
   const inputSt = {
     width: '100%',
     minWidth: 0,
@@ -2049,30 +2103,28 @@ function RoomCards({ rooms, alloc, setA, titularRoom, setTitularRoom, baseRate, 
                 <span style={{ fontSize: 16, fontWeight: 900, color: '#111' }}>{id}</span>
                 <span style={{ fontSize: 11, color: '#9CA3AF' }}>hasta {max}</span>
               </div>
-              {isGroup && (
-                <button
-                  type="button"
-                  onClick={() => setTitularRoom(id)}
+              {isGroup && isTit && (
+                <span
                   style={{
                     padding: '4px 10px',
                     borderRadius: 20,
-                    border: `1.5px solid ${isTit ? GROUP_COLORS.txt : '#E5E7EB'}`,
-                    background: isTit ? GROUP_COLORS.txt : '#fff',
-                    color: isTit ? '#fff' : '#6B7280',
-                    fontFamily: 'inherit',
+                    background: GROUP_COLORS.txt,
+                    color: '#fff',
                     fontWeight: 700,
                     fontSize: 11,
-                    cursor: 'pointer',
                     whiteSpace: 'nowrap',
+                    maxWidth: 200,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
                   }}
                 >
-                  {isTit ? '★ El titular duerme acá' : 'Titular acá'}
-                </button>
+                  ★ Titular{titularName ? ` · ${titularName}` : ''}
+                </span>
               )}
             </div>
-            {isGroup && !isTit && (
+            {isGroup && titularRoom && !isTit && (
               <div style={{ fontSize: 11, color: '#6B7280', marginTop: -4, marginBottom: 8 }}>
-                Contacto: queda con los datos del titular hasta que llegue (ahí le sacás la foto al documento).
+                Contacto: se carga al llegar (le sacás la foto al documento).
               </div>
             )}
 
