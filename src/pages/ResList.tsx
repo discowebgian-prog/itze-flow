@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Badge } from '../components/ui/Badge';
 import { Icon } from '../components/ui/Icon';
 import { TODAY, fmt, fmtD, addDays, parseD, currency, MONTHS, DAYS } from '../lib/dates';
@@ -15,12 +15,58 @@ export function ResList({ reservations, properties, onView, onAdd }) {
   const ribbonDates = Array.from({ length: 60 }, (_, i) => addDays(TODAY, i - 15));
 
   // Auto-scroll para centrar el día seleccionado
+  const centerOn = (dStr) => {
+    const el = document.getElementById(`date-${dStr}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  };
   useEffect(() => {
-    if (!q) {
-      const el = document.getElementById(`date-${selectedDate}`);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    }
+    if (!q) centerOn(selectedDate);
   }, [selectedDate, q]);
+
+  // Mes que se está viendo en el carrusel (el del día que queda en el centro)
+  const ribbonRef = useRef(null);
+  const [viewMonth, setViewMonth] = useState(() => parseD(selectedDate));
+  const [todayInView, setTodayInView] = useState(true);
+  const updateViewMonth = () => {
+    const box = ribbonRef.current;
+    if (!box) return;
+    const r = box.getBoundingClientRect();
+    const mid = r.left + r.width / 2;
+    const kids = Array.from(box.children);
+    // el día más cercano al centro de la tira
+    let hit = kids[0];
+    let best = Infinity;
+    kids.forEach((k) => {
+      const kr = k.getBoundingClientRect();
+      const dist = Math.abs(kr.left + kr.width / 2 - mid);
+      if (dist < best) { best = dist; hit = k; }
+    });
+    const tEl = document.getElementById(`date-${fmt(TODAY)}`);
+    if (tEl) {
+      const tr = tEl.getBoundingClientRect();
+      setTodayInView(tr.right > r.left && tr.left < r.right);
+    }
+    const id = hit?.id?.replace('date-', '');
+    if (!id) return;
+    const d = parseD(id);
+    setViewMonth((prev) =>
+      prev && prev.getMonth() === d.getMonth() && prev.getFullYear() === d.getFullYear() ? prev : d
+    );
+  };
+  useEffect(() => {
+    // al abrir y al cambiar de día (después de que termine de desplazarse)
+    const t = setTimeout(updateViewMonth, 400);
+    return () => clearTimeout(t);
+  }, [selectedDate, q]);
+  const monthLabel = (() => {
+    const m = viewMonth.toLocaleDateString('es-MX', { month: 'long' });
+    return m.charAt(0).toUpperCase() + m.slice(1) + ' ' + viewMonth.getFullYear();
+  })();
+  const todayStr = fmt(TODAY);
+  const goToday = () => {
+    setSelectedDate(todayStr);
+    centerOn(todayStr); // por si ya era hoy pero el carrusel quedó lejos
+  };
 
   // Si hay búsqueda, mostramos lista plana. Si no, mostramos la Agenda del Día.
   const isSearching = q.length > 0;
@@ -160,8 +206,33 @@ export function ResList({ reservations, properties, onView, onAdd }) {
         </div>
       ) : (
         <>
+         {/* MES QUE SE ESTÁ VIENDO + IR A HOY */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#111' }}>📅 {monthLabel}</div>
+            <button
+              type="button"
+              onClick={goToday}
+              style={{
+                padding: '6px 14px',
+                minHeight: 32,
+                borderRadius: 20,
+                border: '1.5px solid #3B82F6',
+                // Azul lleno cuando estás lejos de hoy; contorno cuando ya estás en hoy
+                background: selectedDate === todayStr && todayInView ? '#fff' : '#3B82F6',
+                color: selectedDate === todayStr && todayInView ? '#3B82F6' : '#fff',
+                fontWeight: 800,
+                fontSize: 12,
+                fontFamily: 'inherit',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Ir a hoy
+            </button>
+          </div>
+
          {/* CARRUSEL DE FECHAS ESTILO PULSE */}
-          <div style={{ display: 'flex', overflowX: 'auto', gap: 8, paddingBottom: 12, marginBottom: 16, borderBottom: '1px solid #E5E7EB', scrollBehavior: 'smooth' }} className="hide-scroll">
+          <div ref={ribbonRef} onScroll={updateViewMonth} style={{ display: 'flex', overflowX: 'auto', gap: 8, paddingBottom: 12, marginBottom: 16, borderBottom: '1px solid #E5E7EB', scrollBehavior: 'smooth' }} className="hide-scroll">
             {ribbonDates.map((d) => {
               const dStr = fmt(d);
               const isSelected = selectedDate === dStr;
