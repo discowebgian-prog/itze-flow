@@ -14,11 +14,11 @@ export function buildGuestDB(reservations) {
   reservations.forEach((r) => {
     // Ignoramos si por algún error la reserva no tiene nombre
     if (!r.guestName || r.guestName.trim() === '') return;
+    // Las canceladas no son una visita ni suman al total gastado
+    if (r.status === 'cancelada') return;
 
-    // MAGIA: Si tiene documento, agrupa por documento. Si no, agrupa por el nombre (en minúsculas para evitar duplicados).
-    const k = r.guestDoc
-      ? r.guestDoc.replace(/\s+/g, '').toLowerCase()
-      : r.guestName.trim().toLowerCase();
+    // Si tiene documento, agrupa por documento. Si no, agrupa por el nombre.
+    const k = guestKey(r);
 
     if (!db[k]) {
       db[k] = {
@@ -59,18 +59,22 @@ export function freqBadge(n) {
 }
 
 // ── NÚMERO DE ESTANCIA ────────────────────────────────────────────────────────
-// Misma persona: si las dos reservas tienen documento, se compara el documento.
-// Si a alguna le falta, se compara el nombre (sin tildes, mayúsculas ni espacios de más).
+// Misma persona (la misma regla que la pestaña Huéspedes): si la reserva tiene documento,
+// se junta con las que tienen ese documento. Si no tiene, se junta con las que tampoco
+// tienen documento y tienen el mismo nombre (sin tildes, mayúsculas ni espacios de más).
+// Una reserva con documento y otra sin documento nunca se juntan: puede haber varios
+// "Juan Pérez" que no son la misma persona.
 const normName = (s) =>
   String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
 const normDoc = (s) => String(s || '').replace(/\s+/g, '').toLowerCase();
+export const guestKey = (r) => {
+  const d = normDoc(r.guestDoc);
+  return d ? 'doc:' + d : 'nom:' + normName(r.guestName);
+};
 
 export function samePerson(a, b) {
-  const da = normDoc(a.guestDoc);
-  const db = normDoc(b.guestDoc);
-  if (da && db) return da === db;
-  const na = normName(a.guestName);
-  return na.length >= 3 && na === normName(b.guestName);
+  if (!normDoc(a.guestDoc) && normName(a.guestName).length < 3) return false;
+  return guestKey(a) === guestKey(b);
 }
 
 // Devuelve qué número de estancia es esta reserva para el huésped (sin contar canceladas),
