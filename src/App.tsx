@@ -331,6 +331,9 @@ export default function AppMejorada() {
       setDrawer(data);
     } else {
       setTab(newTab);
+      // Desde el inicio ("En casa", "Ocupación de hoy") el calendario se abre en hoy,
+      // igual que el botón "Hoy" del calendario
+      if (newTab === 'calendario') setCalOffset(-2);
       if (typeof data === 'string') {
         setHighlightStatus(data);
         setTimeout(() => setHighlightStatus(null), 2700);
