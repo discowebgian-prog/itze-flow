@@ -4,13 +4,24 @@ import { useState } from 'react';
 import { Icon } from '../components/ui/Icon';
 import { currency } from '../lib/dates';
 import { waLink, buildGuestDB, freqBadge } from '../lib/guests';
+import { DuplicateReview } from '../components/guests/DuplicateReview';
 
 // ── GUESTS PAGE (DIRECTORIO CRM) ──────────────────────────────────────────────
-export function GuestsPage({ reservations, properties, onView }) {
+export function GuestsPage({
+  reservations,
+  properties,
+  onView,
+  decisions = [],
+  dupPairs = [],
+  canReview = false,
+  onDecide,
+  onUndo,
+}) {
   const [q, setQ] = useState('');
-  
-  // Agrupamos el historial de los clientes
-  const gdb = buildGuestDB(reservations);
+  const [reviewing, setReviewing] = useState(false);
+
+  // Agrupamos el historial de los clientes (respetando las decisiones de duplicados)
+  const gdb = buildGuestDB(reservations, decisions);
   
   // Filtramos por búsqueda (nombre o documento)
   const allGuests = Object.values(gdb).filter(g => 
@@ -22,8 +33,59 @@ export function GuestsPage({ reservations, properties, onView }) {
   // Ordenamos por los que más dinero han dejado (los mejores clientes primero)
   allGuests.sort((a, b) => b.totalSpent - a.totalSpent);
 
+  if (reviewing && canReview) {
+    return (
+      <DuplicateReview
+        pairs={dupPairs}
+        reservations={reservations}
+        decisions={decisions}
+        onDecide={onDecide}
+        onUndo={onUndo}
+        onClose={() => setReviewing(false)}
+      />
+    );
+  }
+
   return (
     <div>
+      {/* ── AVISO DE POSIBLES DUPLICADOS (solo admin) ── */}
+      {canReview && dupPairs.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
+            background: '#FFFBEB',
+            border: '1.5px solid #FDE68A',
+            borderRadius: 10,
+            padding: '12px 14px',
+            marginBottom: 16,
+          }}
+        >
+          <div style={{ flex: '1 1 200px', fontSize: 13, color: '#92400E', fontWeight: 600 }}>
+            🔎 Encontramos {dupPairs.length}{' '}
+            {dupPairs.length === 1 ? 'posible huésped duplicado' : 'posibles huéspedes duplicados'}
+          </div>
+          <button
+            onClick={() => setReviewing(true)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 8,
+              border: 'none',
+              background: '#F59E0B',
+              color: '#fff',
+              fontWeight: 800,
+              fontSize: 12,
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+            }}
+          >
+            Revisar
+          </button>
+        </div>
+      )}
+
       <div style={{ marginBottom: 16 }}>
         <h2 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 800, color: '#111' }}>Directorio CRM</h2>
         <p style={{ margin: 0, fontSize: 12, color: '#6B7280' }}>Gestión de fidelización y valor de clientes</p>
@@ -41,7 +103,7 @@ export function GuestsPage({ reservations, properties, onView }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 12 }}>
         {allGuests.map((g, idx) => {
-          const freq = freqBadge(g.stays.length);
+          const freq = freqBadge(g.visits);
           const lastRes = reservations.find(r => r.id === g.stays[g.stays.length - 1]);
 
           return (
@@ -75,7 +137,7 @@ export function GuestsPage({ reservations, properties, onView }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', background: '#F8FAFC', borderRadius: 6, padding: '8px 10px', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
                   <span style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 700, textTransform: 'uppercase' }}>Visitas:</span>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: '#374151' }}>{g.stays.length}</span>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#374151' }}>{g.visits}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
                   <span style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 700, textTransform: 'uppercase' }}>Inversión:</span>
@@ -102,6 +164,17 @@ export function GuestsPage({ reservations, properties, onView }) {
           );
         })}
         
+        {canReview && dupPairs.length === 0 && decisions.length > 0 && (
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', marginTop: 8 }}>
+            <button
+              onClick={() => setReviewing(true)}
+              style={{ background: 'none', border: 'none', fontFamily: 'inherit', fontSize: 11, color: '#9CA3AF', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Ver decisiones de duplicados ({decisions.length})
+            </button>
+          </div>
+        )}
+
         {allGuests.length === 0 && (
           <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#D1D5DB', padding: 40, fontSize: 13 }}>
             No se encontraron clientes.

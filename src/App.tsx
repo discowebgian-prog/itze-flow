@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ResDrawer } from './components/reservations/ResDrawer';
 import { ResForm } from './components/reservations/ResForm';
 import { Icon } from './components/ui/Icon';
@@ -9,6 +9,7 @@ import { useW } from './hooks/useW';
 import { PROPS, INIT_RES, COUNTRIES } from './lib/constants';
 import { TODAY, fmt, diffDays } from './lib/dates';
 import { supabase } from './lib/supabase';
+import { findDuplicates } from './lib/duplicates';
 import { Dashboard } from './pages/Dashboard';
 import { FinancePage } from './pages/FinancePage';
 import { GuestsPage } from './pages/GuestsPage';
@@ -23,6 +24,9 @@ import appLayoutCss from './styles/app-layout.css?raw';
 export default function AppMejorada() {
   const [user, setUser] = useState(null);
   const [res, setRes] = useState(INIT_RES);
+  // Decisiones de "misma persona / son distintas" sobre huéspedes (tabla huespedes_decisiones)
+  const [guestDecisions, setGuestDecisions] = useState([]);
+  const [decisionsOk, setDecisionsOk] = useState(false);
   const [tab, setTab] = useState('dashboard');
   const [highlightStatus, setHighlightStatus] = useState(null);
   const winW = useW();
@@ -111,7 +115,20 @@ export default function AppMejorada() {
       setRes(reservasCargadas);
     };
 
+    const fetchDecisiones = async () => {
+      const { data, error } = await supabase.from('huespedes_decisiones').select('*');
+      if (error) {
+        // Si la tabla todavía no existe, la revisión de duplicados queda apagada
+        console.error('Error al cargar decisiones de huéspedes:', error);
+        setDecisionsOk(false);
+        return;
+      }
+      setGuestDecisions(data || []);
+      setDecisionsOk(true);
+    };
+
     fetchReservas();
+    fetchDecisiones();
 
     const canalReservas = supabase
       .channel('cambios-en-vivo')
@@ -124,11 +141,17 @@ export default function AppMejorada() {
           }, 500);
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'huespedes_decisiones' },
+        () => fetchDecisiones()
+      )
       .subscribe();
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         fetchReservas();
+        fetchDecisiones();
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
@@ -205,8 +228,62 @@ export default function AppMejorada() {
     setUser(null);
   };
 
+  // Posibles huéspedes duplicados (se recalcula solo cuando cambian reservas o decisiones)
+  const dupPairs = useMemo(
+    () => (decisionsOk ? findDuplicates(res.filter((r) => !r.deleted), guestDecisions) : []),
+    [res, guestDecisions, decisionsOk]
+  );
+
   // 1. Verificación de Login
   if (!user) return <Login onLogin={setUser} />;
+
+  const isAdmin = user.role === 'admin';
+  // Numerito rojo de "posibles duplicados" en el menú
+  const dupDotStyle = {
+    position: 'absolute',
+    top: -6,
+    right: -9,
+    minWidth: 16,
+    height: 16,
+    padding: '0 4px',
+    borderRadius: 8,
+    background: '#EF4444',
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 800,
+    lineHeight: '16px',
+    textAlign: 'center',
+    boxSizing: 'border-box',
+  };
+  const dupCount = isAdmin ? dupPairs.length : 0;
+
+  // Guarda la decisión de un admin sobre un par de huéspedes
+  const decideGuests = async (pair, decision) => {
+    const [clave_a, clave_b] = [pair.a.key, pair.b.key].sort();
+    const { error } = await supabase
+      .from('huespedes_decisiones')
+      .upsert([{ clave_a, clave_b, decision, decidido_por: user.name || '' }], {
+        onConflict: 'clave_a,clave_b',
+      });
+    if (error) {
+      console.error('Error al guardar decisión:', error);
+      alert('No se pudo guardar la decisión. Probá de nuevo.');
+      return false;
+    }
+    const { data } = await supabase.from('huespedes_decisiones').select('*');
+    if (data) setGuestDecisions(data);
+    return true;
+  };
+
+  const undoGuestDecision = async (id) => {
+    const { error } = await supabase.from('huespedes_decisiones').delete().eq('id', id);
+    if (error) {
+      console.error('Error al deshacer decisión:', error);
+      alert('No se pudo deshacer. Probá de nuevo.');
+      return;
+    }
+    setGuestDecisions((ds) => ds.filter((d) => d.id !== id));
+  };
 
   // 2. Definición de permisos y datos
   const visProps =
@@ -660,15 +737,26 @@ const toggleBlacklist = async (id, currentStatus) => {
                   justifyContent: isTablet ? 'center' : 'flex-start',
                 }}
               >
-                <span style={{ display: 'flex', flexShrink: 0 }}>
+                <span style={{ display: 'flex', flexShrink: 0, position: 'relative' }}>
                   <Icon name={t.icon} size={20} />
+                  {t.id === 'huespedes' && dupCount > 0 && isTablet && (
+                    <span style={dupDotStyle}>{dupCount}</span>
+                  )}
                 </span>
                 <span
                   className="sl"
-                  style={{ display: isTablet ? 'none' : 'inline' }}
+                  style={{ display: isTablet ? 'none' : 'inline', flex: 1 }}
                 >
                   {t.label}
                 </span>
+                {t.id === 'huespedes' && dupCount > 0 && !isTablet && (
+                  <span
+                    title="Posibles huéspedes duplicados para revisar"
+                    style={{ ...dupDotStyle, position: 'static' }}
+                  >
+                    {dupCount}
+                  </span>
+                )}
               </button>
             ))}
             <div
@@ -787,6 +875,11 @@ const toggleBlacklist = async (id, currentStatus) => {
               reservations={visRes}
               properties={visProps}
               onView={(r) => setDrawer(r)}
+              decisions={guestDecisions}
+              dupPairs={isAdmin ? dupPairs : []}
+              canReview={isAdmin && decisionsOk}
+              onDecide={decideGuests}
+              onUndo={undoGuestDecision}
             />
           )}
           {tab === 'finanzas' && (
@@ -841,9 +934,13 @@ const toggleBlacklist = async (id, currentStatus) => {
               style={{
                 display: 'flex',
                 color: tab === t.id ? '#2563EB' : '#9CA3AF',
+                position: 'relative',
               }}
             >
               <Icon name={t.icon} size={22} />
+              {t.id === 'huespedes' && dupCount > 0 && (
+                <span style={dupDotStyle}>{dupCount}</span>
+              )}
             </span>
             <span
               style={{
@@ -884,6 +981,7 @@ const toggleBlacklist = async (id, currentStatus) => {
           onToggleBlacklist={toggleBlacklist}
           properties={visProps}
           allRes={res}
+          guestDecisions={guestDecisions}
           isMobile={isMobile}
           onCheckIn={handleCI}
           onCheckOut={handleCO}
@@ -985,6 +1083,7 @@ const toggleBlacklist = async (id, currentStatus) => {
             prefillProp={prefill.pid}
             prefillDate={prefill.date}
             allRes={res}
+            guestDecisions={guestDecisions}
           />
         </Modal>
       )}
@@ -1000,6 +1099,7 @@ const toggleBlacklist = async (id, currentStatus) => {
             onSave={saveRes}
             onClose={() => setModal(null)}
             allRes={res}
+            guestDecisions={guestDecisions}
           />
         </Modal>
       )}
