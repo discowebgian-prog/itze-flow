@@ -6,6 +6,7 @@ import { Icon } from '../components/ui/Icon';
 import { TODAY, fmt, fmtD, addDays, parseD, currency, MONTHS, DAYS } from '../lib/dates';
 import { waLink } from '../lib/guests';
 import { LateBadge } from '../components/ui/LateBadge';
+import { GroupBadge } from '../components/ui/GroupBadge';
 
 // ── RESERVATIONS LIST (AGENDA DIARIA ESTILO PULSE) ────────────────────────────
 export function ResList({ reservations, properties, onView, onAdd }) {
@@ -120,6 +121,7 @@ export function ResList({ reservations, properties, onView, onAdd }) {
             )}
 
             <LateBadge r={r} />
+            <GroupBadge r={r} />
 
             {r.guestPhone && (
               <a

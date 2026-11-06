@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ROOMS, srcShort, RS, PS, BLOCK_COLORS, ALERTS, getAlerts } from '../lib/constants';
 import { TODAY, fmt, fmtD, addDays, diffDays, parseD, currency, MONTHS, DAYS } from '../lib/dates';
 import { findConflicts, lateHour } from '../lib/reservations';
+import { groupOf } from '../lib/groups';
 import { TimelineMobile } from './TimelineMobile';
 import timelineCss from '../styles/timeline.css?raw';
 
@@ -821,6 +822,7 @@ export function Timeline({
                             clipPath={`url(#${cid})`}
                           >
                             {r.source === 'Booking' ? '🔵 ' : ''}
+                            {r.grupoId ? '🔗 ' : ''}
                             {r.guestName}
                             {r.companions?.length > 0
                               ? ` +${r.companions.length}`
@@ -874,6 +876,7 @@ export function Timeline({
                             }}
                           >
                             {r.source === 'Booking' ? '🔵 ' : ''}
+                            {r.grupoId ? '🔗 ' : ''}
                             {r.guestName} ({srcShort(r.source)})
                           </span>
                           <span
@@ -1033,6 +1036,14 @@ export function Timeline({
             {fmtD(tooltip.r.checkIn)} → {fmtD(tooltip.r.checkOut)} ·{' '}
             {diffDays(tooltip.r.checkIn, tooltip.r.checkOut)}n
           </div>
+          {tooltip.r.grupoId && (() => {
+            const g = groupOf(reservations, tooltip.r);
+            return g.length > 1 ? (
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#5EEAD4', marginBottom: 8 }}>
+                🔗 Grupo de {g.length}: {g.map((m) => m.room).filter(Boolean).join(', ')}
+              </div>
+            ) : null;
+          })()}
           {lateHour(tooltip.r) && (
             <div style={{ fontSize: 11, fontWeight: 800, color: '#A5B4FC', marginBottom: 8 }}>
               🕐 Late check-out {lateHour(tooltip.r)}

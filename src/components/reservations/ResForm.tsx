@@ -10,11 +10,24 @@ import { RangeCalendar } from '../ui/RangeCalendar';
 import { Sel } from '../ui/Sel';
 import { ROOMS, SOURCES, RS, COUNTRIES, findCountry } from '../../lib/constants';
 import { TODAY, fmt, fmtD, addDays, diffDays, currency } from '../../lib/dates';
-import { findConflicts } from '../../lib/reservations';
+import { findConflicts, calcStayTotal, lateCostOf } from '../../lib/reservations';
 import { stayInfo, stayBadge, suggestGuests } from '../../lib/guests';
+import {
+  groupOf,
+  groupTitular,
+  hasOwnContact,
+  changedFields,
+  sameName,
+  splitPaid,
+  newGroupId,
+  PERSON_FIELDS,
+  SHARED_FIELDS,
+  SHARED_LABELS,
+} from '../../lib/groups';
 import { DocLink } from '../ui/DocLink';
 import { LatePicker } from './LatePicker';
 import { LATE_COLORS } from '../ui/LateBadge';
+import { GROUP_COLORS } from '../ui/GroupBadge';
 
 export function ResForm({
   initial,
@@ -25,6 +38,7 @@ export function ResForm({
   prefillDate,
   allRes = [],
   guestDecisions = [],
+  focusDoc = false,
 }) {
   const blank = {
     propertyId: prefillProp || visibleProps[0]?.id || '',
@@ -91,32 +105,123 @@ export function ResForm({
     };
   });
   const sv = (k, v) => setF((x) => ({ ...x, [k]: v }));
+
+  // ── GRUPO AL EDITAR: esta habitación es parte de un grupo ──
+  const members = useMemo(() => (initial?.grupoId ? groupOf(allRes, initial) : []), [allRes, initial?.grupoId]);
+  const inGroup = !!initial?.id && members.length > 1;
+  const titular = inGroup ? groupTitular(members) : null;
+  const isTitRoom = inGroup && titular?.id === initial.id;
+  // Sigue con los datos del titular (todavía no se cargó el contacto de esta habitación)
+  const wasPlaceholder = inGroup && !isTitRoom && !hasOwnContact(initial, titular);
+
   const applyScan = (scan) => {
     const name = (scan.fullName || [scan.firstName, scan.lastName].filter(Boolean).join(' ')).trim();
     const country = findCountry(scan.nationality);
-    setF((x) => ({
-      ...x,
-      guestName: name || x.guestName,
-      guestDoc: scan.docNumber || x.guestDoc,
-      guestDocType: ['INE', 'Pasaporte', 'Otro'].includes(scan.docType) ? scan.docType : x.guestDocType,
-      guestNationality: country ? country.code : x.guestNationality,
-      guestPhonePrefix: country && !x.guestPhone ? country.prefix : x.guestPhonePrefix,
-    }));
+    setF((x) => {
+      const next = { ...x };
+      // En una habitación del grupo, el documento escaneado es el contacto de ESTA habitación
+      if (inGroup && !isTitRoom && name) {
+        // Si tenía los datos del titular, el teléfono y el email eran del titular: se vacían
+        if (wasPlaceholder && !sameName(name, initial.guestName)) {
+          next.guestPhone = '';
+          next.guestEmail = '';
+        }
+        // Si estaba anotado como acompañante, se libera ese lugar para no contarlo dos veces
+        next.companions = (x.companions || []).map((c) => (sameName(c.name, name) ? { name: '', phone: '' } : c));
+      }
+      next.guestName = name || x.guestName;
+      next.guestDoc = scan.docNumber || x.guestDoc;
+      next.guestDocType = ['INE', 'Pasaporte', 'Otro'].includes(scan.docType) ? scan.docType : x.guestDocType;
+      next.guestNationality = country ? country.code : x.guestNationality;
+      next.guestPhonePrefix = country && !next.guestPhone ? country.prefix : x.guestPhonePrefix;
+      return next;
+    });
   };
+
+  // Atajo "Cargar contacto de esta habitación": abre el formulario en el documento
+  const docRef = useRef(null);
+  useEffect(() => {
+    if (focusDoc && docRef.current) {
+      setTimeout(() => docRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+    }
+  }, [focusDoc]);
   const nights = f.checkIn && f.checkOut ? diffDays(f.checkIn, f.checkOut) : 0;
   const isHostel = f.propertyId === 'hostel';
   const selRoom = isHostel ? ROOMS.find((r) => r.id === f.room) : null;
   const maxG = selRoom ? selRoom.maxGuests : isHostel ? 1 : 6;
   const addlCount = Math.max(0, f.totalGuests - 2);
+
+  // ── VARIAS HABITACIONES (solo al crear una reserva del hostel) ──
+  // Titular, fechas, estado, canal y pago se cargan una vez; cada habitación tiene su tarjeta
+  // con huéspedes, acompañantes y tarifa. Al guardar se crea una reserva por habitación.
+  const [multi, setMulti] = useState(false);
+  const [selRooms, setSelRooms] = useState([]);
+  const [alloc, setAlloc] = useState({}); // habitación → { guests, companions, rate, extra, paid }
+  const [titularRoom, setTitularRoom] = useState('');
+  const [splitPay, setSplitPay] = useState(false);
+  const multiOn = !initial?.id && isHostel && multi;
+  const isGroupNew = multiOn && selRooms.length > 1;
+  const blankAlloc = () => ({ guests: 1, companions: [], rate: '', extra: '', paid: '' });
+  const setA = (id, changes) => setAlloc((a) => ({ ...a, [id]: { ...(a[id] || blankAlloc()), ...changes } }));
+  const toggleMulti = () => {
+    if (!multi) {
+      // Pasa la habitación ya elegida (con sus huéspedes) a la primera tarjeta
+      if (f.room) {
+        setSelRooms([f.room]);
+        setAlloc({ [f.room]: { ...blankAlloc(), guests: f.totalGuests || 1, companions: f.companions || [] } });
+        setTitularRoom(f.room);
+      }
+      setMulti(true);
+    } else {
+      // Vuelve a una sola habitación: se queda la primera elegida
+      const first = selRooms[0] || '';
+      const a = alloc[first] || blankAlloc();
+      setF((x) => ({
+        ...x,
+        room: first,
+        totalGuests: first ? a.guests : 1,
+        companions: first ? a.companions : [],
+        pricing: {
+          ...x.pricing,
+          additionals: Array.from({ length: Math.max(0, (first ? a.guests : 1) - 2) }, () => ({ ratePerNight: 0, bonificada: false })),
+        },
+      }));
+      setSelRooms([]);
+      setSplitPay(false);
+      setMulti(false);
+    }
+  };
+  const toggleRoom = (id) => {
+    const next = selRooms.includes(id) ? selRooms.filter((x) => x !== id) : [...selRooms, id];
+    setSelRooms(next);
+    if (!alloc[id]) setA(id, {});
+    if (!next.includes(titularRoom)) setTitularRoom(next[0] || '');
+  };
+  // Precio de cada habitación: su tarifa (o la general) y el extra por persona desde la 3ª
+  const roomPricing = (id) => {
+    const a = alloc[id] || blankAlloc();
+    const rate = a.rate !== '' && a.rate !== null && a.rate !== undefined ? a.rate : f.pricing.ratePerNight;
+    return {
+      ...f.pricing,
+      ratePerNight: rate,
+      additionals: Array.from({ length: Math.max(0, (a.guests || 1) - 2) }, () => ({
+        ratePerNight: Number(a.extra) || 0,
+        bonificada: false,
+      })),
+    };
+  };
+  const roomLate = f.lateCheckout ? Number(f.lateCost) || 0 : 0;
+  const roomTotal = (id) => calcStayTotal(roomPricing(id), nights, roomLate);
+  const groupTotal = multiOn ? selRooms.reduce((s, id) => s + roomTotal(id), 0) : 0;
+  const groupGuests = multiOn ? selRooms.reduce((s, id) => s + ((alloc[id] || {}).guests || 1), 0) : 0;
+  const groupPaidSplit = multiOn && splitPay ? selRooms.reduce((s, id) => s + (Number((alloc[id] || {}).paid) || 0), 0) : 0;
+
   // En el hostel, sin habitación elegida no hay con qué comparar: no se avisa conflicto
-  const conflicts = isHostel && !f.room ? [] : findConflicts(
-    allRes,
-    f.propertyId,
-    f.room || '',
-    f.checkIn,
-    f.checkOut,
-    initial?.id
-  );
+  const conflicts = multiOn
+    ? selRooms.flatMap((id) => findConflicts(allRes, f.propertyId, id, f.checkIn, f.checkOut, null))
+    : isHostel && !f.room
+    ? []
+    : findConflicts(allRes, f.propertyId, f.room || '', f.checkIn, f.checkOut, initial?.id);
   // Cómo estaba el pago antes de tildar "VCC cobrada", para poder destildar
   const vccPrev = useRef(null);
   const [confModal, setConfModal] = useState(null);
@@ -197,26 +302,14 @@ export function ResForm({
     sv('pricing', { ...f.pricing, additionals: nextA });
   };
 
-  const calcTotal = () => {
-    if (!nights) return 0;
-    let b = Number(f.pricing.ratePerNight) * nights;
-    if (f.pricing.discountType === 'porcentaje')
-      b -= b * (Number(f.pricing.discountValue) / 100);
-    else if (f.pricing.discountType === 'monto_fijo')
-      b -= Number(f.pricing.discountValue);
-    else if (f.pricing.discountType === 'noche_gratis')
-      b -= Number(f.pricing.ratePerNight) * Number(f.pricing.discountValue);
-    const addT = (f.pricing.additionals || []).reduce(
-      (s, a) => s + (a.bonificada ? 0 : (Number(a.ratePerNight) || 0) * nights),
-      0
-    );
-    // El late check-out se suma al total
-    const lateT = f.lateCheckout ? Number(f.lateCost) || 0 : 0;
-    return Math.max(0, b + addT + lateT);
-  };
+  // El late check-out se suma al total
+  const calcTotal = () => calcStayTotal(f.pricing, nights, f.lateCheckout ? Number(f.lateCost) || 0 : 0);
 
   useEffect(() => {
-    if (f.pricing.ratePerNight !== '') {
+    // Con varias habitaciones, el total es la suma de las tarjetas
+    if (multiOn) {
+      if (f.totalAmount !== groupTotal) sv('totalAmount', groupTotal);
+    } else if (f.pricing.ratePerNight !== '') {
       const t = calcTotal();
       if (f.totalAmount !== t) {
         sv('totalAmount', t);
@@ -230,6 +323,8 @@ export function ResForm({
     nights,
     f.lateCheckout,
     f.lateCost,
+    multiOn,
+    groupTotal,
   ]);
 
   // Late check-out: el apartado se abre con el botón; sin hora elegida no se guarda
@@ -243,46 +338,166 @@ export function ResForm({
     }
   };
 
+  // Arma una reserva por habitación (la del titular primero). Con una sola, es una reserva común.
+  const buildRooms = () => {
+    const ordered = [titularRoom, ...selRooms.filter((x) => x !== titularRoom)].filter(Boolean);
+    const totals = ordered.map(roomTotal);
+    const paids = splitPay
+      ? ordered.map((id) => Number((alloc[id] || {}).paid) || 0)
+      : splitPaid(f.paid, totals);
+    const gid = ordered.length > 1 ? newGroupId() : null;
+    return ordered.map((id, i) => {
+      const a = alloc[id] || blankAlloc();
+      return {
+        ...f,
+        room: id,
+        totalGuests: a.guests,
+        companions: a.companions,
+        pricing: roomPricing(id),
+        totalAmount: totals[i],
+        paid: paids[i],
+        grupoId: gid,
+        grupoTitular: !!gid && i === 0,
+      };
+    });
+  };
+
+  // ¿Aplicar a todo el grupo o solo a esta habitación? (al editar una del grupo)
+  const [scopeAsk, setScopeAsk] = useState(null);
+
+  // Guarda (pasando antes por el aviso de conflicto si hace falta)
+  const proceed = (payload, opts) => {
+    const go = () => {
+      setIsSaving(true);
+      onSave(payload, opts);
+    };
+    if (conflicts.length > 0) {
+      setConfModal(() => () => {
+        go();
+        setConfModal(null);
+      });
+    } else go();
+  };
+
   const handleSave = () => {
-    if (isSaving) return; 
+    if (isSaving) return;
 
     // --- 1. VALIDACIÓN DE CAMPOS OBLIGATORIOS ---
     if (!f.guestName || f.guestName.trim() === '') {
       setValErr('El Nombre del huésped es obligatorio.');
       return;
     }
-    if (f.pricing.ratePerNight === '' || f.pricing.ratePerNight === null) {
-      setValErr('La Tarifa base/noche es obligatoria.');
-      return;
-    }
-    if (f.paid === '' || f.paid === null) {
-      setValErr('El Monto pagado es obligatorio (podés poner 0).');
-      return;
+    if (multiOn) {
+      if (!selRooms.length) {
+        setValErr('Elegí al menos una habitación.');
+        return;
+      }
+      const sinTarifa = selRooms.filter((id) => {
+        const r = roomPricing(id).ratePerNight;
+        return r === '' || r === null || r === undefined;
+      });
+      if (sinTarifa.length) {
+        setValErr(`Falta la tarifa/noche de ${sinTarifa.join(', ')} (o cargá la tarifa base para todas).`);
+        return;
+      }
+      if (!splitPay && (f.paid === '' || f.paid === null)) {
+        setValErr('El Pagado del grupo es obligatorio (podés poner 0).');
+        return;
+      }
+    } else {
+      if (f.pricing.ratePerNight === '' || f.pricing.ratePerNight === null) {
+        setValErr('La Tarifa base/noche es obligatoria.');
+        return;
+      }
+      if (f.paid === '' || f.paid === null) {
+        setValErr('El Monto pagado es obligatorio (podés poner 0).');
+        return;
+      }
     }
     if (lateOpen && !f.lateCheckout) {
       setValErr('Elegí la hora del late check-out (o desactivalo).');
       return;
     }
-    
+
     setValErr(''); // Si todo está bien, limpiamos el error
     // --------------------------------------------
 
-    if (conflicts.length > 0) {
-      setConfModal(() => () => {
-        setIsSaving(true);
-        onSave(f);
-        setConfModal(null);
-      });
-    } else {
-      setIsSaving(true);
-      onSave(f);
+    if (multiOn) {
+      const rows = buildRooms();
+      proceed(rows.length === 1 ? rows[0] : rows);
+      return;
     }
+
+    if (inGroup) {
+      // Lo que es del grupo pregunta; los datos de la persona de esta habitación se guardan solo acá.
+      // Si es la habitación del titular y se corrigieron sus datos, se ofrece pasarlos a las
+      // habitaciones que todavía tienen sus datos.
+      const shared = changedFields(f, initial, SHARED_FIELDS);
+      const person = isTitRoom ? changedFields(f, initial, PERSON_FIELDS) : [];
+      const followers = members.filter((m) => m.id !== initial.id && !hasOwnContact(m, titular));
+      if (shared.length || (person.length && followers.length)) {
+        setScopeAsk({ shared, person: followers.length ? person : [], followers });
+        return;
+      }
+    }
+    proceed(f);
   };
 
-  const saldoPendiente = Math.max(0, Number(f.totalAmount || 0) - Number(f.paid || 0));
+  // "Todo el grupo": copia los cambios a las otras habitaciones
+  const applyToGroup = () => {
+    const { shared, person, followers } = scopeAsk;
+    const datesChanged = shared.includes('checkIn') || shared.includes('checkOut');
+    const also = members
+      .filter((m) => m.id !== initial.id)
+      .map((m) => {
+        const n = { ...m };
+        shared.forEach((k) => (n[k] = f[k]));
+        if (followers.some((x) => x.id === m.id)) person.forEach((k) => (n[k] = f[k]));
+        // Nuevas fechas: se recalcula el total de cada habitación con su propia tarifa
+        if (datesChanged) n.totalAmount = calcStayTotal(m.pricing, diffDays(n.checkIn, n.checkOut), lateCostOf(m));
+        return n;
+      })
+      .filter((n) => {
+        const m = members.find((x) => x.id === n.id);
+        return changedFields(n, m, [...SHARED_FIELDS, ...PERSON_FIELDS, 'totalAmount']).length > 0;
+      });
+    setScopeAsk(null);
+    proceed(f, also.length ? { also } : undefined);
+  };
+
+  const paidShown = multiOn && splitPay ? groupPaidSplit : f.paid;
+  const saldoPendiente = Math.max(0, Number(f.totalAmount || 0) - Number(paidShown || 0));
 
   return (
     <div>
+      {inGroup && (
+        <div
+          style={{
+            marginBottom: 14,
+            padding: '10px 12px',
+            borderRadius: 10,
+            background: GROUP_COLORS.bg,
+            border: `1.5px solid ${GROUP_COLORS.border}`,
+          }}
+        >
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: GROUP_COLORS.txt }}>
+            🔗 Grupo de {titular?.guestName} · {members.map((m) => m.room).filter(Boolean).join(' · ')}
+          </div>
+          <div style={{ fontSize: 11.5, color: '#4B5563', marginTop: 4, lineHeight: 1.4 }}>
+            {isTitRoom
+              ? `Estás editando ${initial.room}, la habitación del titular.`
+              : `Estás editando ${initial.room}. Los datos de la persona se guardan solo en esta habitación.`}
+            {wasPlaceholder && (
+              <>
+                {' '}
+                <b>Todavía tiene los datos del titular:</b> sacá la foto del documento de quien se queda acá
+                y se reemplazan solo en {initial.room}.
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <label
         style={{
           display: 'block',
@@ -318,11 +533,11 @@ export function ResForm({
               letterSpacing: 0.4,
             }}
           >
-            Habitación
+            {multiOn ? 'Habitaciones (elegí varias)' : 'Habitación'}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
             {ROOMS.map((r) => {
-              const on = f.room === r.id;
+              const on = multiOn ? selRooms.includes(r.id) : f.room === r.id;
               // Ocupada en estas fechas (se puede elegir igual: aparece el aviso de conflicto)
               const busy =
                 findConflicts(allRes, f.propertyId, r.id, f.checkIn, f.checkOut, initial?.id).length > 0;
@@ -332,6 +547,7 @@ export function ResForm({
                   key={r.id}
                   type="button"
                   onClick={() => {
+                    if (multiOn) return toggleRoom(r.id);
                     if (on) return;
                     sv('room', r.id);
                     sv('companions', []);
@@ -371,6 +587,30 @@ export function ResForm({
               );
             })}
           </div>
+          {!initial?.id && (
+            <button
+              type="button"
+              onClick={toggleMulti}
+              style={{
+                marginTop: 8,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                minHeight: 32,
+                padding: '5px 12px',
+                borderRadius: 20,
+                border: `1.5px ${multi ? 'solid' : 'dashed'} ${multi ? GROUP_COLORS.txt : GROUP_COLORS.border}`,
+                background: multi ? GROUP_COLORS.bg : '#fff',
+                color: GROUP_COLORS.txt,
+                fontFamily: 'inherit',
+                fontWeight: multi ? 800 : 700,
+                fontSize: 12,
+                cursor: 'pointer',
+              }}
+            >
+              {multi ? '✓ 🔗 Varias habitaciones' : '🔗 Reservar varias habitaciones'}
+            </button>
+          )}
         </div>
       )}
 
@@ -588,6 +828,7 @@ export function ResForm({
         </div>
       )}
 
+      <div ref={docRef} />
       <CountrySelector
         value={f.guestNationality}
         onChange={(c) => {
@@ -675,7 +916,21 @@ export function ResForm({
         onChange={(e) => sv('guestEmail', e.target.value)}
       />
 
-      {(!isHostel || selRoom) && maxG > 1 && (
+      {multiOn && selRooms.length > 0 && (
+        <RoomCards
+          rooms={[titularRoom, ...selRooms.filter((x) => x !== titularRoom)].filter(Boolean)}
+          alloc={alloc}
+          setA={setA}
+          titularRoom={titularRoom}
+          setTitularRoom={setTitularRoom}
+          baseRate={f.pricing.ratePerNight}
+          roomTotal={roomTotal}
+          splitPay={splitPay}
+          isGroup={isGroupNew}
+        />
+      )}
+
+      {!multiOn && (!isHostel || selRoom) && maxG > 1 && (
         <div style={{ marginBottom: 14 }}>
           <label
             style={{
@@ -716,7 +971,7 @@ export function ResForm({
         </div>
       )}
 
-      {f.companions.length > 0 && (
+      {!multiOn && f.companions.length > 0 && (
         <div style={{ marginBottom: 14 }}>
           <label
             style={{
@@ -853,7 +1108,9 @@ export function ResForm({
             onCost={(c) => sv('lateCost', c)}
           />
           <div style={{ fontSize: 11, color: '#6B7280', marginTop: 8 }}>
-            El costo se suma solo al Total a cobrar.
+            {isGroupNew
+              ? 'Se aplica a todas las habitaciones; el costo es por habitación y se suma a cada una.'
+              : 'El costo se suma solo al Total a cobrar.'}
           </div>
         </div>
       )}
@@ -885,7 +1142,7 @@ export function ResForm({
         
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <Inp
-            label="Tarifa base/noche $"
+            label={isGroupNew ? 'Tarifa base/noche $ (todas)' : 'Tarifa base/noche $'}
             type="number"
             value={f.pricing.ratePerNight}
             onChange={(e) =>
@@ -926,6 +1183,8 @@ export function ResForm({
                   ? '%'
                   : f.pricing.discountType === 'noche_gratis'
                   ? 'Noches'
+                  : isGroupNew
+                  ? '$ por hab.'
                   : '$'
               }
               type="number"
@@ -1035,12 +1294,24 @@ export function ResForm({
           const totalNum = Number(f.totalAmount) || 0;
           const half = Math.round(totalNum / 2);
           const paidNum = f.paid === '' ? null : Number(f.paid);
+          if (isGroupNew && splitPay) {
+            // Cobro por separado: cada habitación tiene su Pagado en su tarjeta
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <ReadBox label="Total del grupo" value={currency(totalNum)} />
+                <ReadBox label="Pagado (suma)" value={currency(groupPaidSplit)} />
+              </div>
+            );
+          }
           const quick = [
             { key: 'half', label: '50%', value: f.totalAmount === '' ? '' : half, active: totalNum > 0 && paidNum === half },
             { key: 'full', label: 'Total', value: f.totalAmount, active: totalNum > 0 && paidNum === totalNum },
           ];
           return (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 10, alignItems: 'end' }}>
+              {multiOn ? (
+                <ReadBox label={isGroupNew ? 'Total del grupo' : 'Total a cobrar'} value={currency(totalNum)} />
+              ) : (
               <Inp
                 label="Total a cobrar $"
                 type="number"
@@ -1049,8 +1320,9 @@ export function ResForm({
                   sv('totalAmount', e.target.value === '' ? '' : Number(e.target.value))
                 }
               />
+              )}
               <Inp
-                label="Pagado $"
+                label={isGroupNew ? 'Pagado grupo $' : 'Pagado $'}
                 type="number"
                 value={f.paid}
                 onChange={(e) => sv('paid', e.target.value === '' ? '' : Number(e.target.value))}
@@ -1096,6 +1368,43 @@ export function ResForm({
             </div>
           );
         })()}
+
+        {isGroupNew && (
+          <div style={{ margin: '-2px 0 10px' }}>
+            <button
+              type="button"
+              onClick={() => {
+                // Al separar, arranca con lo que tocaría a cada habitación del pago del grupo
+                if (!splitPay) {
+                  const ordered = [titularRoom, ...selRooms.filter((x) => x !== titularRoom)];
+                  const parts = splitPaid(f.paid, ordered.map(roomTotal));
+                  ordered.forEach((id, i) => setA(id, { paid: f.paid === '' ? '' : parts[i] }));
+                } else {
+                  sv('paid', groupPaidSplit);
+                }
+                setSplitPay(!splitPay);
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '2px 0',
+                fontFamily: 'inherit',
+                fontSize: 12,
+                fontWeight: 700,
+                color: GROUP_COLORS.txt,
+                cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
+            >
+              {splitPay ? 'Cobrar junto (un solo pago del grupo)' : 'Cobrar por separado (cada habitación)'}
+            </button>
+            {!splitPay && (
+              <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>
+                Lo pagado se reparte entre las habitaciones según lo que cuesta cada una.
+              </div>
+            )}
+          </div>
+        )}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 4 }}>
           <div style={{ flex: 1, marginRight: 14 }}>
@@ -1196,6 +1505,7 @@ export function ResForm({
           } else {
             vccPrev.current = { paid: f.paid, paymentMethod: f.paymentMethod };
             setF((x) => ({ ...x, paid: x.totalAmount, paymentMethod: 'vcc' }));
+            if (multiOn && splitPay) selRooms.forEach((id) => setA(id, { paid: roomTotal(id) }));
           }
         };
         return (
@@ -1312,6 +1622,24 @@ export function ResForm({
           </button>
         </div>
 
+        {isGroupNew && (
+          <div
+            style={{
+              marginBottom: 12,
+              padding: '10px 12px',
+              borderRadius: 10,
+              background: GROUP_COLORS.bg,
+              border: `1.5px solid ${GROUP_COLORS.border}`,
+              fontSize: 13,
+              fontWeight: 800,
+              color: GROUP_COLORS.txt,
+              textAlign: 'center',
+            }}
+          >
+            🔗 {selRooms.length} habitaciones · {groupGuests} huéspedes · Total del grupo {currency(groupTotal)}
+          </div>
+        )}
+
         {/* ALERTA DE ERROR SI FALTAN CAMPOS OBLIGATORIOS */}
         {valErr && (
           <div
@@ -1375,12 +1703,106 @@ export function ResForm({
           ) : (
             <>
               {conflicts.length > 0 ? <Icon name="warning" size={18} /> : null}
-              Guardar
+              {isGroupNew ? `Guardar ${selRooms.length} habitaciones` : 'Guardar'}
               {conflicts.length > 0 ? ` (${conflicts.length} conflicto)` : ''}
             </>
           )}
         </button>
       </div>
+
+      {scopeAsk && (() => {
+        const others = members.filter((m) => m.id !== initial.id);
+        const labels = [...new Set(scopeAsk.shared.map((k) => SHARED_LABELS[k]))];
+        const datesChanged = scopeAsk.shared.includes('checkIn') || scopeAsk.shared.includes('checkOut');
+        // Si las fechas pasan a todo el grupo, ¿alguna otra habitación queda empalmada?
+        const otherConf = datesChanged
+          ? others.flatMap((m) =>
+              findConflicts(allRes, m.propertyId, m.room, f.checkIn, f.checkOut, m.id).map((c) => ({ room: m.room, c }))
+            )
+          : [];
+        const onlyPerson = !labels.length;
+        const btn = {
+          padding: '11px',
+          borderRadius: 8,
+          fontFamily: 'inherit',
+          fontWeight: 700,
+          fontSize: 13,
+          cursor: 'pointer',
+        };
+        return (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,.5)',
+              zIndex: 400,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 16,
+            }}
+          >
+            <div style={{ background: '#fff', borderRadius: 16, maxWidth: 380, width: '100%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.25)' }}>
+              <div style={{ background: GROUP_COLORS.txt, padding: '16px 22px' }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>🔗 ¿Aplicar a todo el grupo?</div>
+              </div>
+              <div style={{ padding: '18px 22px' }}>
+                <p style={{ fontSize: 13, color: '#374151', margin: '0 0 12px', lineHeight: 1.45 }}>
+                  {onlyPerson ? (
+                    <>
+                      Corregiste datos del titular. ¿Pasarlos también a las habitaciones que todavía tienen sus datos (
+                      <b>{scopeAsk.followers.map((m) => m.room).join(', ')}</b>)?
+                    </>
+                  ) : (
+                    <>
+                      Cambiaste <b>{labels.join(', ')}</b>
+                      {scopeAsk.person.length ? ' y datos del titular' : ''}. ¿Va para todo el grupo (
+                      {members.map((m) => m.room).join(', ')}) o solo para {initial.room}?
+                    </>
+                  )}
+                </p>
+                {datesChanged && (
+                  <p style={{ fontSize: 11.5, color: '#6B7280', margin: '0 0 12px' }}>
+                    Con nuevas fechas, el total de cada habitación se recalcula con su propia tarifa.
+                  </p>
+                )}
+                {otherConf.length > 0 && (
+                  <div style={{ fontSize: 12, color: '#991B1B', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '8px 10px', marginBottom: 12 }}>
+                    ⚠️ Para todo el grupo quedarían empalmadas:{' '}
+                    {otherConf.map((x) => `${x.room} con ${x.c.guestName}`).join(' · ')}
+                  </div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={applyToGroup}
+                    style={{ ...btn, background: GROUP_COLORS.txt, color: '#fff', border: 'none' }}
+                  >
+                    {onlyPerson ? 'Sí, pasarlos' : `Todo el grupo (${members.length} habitaciones)`}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScopeAsk(null);
+                      proceed(f);
+                    }}
+                    style={{ ...btn, background: '#fff', color: '#374151', border: '1.5px solid #E5E7EB' }}
+                  >
+                    Solo esta habitación ({initial.room})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScopeAsk(null)}
+                    style={{ ...btn, background: 'none', color: '#6B7280', border: 'none', fontWeight: 600 }}
+                  >
+                    ← Volver al formulario
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {confModal && (
         <div
@@ -1521,6 +1943,253 @@ function ChipGroup({ label, value, onChange, options }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ── CAJA SOLO LECTURA (mismo alto que un campo) ──────────────────────────────
+function ReadBox({ label, value }) {
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <label
+        style={{
+          display: 'block',
+          fontSize: 11,
+          fontWeight: 700,
+          color: '#888',
+          marginBottom: 4,
+          textTransform: 'uppercase',
+          letterSpacing: 0.4,
+        }}
+      >
+        {label}
+      </label>
+      <div
+        style={{
+          padding: '9px 12px',
+          border: '1.5px solid #E5E7EB',
+          borderRadius: 8,
+          fontSize: 13,
+          fontWeight: 800,
+          background: '#F3F4F6',
+          color: '#111',
+          minHeight: 36,
+          boxSizing: 'border-box',
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+// ── REPARTO POR HABITACIÓN (reserva de varias habitaciones) ──────────────────
+// Una tarjeta por habitación: dónde duerme el titular, huéspedes, acompañantes,
+// tarifa (si no se carga, usa la tarifa base) y, si se cobra por separado, su Pagado.
+function RoomCards({ rooms, alloc, setA, titularRoom, setTitularRoom, baseRate, roomTotal, splitPay, isGroup }) {
+  const inputSt = {
+    width: '100%',
+    minWidth: 0,
+    padding: '9px 12px',
+    border: '1.5px solid #E5E7EB',
+    borderRadius: 8,
+    fontSize: 13,
+    fontFamily: 'inherit',
+    outline: 'none',
+    boxSizing: 'border-box',
+    background: '#fff',
+  };
+  const lbl = { display: 'block', fontSize: 10.5, fontWeight: 700, color: '#888', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.4 };
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 11, fontWeight: 800, color: GROUP_COLORS.txt, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+        {isGroup ? '🔗 Reparto por habitación' : 'Huéspedes de la habitación'}
+      </div>
+      {rooms.map((id) => {
+        const room = ROOMS.find((r) => r.id === id);
+        const max = room ? room.maxGuests : 6;
+        const a = alloc[id] || { guests: 1, companions: [], rate: '', extra: '', paid: '' };
+        const isTit = id === titularRoom;
+        const total = roomTotal(id);
+        const setGuests = (n) => {
+          const need = n - 1;
+          const cur = a.companions || [];
+          setA(id, {
+            guests: n,
+            companions:
+              cur.length < need
+                ? [...cur, ...Array.from({ length: need - cur.length }, () => ({ name: '', phone: '' }))]
+                : cur.slice(0, need),
+          });
+        };
+        const half = Math.round(total / 2);
+        const paidNum = a.paid === '' ? null : Number(a.paid);
+        return (
+          <div
+            key={id}
+            style={{
+              border: `1.5px solid ${isTit && isGroup ? GROUP_COLORS.border : '#E5E7EB'}`,
+              background: '#FAFAFA',
+              borderRadius: 12,
+              padding: 12,
+              marginBottom: 10,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                <span style={{ fontSize: 16, fontWeight: 900, color: '#111' }}>{id}</span>
+                <span style={{ fontSize: 11, color: '#9CA3AF' }}>hasta {max}</span>
+              </div>
+              {isGroup && (
+                <button
+                  type="button"
+                  onClick={() => setTitularRoom(id)}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: 20,
+                    border: `1.5px solid ${isTit ? GROUP_COLORS.txt : '#E5E7EB'}`,
+                    background: isTit ? GROUP_COLORS.txt : '#fff',
+                    color: isTit ? '#fff' : '#6B7280',
+                    fontFamily: 'inherit',
+                    fontWeight: 700,
+                    fontSize: 11,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {isTit ? '★ El titular duerme acá' : 'Titular acá'}
+                </button>
+              )}
+            </div>
+            {isGroup && !isTit && (
+              <div style={{ fontSize: 11, color: '#6B7280', marginTop: -4, marginBottom: 8 }}>
+                Contacto: queda con los datos del titular hasta que llegue (ahí le sacás la foto al documento).
+              </div>
+            )}
+
+            <label style={lbl}>Huéspedes</label>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+              {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setGuests(n)}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 8,
+                    border: `2px solid ${a.guests === n ? '#3B82F6' : '#E5E7EB'}`,
+                    background: a.guests === n ? '#EFF6FF' : '#fff',
+                    fontFamily: 'inherit',
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: 'pointer',
+                    color: a.guests === n ? '#1E40AF' : '#6B7280',
+                  }}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+
+            {(a.companions || []).map((c, i) => (
+              <div
+                key={i}
+                style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8, padding: 10, background: '#fff', border: '1px solid #EEF0F2', borderRadius: 10 }}
+              >
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280' }}>Acompañante {i + 1}</div>
+                <input
+                  value={c.name}
+                  placeholder="Nombre"
+                  onChange={(e) => setA(id, { companions: a.companions.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })}
+                  style={inputSt}
+                />
+                <input
+                  type="tel"
+                  inputMode="tel"
+                  value={c.phone || ''}
+                  placeholder="WhatsApp (ej. 55...)"
+                  onChange={(e) => setA(id, { companions: a.companions.map((x, j) => (j === i ? { ...x, phone: e.target.value } : x)) })}
+                  style={inputSt}
+                />
+              </div>
+            ))}
+
+            <div style={{ display: 'grid', gridTemplateColumns: a.guests > 2 ? '1fr 1fr' : '1fr', gap: 8, marginTop: 4 }}>
+              <div>
+                <label style={lbl}>Tarifa/noche $</label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={a.rate}
+                  placeholder={baseRate !== '' && baseRate !== null ? `${baseRate} (base)` : 'Tarifa'}
+                  onChange={(e) => setA(id, { rate: e.target.value === '' ? '' : Number(e.target.value) })}
+                  style={inputSt}
+                />
+              </div>
+              {a.guests > 2 && (
+                <div>
+                  <label style={lbl}>Extra 3ª+ $/noche c/u</label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={a.extra}
+                    placeholder="0"
+                    onChange={(e) => setA(id, { extra: e.target.value === '' ? '' : Number(e.target.value) })}
+                    style={inputSt}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, fontSize: 12.5 }}>
+              <span style={{ color: '#6B7280', fontWeight: 600 }}>Total {id}</span>
+              <span style={{ fontWeight: 900, color: '#111' }}>{currency(total)}</span>
+            </div>
+
+            {splitPay && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'end', marginTop: 8 }}>
+                <div>
+                  <label style={lbl}>Pagado {id} $</label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={a.paid}
+                    placeholder="0"
+                    onChange={(e) => setA(id, { paid: e.target.value === '' ? '' : Number(e.target.value) })}
+                    style={inputSt}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: 4, height: 38 }}>
+                  {[
+                    { k: '50%', v: half, on: total > 0 && paidNum === half },
+                    { k: 'Total', v: total, on: total > 0 && paidNum === total },
+                  ].map((q) => (
+                    <button
+                      key={q.k}
+                      type="button"
+                      onClick={() => setA(id, { paid: q.v })}
+                      style={{
+                        padding: '0 10px',
+                        background: q.on ? '#10B981' : '#D1FAE5',
+                        color: q.on ? '#fff' : '#065F46',
+                        border: '1.5px solid #10B981',
+                        borderRadius: 8,
+                        fontWeight: 800,
+                        fontSize: 12,
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      {q.k}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

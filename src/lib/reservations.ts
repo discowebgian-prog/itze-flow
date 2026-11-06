@@ -21,6 +21,23 @@ export function findConflicts(all, propId, room, ci, co, excludeId) {
   });
 }
 
+// ── TOTAL DE UNA ESTANCIA ─────────────────────────────────────────────────────
+// Tarifa × noches − descuento + personas adicionales + late check-out.
+// Lo usan el formulario y el grupo (al cambiar fechas de todas las habitaciones).
+export function calcStayTotal(pricing, nights, lateCost = 0) {
+  if (!nights || !pricing) return 0;
+  const rate = Number(pricing.ratePerNight) || 0;
+  let b = rate * nights;
+  if (pricing.discountType === 'porcentaje') b -= b * ((Number(pricing.discountValue) || 0) / 100);
+  else if (pricing.discountType === 'monto_fijo') b -= Number(pricing.discountValue) || 0;
+  else if (pricing.discountType === 'noche_gratis') b -= rate * (Number(pricing.discountValue) || 0);
+  const addT = (pricing.additionals || []).reduce(
+    (s, a) => s + (a.bonificada ? 0 : (Number(a.ratePerNight) || 0) * nights),
+    0
+  );
+  return Math.max(0, b + addT + (Number(lateCost) || 0));
+}
+
 // ── LATE CHECK-OUT ────────────────────────────────────────────────────────────
 // Hora normal de salida (el check-out automático la usa si no hay late check-out)
 export const CHECKOUT_HOUR = 14;
