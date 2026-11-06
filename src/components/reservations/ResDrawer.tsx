@@ -624,109 +624,41 @@ export function ResDrawer({
             background: '#FAFAFA',
           }}
         >
-          {res.status === 'por_llegar' && (
-            <button
-              onClick={() => onCheckIn(res)}
-              style={{
-                width: '100%',
-                padding: '12px',
-                background: '#10B981',
-                border: 'none',
-                borderRadius: 8,
-                fontFamily: 'inherit',
-                fontWeight: 700,
-                fontSize: 14,
-                cursor: 'pointer',
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-              }}
-            >
-              <Icon name="checkIn" size={18} /> Hacer Check-in
-            </button>
-          )}
-          {res.status === 'hospedado' && (
-            <button
-              onClick={() => onCheckOut(res)}
-              style={{
-                width: '100%',
-                padding: '12px',
-                background: '#F59E0B',
-                border: 'none',
-                borderRadius: 8,
-                fontFamily: 'inherit',
-                fontWeight: 700,
-                fontSize: 14,
-                cursor: 'pointer',
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-              }}
-            >
-              <Icon name="checkOut" size={18} /> Hacer Check-out
-            </button>
-          )}
-          
+          {/* Acción principal (Check-in/out, más ancha) y Editar en la misma fila */}
           <div style={{ display: 'flex', gap: 8 }}>
+            {res.status === 'por_llegar' && (
+              <button
+                onClick={() => onCheckIn(res)}
+                style={{ ...mainBtn, flex: 2, background: '#10B981', color: '#fff' }}
+              >
+                <Icon name="checkIn" size={18} /> Hacer Check-in
+              </button>
+            )}
+            {res.status === 'hospedado' && (
+              <button
+                onClick={() => onCheckOut(res)}
+                style={{ ...mainBtn, flex: 2, background: '#F59E0B', color: '#fff' }}
+              >
+                <Icon name="checkOut" size={18} /> Hacer Check-out
+              </button>
+            )}
             <button
               onClick={() => onEdit(res)}
               style={{
+                ...mainBtn,
                 flex: 1,
-                padding: '10px',
                 background: '#fff',
                 border: '1px solid #E5E7EB',
-                borderRadius: 8,
-                fontFamily: 'inherit',
-                fontWeight: 600,
-                fontSize: 13,
-                cursor: 'pointer',
                 color: '#374151',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
               }}
             >
               <Icon name="edit" size={16} /> Editar
             </button>
-            <button
-              onClick={() => onDelete(res.id)}
-              style={{
-                flex: 1,
-                padding: '10px',
-                background: '#FEF2F2',
-                border: 'none',
-                borderRadius: 8,
-                fontFamily: 'inherit',
-                fontWeight: 600,
-                fontSize: 13,
-                cursor: 'pointer',
-                color: '#DC2626',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-              }}
-            >
-              <Icon name="trash" size={16} /> Eliminar
-            </button>
           </div>
 
-          {/* LISTA NEGRA: discreto, al pie */}
-          {res.lista_negra ? (
-            <button
-              type="button"
-              onClick={() => onToggleBlacklist(res.id, true)}
-              style={blLink('#DC2626')}
-            >
-              Quitar de lista negra
-            </button>
-          ) : askBlacklist ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontSize: 11, color: '#6B7280' }}>
+          {/* Acciones poco frecuentes, discretas al pie: Eliminar (pide confirmar en ventana) y No grato */}
+          {askBlacklist ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontSize: 11, color: '#6B7280', marginTop: 4 }}>
               <span>¿Marcar como no grato?</span>
               <button
                 type="button"
@@ -747,19 +679,47 @@ export function ResDrawer({
               </button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => setAskBlacklist(true)}
-              style={blLink('#9CA3AF')}
-            >
-              Marcar como no grato
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 4 }}>
+              <button type="button" onClick={() => onDelete(res.id)} style={blLink('#9CA3AF')}>
+                Eliminar reserva
+              </button>
+              <span style={{ color: '#D1D5DB', fontSize: 11 }}>·</span>
+              {res.lista_negra ? (
+                <button
+                  type="button"
+                  onClick={() => onToggleBlacklist(res.id, true)}
+                  style={blLink('#DC2626')}
+                >
+                  Quitar de lista negra
+                </button>
+              ) : (
+                <button type="button" onClick={() => setAskBlacklist(true)} style={blLink('#9CA3AF')}>
+                  Marcar como no grato
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>
     </div>
   );
 }
+
+const mainBtn = {
+  minHeight: 44,
+  padding: '10px 12px',
+  border: 'none',
+  borderRadius: 8,
+  fontFamily: 'inherit',
+  fontWeight: 700,
+  fontSize: 14,
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+  whiteSpace: 'nowrap',
+};
 
 const blLink = (color) => ({
   background: 'none',
