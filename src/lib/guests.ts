@@ -57,3 +57,47 @@ export function freqBadge(n) {
   if (n >= 2) return { label: '↩ Regresa', color: '#0369A1', bg: '#E0F2FE' };
   return null;
 }
+
+// ── NÚMERO DE ESTANCIA ────────────────────────────────────────────────────────
+// Misma persona: si las dos reservas tienen documento, se compara el documento.
+// Si a alguna le falta, se compara el nombre (sin tildes, mayúsculas ni espacios de más).
+const normName = (s) =>
+  String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+const normDoc = (s) => String(s || '').replace(/\s+/g, '').toLowerCase();
+
+export function samePerson(a, b) {
+  const da = normDoc(a.guestDoc);
+  const db = normDoc(b.guestDoc);
+  if (da && db) return da === db;
+  const na = normName(a.guestName);
+  return na.length >= 3 && na === normName(b.guestName);
+}
+
+// Devuelve qué número de estancia es esta reserva para el huésped (sin contar canceladas),
+// cuántas tiene en total y cuál fue la anterior. null si todavía no hay nombre ni documento.
+export function stayInfo(allRes, res) {
+  if (!normDoc(res.guestDoc) && normName(res.guestName).length < 3) return null;
+  const others = (allRes || []).filter(
+    (r) => r.id !== res.id && r.status !== 'cancelada' && samePerson(r, res)
+  );
+  const prev = others
+    .filter((r) => !res.checkIn || (r.checkIn && r.checkIn < res.checkIn))
+    .sort((a, b) => a.checkIn.localeCompare(b.checkIn));
+  return {
+    number: prev.length + 1,
+    total: others.length + 1,
+    last: prev.length ? prev[prev.length - 1] : null,
+  };
+}
+
+// Etiqueta lista para mostrar: "3ª estancia · Frecuente", con sus colores.
+export function stayBadge(info) {
+  if (!info) return null;
+  if (info.number === 1) {
+    return { label: '🆕 Primera estancia', color: '#475569', bg: '#F1F5F9' };
+  }
+  const f = freqBadge(info.number);
+  const tag = f.label.replace(/^\S+\s/, ''); // "Regresa", "Frecuente", "VIP"
+  const icon = f.label.split(' ')[0];
+  return { label: `${icon} ${info.number}ª estancia · ${tag}`, color: f.color, bg: f.bg };
+}
