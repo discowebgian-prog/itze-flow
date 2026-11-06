@@ -586,9 +586,52 @@ export function ResDrawer({
               {currency(res.totalAmount)}
             </div>
           </div>
+          {saldo <= 0 ? (
+            // Pagado del todo: se lee primero "pagado", el saldo queda chiquito abajo
+            <div
+              style={{
+                background: '#D1FAE5',
+                border: '1.5px solid #A7F3D0',
+                borderRadius: 10,
+                padding: '12px 16px',
+                marginBottom: 10,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: '50%',
+                  background: '#10B981',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 900,
+                  fontSize: 18,
+                  flexShrink: 0,
+                }}
+              >
+                ✓
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: '#065F46', fontWeight: 800, textTransform: 'uppercase' }}>
+                  Pagado completo
+                </div>
+                <div style={{ fontWeight: 800, fontSize: 20, color: '#047857' }}>{currency(res.paid)}</div>
+                <div style={{ fontSize: 11, color: '#6B7280', marginTop: 1 }}>
+                  {saldo < 0 ? `Pagó de más ${currency(-saldo)}` : 'Saldo $0'}
+                  {res.paymentMethod ? ` · ${pmLabel[res.paymentMethod] || res.paymentMethod}` : ''}
+                </div>
+              </div>
+            </div>
+          ) : (
           <div
             style={{
-              background: saldo > 0 ? '#FEF3C7' : '#D1FAE5',
+              background: '#FEF3C7',
               borderRadius: 10,
               padding: '12px 16px',
               marginBottom: 10,
@@ -601,7 +644,7 @@ export function ResDrawer({
               <div
                 style={{
                   fontSize: 10,
-                  color: saldo > 0 ? '#92400E' : '#065F46',
+                  color: '#92400E',
                   fontWeight: 700,
                   textTransform: 'uppercase',
                 }}
@@ -612,12 +655,12 @@ export function ResDrawer({
                 style={{
                   fontWeight: 800,
                   fontSize: 20,
-                  color: saldo > 0 ? '#B45309' : '#059669',
+                  color: '#B45309',
                 }}
               >
                 {currency(saldo)}
               </div>
-              {inGroup && saldo > 0 && onPay && payMode !== 'room' && (
+              {inGroup && onPay && payMode !== 'room' && (
                 <button
                   type="button"
                   onClick={() => openPay('room')}
@@ -639,6 +682,7 @@ export function ResDrawer({
               )}
             </div>
           </div>
+          )}
           {payMode && (() => {
             const total = Number(res.totalAmount) || 0;
             const paid = Number(res.paid) || 0;
@@ -730,9 +774,13 @@ export function ResDrawer({
                 marginBottom: 6,
               }}
             >
-              <span style={{ fontWeight: 700 }}>
-                🔗 Saldo del grupo: <b>{currency(groupSaldo)}</b>
-              </span>
+              {groupSaldo > 0 ? (
+                <span style={{ fontWeight: 700 }}>
+                  🔗 Saldo del grupo: <b style={{ whiteSpace: 'nowrap' }}>{currency(groupSaldo)}</b>
+                </span>
+              ) : (
+                <span style={{ fontWeight: 800, color: '#047857' }}>🔗 Grupo pagado completo ✓</span>
+              )}
               {groupSaldo > 0 && onPay && (
                 <button
                   type="button"
