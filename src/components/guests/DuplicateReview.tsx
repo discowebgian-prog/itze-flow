@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { COUNTRIES } from '../../lib/constants';
 import { fmtD } from '../../lib/dates';
 import { guestKey } from '../../lib/guests';
+import { DocLink } from '../ui/DocLink';
 
 // ── REVISIÓN DE POSIBLES HUÉSPEDES DUPLICADOS ─────────────────────────────────
 // Muestra de a un par por vez. El admin decide: misma persona, son distintas o después.
@@ -65,14 +66,14 @@ function GuestSide({ g, reservations }) {
       {withPhoto && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
           {withPhoto.url_ine_frente && (
-            <a href={withPhoto.url_ine_frente} target="_blank" rel="noreferrer" style={photoLink}>
+            <DocLink url={withPhoto.url_ine_frente} style={photoLink}>
               📷 Doc. frente
-            </a>
+            </DocLink>
           )}
           {withPhoto.url_ine_dorso && (
-            <a href={withPhoto.url_ine_dorso} target="_blank" rel="noreferrer" style={photoLink}>
+            <DocLink url={withPhoto.url_ine_dorso} style={photoLink}>
               📷 Doc. dorso
-            </a>
+            </DocLink>
           )}
         </div>
       )}

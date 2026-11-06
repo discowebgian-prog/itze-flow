@@ -12,6 +12,7 @@ import { ROOMS, SOURCES, RS, COUNTRIES, findCountry } from '../../lib/constants'
 import { TODAY, fmt, fmtD, addDays, diffDays, currency } from '../../lib/dates';
 import { findConflicts } from '../../lib/reservations';
 import { stayInfo, stayBadge, suggestGuests } from '../../lib/guests';
+import { DocLink } from '../ui/DocLink';
 
 export function ResForm({
   initial,
@@ -467,14 +468,14 @@ export function ResForm({
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             {matchBlacklist.url_ine_frente && (
-              <a href={matchBlacklist.url_ine_frente} target="_blank" rel="noreferrer" style={{ fontSize: 11, background: '#DC2626', color: '#fff', padding: '6px 12px', borderRadius: 6, textDecoration: 'none', fontWeight: 700 }}>
+              <DocLink url={matchBlacklist.url_ine_frente} style={{ fontSize: 11, background: '#DC2626', color: '#fff', padding: '6px 12px', borderRadius: 6, textDecoration: 'none', fontWeight: 700 }}>
                 📷 ID Frente
-              </a>
+              </DocLink>
             )}
             {matchBlacklist.url_ine_dorso && (
-              <a href={matchBlacklist.url_ine_dorso} target="_blank" rel="noreferrer" style={{ fontSize: 11, background: '#DC2626', color: '#fff', padding: '6px 12px', borderRadius: 6, textDecoration: 'none', fontWeight: 700 }}>
+              <DocLink url={matchBlacklist.url_ine_dorso} style={{ fontSize: 11, background: '#DC2626', color: '#fff', padding: '6px 12px', borderRadius: 6, textDecoration: 'none', fontWeight: 700 }}>
                 📷 ID Dorso
-              </a>
+              </DocLink>
             )}
             {!matchBlacklist.url_ine_frente && !matchBlacklist.url_ine_dorso && (
               <span style={{ fontSize: 11, color: '#991B1B', fontWeight: 600 }}>

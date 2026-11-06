@@ -5,6 +5,7 @@ import { Icon } from '../ui/Icon';
 import { srcLabel, srcColor, BLOCK_COLORS } from '../../lib/constants';
 import { fmtD, fmtDT, diffDays, currency } from '../../lib/dates';
 import { waLink, stayInfo, stayBadge } from '../../lib/guests';
+import { DocLink } from '../ui/DocLink';
 
 // ── DRAWER ────────────────────────────────────────────────────────────────────
 export function ResDrawer({
@@ -410,18 +411,18 @@ export function ResDrawer({
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 {res.url_ine_frente && (
-                  <a href={res.url_ine_frente} target="_blank" rel="noreferrer" style={{ flex: 1, textDecoration: 'none' }}>
+                  <DocLink url={res.url_ine_frente} style={{ flex: 1, textDecoration: 'none' }}>
                     <div style={{ background: '#0284C7', color: '#fff', padding: '8px', borderRadius: 8, textAlign: 'center', fontSize: 12, fontWeight: 700 }}>
                       📷 Ver Frente
                     </div>
-                  </a>
+                  </DocLink>
                 )}
                 {res.url_ine_dorso && (
-                  <a href={res.url_ine_dorso} target="_blank" rel="noreferrer" style={{ flex: 1, textDecoration: 'none' }}>
+                  <DocLink url={res.url_ine_dorso} style={{ flex: 1, textDecoration: 'none' }}>
                     <div style={{ background: '#0284C7', color: '#fff', padding: '8px', borderRadius: 8, textAlign: 'center', fontSize: 12, fontWeight: 700 }}>
                       📷 Ver Dorso
                     </div>
-                  </a>
+                  </DocLink>
                 )}
               </div>
             </div>
