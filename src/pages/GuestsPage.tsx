@@ -18,17 +18,23 @@ export function GuestsPage({
   onUndo,
 }) {
   const [q, setQ] = useState('');
+  const [tipo, setTipo] = useState('todos'); // todos | empresa | particular (Empresa = alguna vez pidió factura)
   const [reviewing, setReviewing] = useState(false);
 
   // Agrupamos el historial de los clientes (respetando las decisiones de duplicados)
   const gdb = buildGuestDB(reservations, decisions);
   
-  // Filtramos por búsqueda (nombre o documento)
-  const allGuests = Object.values(gdb).filter(g => 
-    !q || 
-    g.name.toLowerCase().includes(q.toLowerCase()) || 
-    (g.doc && g.doc.toLowerCase().includes(q.toLowerCase()))
+  // Filtramos por tipo (Empresa / Particular) y por búsqueda (nombre, documento o empresa)
+  const matchTipo = (g) => tipo === 'todos' || (tipo === 'empresa' ? g.isCompany : !g.isCompany);
+  const allGuests = Object.values(gdb).filter(g =>
+    matchTipo(g) &&
+    (!q ||
+      g.name.toLowerCase().includes(q.toLowerCase()) ||
+      (g.doc && g.doc.toLowerCase().includes(q.toLowerCase())) ||
+      (g.company && g.company.toLowerCase().includes(q.toLowerCase())))
   );
+  const nEmpresas = Object.values(gdb).filter((g) => g.isCompany).length;
+  const nParticulares = Object.values(gdb).length - nEmpresas;
 
   // Ordenamos por los que más dinero han dejado (los mejores clientes primero)
   allGuests.sort((a, b) => b.totalSpent - a.totalSpent);
@@ -94,12 +100,44 @@ export function GuestsPage({
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Buscar por nombre o documento..."
+        placeholder="Buscar por nombre, documento o empresa..."
         style={{
           width: '100%', padding: '10px 14px', border: '1.5px solid #E5E7EB', borderRadius: 10,
-          fontSize: 13, fontFamily: 'inherit', outline: 'none', marginBottom: 16, boxSizing: 'border-box',
+          fontSize: 13, fontFamily: 'inherit', outline: 'none', marginBottom: 10, boxSizing: 'border-box',
         }}
       />
+
+      {/* Filtro Empresa (pidió factura) / Particular */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+        {[
+          { v: 'todos', label: 'Todos', bg: '#EFF6FF', txt: '#1E40AF' },
+          { v: 'empresa', label: `🏢 Empresas (${nEmpresas})`, bg: '#EDE9FE', txt: '#5B21B6' },
+          { v: 'particular', label: `👤 Particulares (${nParticulares})`, bg: '#F3F4F6', txt: '#374151' },
+        ].map((o) => {
+          const on = tipo === o.v;
+          return (
+            <button
+              key={o.v}
+              type="button"
+              onClick={() => setTipo(o.v)}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 20,
+                border: `1.5px solid ${on ? o.txt : '#E5E7EB'}`,
+                background: on ? o.bg : '#fff',
+                color: on ? o.txt : '#6B7280',
+                fontWeight: on ? 800 : 600,
+                fontSize: 12,
+                fontFamily: 'inherit',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 12 }}>
         {allGuests.map((g, idx) => {
@@ -126,6 +164,11 @@ export function GuestsPage({
                   <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>
                     {g.doc || 'Sin DOC'}
                   </div>
+                  {g.isCompany && (
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#5B21B6', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      🏢 {g.company || 'Empresa'}
+                    </div>
+                  )}
                 </div>
                 {freq && (
                   <div style={{ flexShrink: 0, fontSize: 9, fontWeight: 800, color: freq.color, background: freq.bg, padding: '3px 6px', borderRadius: 6 }}>

@@ -33,6 +33,7 @@ export function ResForm({
     guestPhonePrefix: '+52',
     guestNationality: 'MX',
     guestEmail: '',
+    company: '', // nombre de la empresa (solo si solicita factura)
     checkIn: prefillDate || fmt(TODAY),
     checkOut: fmt(addDays(TODAY, 1)),
     status: 'por_llegar',
@@ -135,7 +136,7 @@ export function ResForm({
         : [],
     [nameTyped, sugDismissed, picked, allRes, f.guestName, guestDecisions, initial?.id]
   );
-  const GUEST_FIELDS = ['guestName', 'guestDoc', 'guestDocType', 'guestNationality', 'guestPhonePrefix', 'guestPhone', 'guestEmail'];
+  const GUEST_FIELDS = ['guestName', 'guestDoc', 'guestDocType', 'guestNationality', 'guestPhonePrefix', 'guestPhone', 'guestEmail', 'company'];
   const pickGuest = (s) => {
     const prev = {};
     GUEST_FIELDS.forEach((k) => (prev[k] = f[k]));
@@ -1074,54 +1075,40 @@ export function ResForm({
         </div>
       </div>
 
-      <div
-        style={{
-          marginBottom: 14,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '10px 14px',
-          background: f.requiresInvoice ? '#EDE9FE' : '#F9FAFB',
-          borderRadius: 10,
-          border: `1.5px solid ${f.requiresInvoice ? '#A855F7' : '#E5E7EB'}`,
-          cursor: 'pointer',
-        }}
-        onClick={() => sv('requiresInvoice', !f.requiresInvoice)}
-      >
-        <div
+      {/* ── FACTURA: botón chico; si pide factura es Empresa y se despliega el nombre (opcional) ── */}
+      <div style={{ marginBottom: f.requiresInvoice ? 8 : 14 }}>
+        <button
+          type="button"
+          onClick={() => sv('requiresInvoice', !f.requiresInvoice)}
           style={{
-            width: 20,
-            height: 20,
-            borderRadius: 5,
-            border: `2px solid ${f.requiresInvoice ? '#A855F7' : '#D1D5DB'}`,
-            background: f.requiresInvoice ? '#A855F7' : '#fff',
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
+            gap: 6,
+            minHeight: 34,
+            padding: '6px 14px',
+            borderRadius: 20,
+            border: `1.5px solid ${f.requiresInvoice ? '#7C3AED' : '#E5E7EB'}`,
+            background: f.requiresInvoice ? '#EDE9FE' : '#fff',
+            color: f.requiresInvoice ? '#5B21B6' : '#6B7280',
+            fontFamily: 'inherit',
+            fontWeight: f.requiresInvoice ? 800 : 600,
+            fontSize: 12,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
           }}
         >
-          {f.requiresInvoice && (
-            <span style={{ color: '#fff', fontSize: 13, fontWeight: 800 }}>
-              ✓
-            </span>
-          )}
-        </div>
-        <div>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 700,
-              color: f.requiresInvoice ? '#7C3AED' : '#374151',
-            }}
-          >
-            Solicita factura
-          </div>
-          <div style={{ fontSize: 11, color: '#9CA3AF' }}>
-            El huésped requiere comprobante fiscal
-          </div>
-        </div>
+          {f.requiresInvoice ? '✓ ' : ''}🧾 Solicita factura
+        </button>
       </div>
+      {f.requiresInvoice && (
+        <Inp
+          label="🏢 Empresa (opcional)"
+          value={f.company || ''}
+          autoComplete="off"
+          onChange={(e) => sv('company', e.target.value)}
+          placeholder="Nombre de la empresa"
+        />
+      )}
 
       {f.source === 'Booking' && (() => {
         const vccOn = f.paymentMethod === 'vcc';

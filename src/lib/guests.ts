@@ -134,6 +134,10 @@ export function buildGuestDB(reservations, decisions = []) {
   });
   Object.values(db).forEach((g) => {
     g.visits = groupVisits(g.resList).length || g.stays.length;
+    // Empresa: si alguna vez pidió factura. Nombre de la empresa: el más reciente cargado.
+    g.isCompany = g.resList.some((r) => r.requiresInvoice);
+    const recent = [...g.resList].sort((a, b) => b.checkIn.localeCompare(a.checkIn));
+    g.company = (recent.find((r) => String(r.company || '').trim()) || {}).company || '';
   });
   return db;
 }
@@ -175,6 +179,7 @@ export function suggestGuests(allRes, query, decisions = [], excludeId = null, m
           guestPhonePrefix: (recent.find((r) => r.guestPhone) || {}).guestPhonePrefix || '',
           guestPhone: pick('guestPhone'),
           guestEmail: pick('guestEmail'),
+          company: pick('company'),
         },
       };
     });
