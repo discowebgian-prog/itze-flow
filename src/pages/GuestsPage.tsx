@@ -18,7 +18,7 @@ export function GuestsPage({
   onUndo,
 }) {
   const [q, setQ] = useState('');
-  const [tipo, setTipo] = useState('todos'); // todos | empresa | particular (Empresa = alguna vez pidió factura)
+  const [tipo, setTipo] = useState('todos'); // todos | empresa | particular (Empresa = tiene nombre de empresa cargado)
   const [reviewing, setReviewing] = useState(false);
 
   // Agrupamos el historial de los clientes (respetando las decisiones de duplicados)
@@ -107,7 +107,7 @@ export function GuestsPage({
         }}
       />
 
-      {/* Filtro Empresa (pidió factura) / Particular */}
+      {/* Filtro Empresa (con nombre de empresa) / Particular */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
         {[
           { v: 'todos', label: 'Todos', bg: '#EFF6FF', txt: '#1E40AF' },
@@ -220,7 +220,9 @@ export function GuestsPage({
 
         {allGuests.length === 0 && (
           <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#D1D5DB', padding: 40, fontSize: 13 }}>
-            No se encontraron clientes.
+            {tipo === 'empresa' && !q
+              ? 'Todavía no hay empresas. Aparecen cuando una reserva pide factura y se escribe el nombre de la empresa.'
+              : 'No se encontraron clientes.'}
           </div>
         )}
       </div>

@@ -134,10 +134,11 @@ export function buildGuestDB(reservations, decisions = []) {
   });
   Object.values(db).forEach((g) => {
     g.visits = groupVisits(g.resList).length || g.stays.length;
-    // Empresa: si alguna vez pidió factura. Nombre de la empresa: el más reciente cargado.
-    g.isCompany = g.resList.some((r) => r.requiresInvoice);
+    // Empresa: tiene cargado el nombre de una empresa (se escribe al pedir factura).
+    // Quien pide factura sin empresa (profesional, persona física) queda como Particular.
     const recent = [...g.resList].sort((a, b) => b.checkIn.localeCompare(a.checkIn));
     g.company = (recent.find((r) => String(r.company || '').trim()) || {}).company || '';
+    g.isCompany = !!g.company;
   });
   return db;
 }

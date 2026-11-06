@@ -1075,7 +1075,8 @@ export function ResForm({
         </div>
       </div>
 
-      {/* ── FACTURA: botón chico; si pide factura es Empresa y se despliega el nombre (opcional) ── */}
+      {/* ── FACTURA: botón chico; al pedir factura se despliega Empresa (opcional).
+             Con nombre de empresa cuenta como Empresa; vacío (persona física) queda Particular ── */}
       <div style={{ marginBottom: f.requiresInvoice ? 8 : 14 }}>
         <button
           type="button"
@@ -1106,7 +1107,7 @@ export function ResForm({
           value={f.company || ''}
           autoComplete="off"
           onChange={(e) => sv('company', e.target.value)}
-          placeholder="Nombre de la empresa"
+          placeholder="Nombre (vacío si es persona física)"
         />
       )}
 
