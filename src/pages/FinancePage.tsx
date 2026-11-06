@@ -8,6 +8,33 @@ import { supabase } from '../lib/supabase';
 
 const PROJECTION_START_DAY = 8; // Antes hay muy pocos días para estimar
 
+// Fin de semana = noches de jueves, viernes, sábado y domingo (igual que las tarifas).
+// Entre semana = lunes, martes y miércoles.
+const isFindeDow = (d) => d === 0 || d >= 4;
+
+const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+// Título de las flechas de comparación, al pie de cada recuadro
+function CmpTitle({ label }) {
+  return (
+    <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px dashed #E2E8F0', fontSize: 9, color: '#64748B', fontWeight: 700, textAlign: 'center' }}>
+      ▲▼ Comparado con el mes anterior <span style={{ fontWeight: 600, color: '#9CA3AF' }}>({label})</span>
+    </div>
+  );
+}
+
+// Variación contra el mes anterior: ▲ 12% (verde), ▼ 8% (rojo), = 0% (gris), — sin dato previo
+function Delta({ cur, prev, style = {} }) {
+  if (!prev) return <span title="El mes anterior no tuvo ingresos acá" style={{ fontSize: 9, fontWeight: 700, color: '#9CA3AF', ...style }}>—</span>;
+  const p = Math.round(((cur - prev) / prev) * 100);
+  const color = p > 0 ? '#059669' : p < 0 ? '#DC2626' : '#6B7280';
+  return (
+    <span title={`Mes anterior: ${currency(prev)}`} style={{ fontSize: 9, fontWeight: 800, color, whiteSpace: 'nowrap', cursor: 'help', ...style }}>
+      {p > 0 ? '▲' : p < 0 ? '▼' : '='} {Math.abs(p)}%
+    </span>
+  );
+}
+
 // ── FINANCE PAGE ──────────────────────────────────────────────────────────────
 export function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoTo }) {
   const [showTrash, setShowTrash] = useState(false);
@@ -101,7 +128,7 @@ export function FinancePage({ reservations, allRes, properties, user, restoreRes
       // 3) EL PROMPT MAESTRO
       // ============================================================
       const prompt = `Actúa como Consultor Senior en Revenue Management (gestión de ingresos hoteleros) de "Itzé Hostel Boutique": 6 habitaciones privadas en Progreso, Yucatán (P6 matrimonial, P4 king, P1-P3 y P5 privadas).
-Tu objetivo es maximizar la ganancia operativa por habitación disponible (GOPPAR), no solo la ocupación, y llenar los días flojos (Dom-Mié) sin bajar el precio de Jue-Sáb.
+Tu objetivo es maximizar la ganancia operativa por habitación disponible (GOPPAR), no solo la ocupación, y llenar los días flojos (Lun-Mié) sin bajar el precio de Jue-Dom.
 Meta del dueño: acercar la ocupación a ${rmMetaOcupacion}%. En temporada baja hoy está por debajo de 30%.
 Fecha de hoy: ${rmHoy}. Si el mes analizado ya terminó, haz un análisis retrospectivo y proyecta el plan al mes siguiente.
 
@@ -117,20 +144,21 @@ REGLAS ESTRICTAS:
 CONTEXTO DE MERCADO: PROGRESO, YUCATÁN (datos 2026):
 - La mayoría de quienes visitan el malecón es local/regional (Mérida está a 30 min) y buena parte va y vuelve el mismo día. El que pernocta, suele hacerlo solo por UNA noche.
 - Oferta informal (rentas vacacionales) es altísima y presiona las tarifas hacia abajo.
-- Picos de demanda: Fines de semana, Carnaval, Semana Santa, Julio-Agosto. Valles: Dom-Mié y meses de Sep-Nov.
+- Picos de demanda: Fines de semana, Carnaval, Semana Santa, Julio-Agosto. Valles: entre semana y meses de Sep-Nov.
 
 PALANCAS DISPONIBLES (Elige solo las que apliquen):
-- Tarifa "escapada entre semana" para residentes de Yucatán (Dom-Mié), vallada con ID.
+- Tarifa "escapada entre semana" para residentes de Yucatán (Lun-Mié), vallada con ID.
 - Paquete trabajo remoto de Dom a Jue (orientado a contratistas del puerto).
 - Precio de último minuto (mismo día) entre semana por canales directos.
-- Jue-Sáb: subir tarifa o cerrar promociones; upselling (late check-out, experiencias).
+- Jue-Dom: subir tarifa o cerrar promociones; upselling (late check-out, experiencias).
 
 DATOS DEL HOTEL (${m.label}). Ingresos, ocupación, ADR, RevPAR y GOPPAR consideran solo las noches transcurridas hasta hoy:
 - Ingreso Base Real: $${metrics.trueRevenue} | Egresos Operativos: $${metrics.gastos}
 - Reservado del mes completo, incluyendo noches futuras: ${metrics.bookedPct}% de ocupación | $${metrics.bookedRevenue}${metrics.projectedPct !== null ? `
-- Proyectado del mes [HIPÓTESIS A PROBAR: estimación según el ritmo de Dom-Mié y Jue-Sáb hasta hoy, no incluye eventos futuros]: ${metrics.projectedPct}% de ocupación | $${metrics.projectedRevenue}` : ''}
+- Proyectado del mes [HIPÓTESIS A PROBAR: estimación según el ritmo de Lun-Mié y Jue-Dom hasta hoy, no incluye eventos futuros]: ${metrics.projectedPct}% de ocupación | $${metrics.projectedRevenue}` : ''}
 - Ocupación Física: ${metrics.occPct}% | ADR: $${metrics.adr} | RevPAR Global: $${metrics.revpar} | GOPPAR: $${metrics.goppar}
-- RevPAR (Dom-Mié): $${metrics.revparEntre} vs RevPAR (Jue-Sáb): $${metrics.revparFinde}
+- RevPAR (Lun-Mié): $${metrics.revparEntre} vs RevPAR (Jue-Dom): $${metrics.revparFinde}${metrics.prevCmp ? `
+- Mes anterior (${metrics.prevCmp.label}): RevPAR Global $${metrics.prevCmp.revpar} | Lun-Mié $${metrics.prevCmp.entre} | Jue-Dom $${metrics.prevCmp.finde}` : ''}
 - Ocup. Matrimonial (P6): ${metrics.oMat}% | King (P4): ${metrics.oKing}% | Privadas (P1-P3, P5): ${metrics.oComp}%
 ${rmBloque("- Distribución de estadía", rmExtra.distribucionEstadia)}
 ${rmBloque("- Ocupación por día de la semana", rmExtra.ocupacionPorDiaSemana)}
@@ -215,6 +243,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
   baseStats[currentMonthKey] = initMonthObj(currentMonthKey);
 
   const todayKey = fmt(TODAY);
+  const nightsByMonth = {}; // 'YYYY-MM' → [{ day, finde, room, rev }] (solo noches hasta hoy)
   const monthlyStats = reservations.reduce((acc, r) => {
     if (r.status === 'cancelada' || !r.checkIn) return acc;
     
@@ -246,7 +275,11 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
         acc[nightMonthKey].trueRevenue += avgDailyRate;
 
         const dayOfWeek = currentNight.getDay();
-        const isWeekend = dayOfWeek >= 4 && dayOfWeek <= 6; 
+        const isWeekend = isFindeDow(dayOfWeek);
+
+        // Índice por noche, para comparar un mes contra el anterior en el mismo tramo de días
+        if (!nightsByMonth[nightMonthKey]) nightsByMonth[nightMonthKey] = [];
+        nightsByMonth[nightMonthKey].push({ day: currentNight.getDate(), finde: isWeekend, room: r.room, rev: avgDailyRate });
 
         if (isWeekend) {
            acc[nightMonthKey].dow.finde.revenue += avgDailyRate;
@@ -288,6 +321,36 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
   });
 
   const monthlyArray = Object.values(monthlyStats).sort((a, b) => b.key.localeCompare(a.key));
+
+  const totalRooms = properties.reduce((s, p) => s + (p.rooms || 1), 0);
+
+  // RevPAR de un mes contando solo las noches del 1 al `upToDay`
+  const revparFor = (key, upToDay) => {
+    const [y, mo] = key.split('-').map(Number);
+    let dEntre = 0, dFinde = 0;
+    for (let i = 1; i <= upToDay; i++) {
+      if (isFindeDow(new Date(y, mo - 1, i).getDay())) dFinde++; else dEntre++;
+    }
+    const s = { all: 0, entre: 0, finde: 0, mat: 0, king: 0, comp: 0 };
+    (nightsByMonth[key] || []).forEach((n) => {
+      if (n.day > upToDay) return;
+      s.all += n.rev;
+      if (n.finde) s.finde += n.rev; else s.entre += n.rev;
+      if (n.room === 'P6') s.mat += n.rev;
+      else if (n.room === 'P4') s.king += n.rev;
+      else if (['P1', 'P2', 'P3', 'P5'].includes(n.room)) s.comp += n.rev;
+    });
+    const div = (a, b) => (b > 0 ? Math.round(a / b) : 0);
+    return {
+      has: s.all > 0,
+      revpar: div(s.all, totalRooms * upToDay),
+      entre: div(s.entre, totalRooms * dEntre),
+      finde: div(s.finde, totalRooms * dFinde),
+      mat: div(s.mat, upToDay),
+      king: div(s.king, upToDay),
+      comp: div(s.comp, 4 * upToDay),
+    };
+  };
 
   useEffect(() => {
     setTimeout(() => {
@@ -403,12 +466,20 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
           const isFuture = m.key > currentMonthKey;
           const passedDays = isFuture ? 0 : isCurrent ? TODAY.getDate() : daysInMonth;
           
-          const totalRooms = properties.reduce((s, p) => s + (p.rooms || 1), 0);
           const availableNights = totalRooms * passedDays;
           const occPct = availableNights > 0 ? Math.min(100, Math.round((m.occupiedNights / availableNights) * 100)) : 0;
           const bookedPct = Math.min(100, Math.round((m.bookedNights / (totalRooms * daysInMonth)) * 100));
           const adr = m.occupiedNights > 0 ? Math.round(m.trueRevenue / m.occupiedNights) : 0;
-          const revpar = availableNights > 0 ? Math.round(m.trueRevenue / availableNights) : 0;
+          // RevPAR (global, por tipo de día y por tipo de habitación) y el del mes anterior en el mismo tramo
+          const rp = revparFor(m.key, passedDays);
+          const revpar = rp.revpar;
+          const [py, pmo] = parseInt(mStr) === 1 ? [parseInt(yStr) - 1, 12] : [parseInt(yStr), parseInt(mStr) - 1];
+          const prevKey = `${py}-${String(pmo).padStart(2, '0')}`;
+          const prevDays = new Date(py, pmo, 0).getDate();
+          const prevUpTo = isCurrent ? Math.min(passedDays, prevDays) : prevDays;
+          const prev = revparFor(prevKey, prevUpTo);
+          const showCmp = !isFuture && passedDays > 0 && prev.has;
+          const cmpLabel = isCurrent ? `${MONTH_NAMES[pmo - 1]}, del 1 al ${prevUpTo}` : MONTH_NAMES[pmo - 1];
 
           // Rentabilidad
           const netProfit = m.trueRevenue - m.gastos;
@@ -418,12 +489,12 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
           let availEntre = 0, availFinde = 0;
           for (let i = 1; i <= passedDays; i++) {
              const d = new Date(parseInt(yStr), parseInt(mStr) - 1, i).getDay();
-             if (d >= 4 && d <= 6) availFinde++; else availEntre++;
+             if (isFindeDow(d)) availFinde++; else availEntre++;
           }
           const availNightsEntre = totalRooms * availEntre;
           const availNightsFinde = totalRooms * availFinde;
-          const revparEntre = availNightsEntre > 0 ? Math.round(m.dow.entre.revenue / availNightsEntre) : 0;
-          const revparFinde = availNightsFinde > 0 ? Math.round(m.dow.finde.revenue / availNightsFinde) : 0;
+          const revparEntre = rp.entre;
+          const revparFinde = rp.finde;
 
           // Proyección del mes actual: cada tipo de día sigue a su ritmo hasta hoy.
           const showProjection = isCurrent && passedDays >= PROJECTION_START_DAY;
@@ -432,7 +503,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
             let restEntre = 0, restFinde = 0;
             for (let i = passedDays + 1; i <= daysInMonth; i++) {
               const d = new Date(parseInt(yStr), parseInt(mStr) - 1, i).getDay();
-              if (d >= 4 && d <= 6) restFinde++; else restEntre++;
+              if (isFindeDow(d)) restFinde++; else restEntre++;
             }
             const extraNights =
               (restEntre * totalRooms * m.dow.entre.nights) / availNightsEntre +
@@ -448,9 +519,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
 
           // Segmentación Tipos de Habitación
           const aMat = 1 * passedDays, aKing = 1 * passedDays, aComp = 4 * passedDays;
-          const rMat = aMat > 0 ? Math.round(m.rooms.matrimonial.revenue / aMat) : 0;
-          const rKing = aKing > 0 ? Math.round(m.rooms.king.revenue / aKing) : 0;
-          const rComp = aComp > 0 ? Math.round(m.rooms.compartidas.revenue / aComp) : 0;
+          const rMat = rp.mat, rKing = rp.king, rComp = rp.comp;
           const oMat = aMat > 0 ? Math.min(100, Math.round((m.rooms.matrimonial.nights / aMat)*100)) : 0;
           const oKing = aKing > 0 ? Math.min(100, Math.round((m.rooms.king.nights / aKing)*100)) : 0;
           const oComp = aComp > 0 ? Math.min(100, Math.round((m.rooms.compartidas.nights / aComp)*100)) : 0;
@@ -485,7 +554,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                     <span style={{ fontWeight: 800, color: '#111' }}>{bookedPct}% · {currency(m.bookedRevenue)}</span>
                   </div>
                   {isCurrent && (
-                    <div title="Estimación según el ritmo de Dom-Mié y Jue-Sáb hasta hoy" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                    <div title="Estimación según el ritmo de Lun-Mié y Jue-Dom hasta hoy" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 6 }}>
                       <span style={{ color: '#1E40AF', fontWeight: 700 }}>Proyectado del mes:</span>
                       {showProjection
                         ? <span style={{ fontWeight: 800, color: '#111' }}>{projectedPct}% · {currency(projectedRevenue)}</span>
@@ -523,18 +592,22 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
                   <div style={{ background: '#FFFBEB', border: '1px solid #FEF3C7', padding: '8px 4px', borderRadius: 8, textAlign: 'center' }}>
-                    <div style={{ fontSize: 9, color: '#D97706', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Dom - Mié</div>
+                    <div style={{ fontSize: 9, color: '#D97706', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Lun - Mié</div>
                     <div style={{ fontSize: 11, fontWeight: 800, color: '#92400E' }}>{currency(revparEntre)}</div>
+                    {showCmp && <div style={{ marginTop: 2 }}><Delta cur={revparEntre} prev={prev.entre} /></div>}
                   </div>
                   <div style={{ background: '#F5F3FF', border: '1px solid #EDE9FE', padding: '8px 4px', borderRadius: 8, textAlign: 'center' }}>
-                    <div style={{ fontSize: 9, color: '#7C3AED', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Jue - Sáb</div>
+                    <div style={{ fontSize: 9, color: '#7C3AED', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Jue - Dom</div>
                     <div style={{ fontSize: 11, fontWeight: 800, color: '#5B21B6' }}>{currency(revparFinde)}</div>
+                    {showCmp && <div style={{ marginTop: 2 }}><Delta cur={revparFinde} prev={prev.finde} /></div>}
                   </div>
                   <div title="Ingreso por Habitación Disponible" style={{ background: isCurrent ? '#DBEAFE' : '#fff', border: `1px solid ${isCurrent ? '#BFDBFE' : '#E5E7EB'}`, padding: '8px 4px', borderRadius: 8, textAlign: 'center', cursor: 'help' }}>
                     <div style={{ fontSize: 9, color: isCurrent ? '#1E40AF' : '#4B5563', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Global</div>
                     <div style={{ fontSize: 11, fontWeight: 800, color: isCurrent ? '#1D4ED8' : '#111' }}>{currency(revpar)}</div>
+                    {showCmp && <div style={{ marginTop: 2 }}><Delta cur={revpar} prev={prev.revpar} /></div>}
                   </div>
                 </div>
+                {showCmp && <CmpTitle label={cmpLabel} />}
               </div>
 
               {/* DESGLOSE DE INVENTARIO */}
@@ -542,16 +615,17 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                 <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: 8 }}>Segmentación Física</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4, alignItems: 'center' }}>
                   <span style={{ color: '#4B5563', fontWeight: 600 }}>Matrimonial <span style={{ opacity: 0.6 }}>(P6)</span></span>
-                  <div style={{ textAlign: 'right' }}><span style={{ color: oMat > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oMat}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rMat)}</span></div>
+                  <div style={{ textAlign: 'right' }}><span style={{ color: oMat > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oMat}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rMat)}</span>{showCmp && <Delta cur={rMat} prev={prev.mat} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4, alignItems: 'center' }}>
                   <span style={{ color: '#4B5563', fontWeight: 600 }}>King <span style={{ opacity: 0.6 }}>(P4)</span></span>
-                  <div style={{ textAlign: 'right' }}><span style={{ color: oKing > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oKing}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rKing)}</span></div>
+                  <div style={{ textAlign: 'right' }}><span style={{ color: oKing > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oKing}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rKing)}</span>{showCmp && <Delta cur={rKing} prev={prev.king} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, alignItems: 'center' }}>
                   <span style={{ color: '#4B5563', fontWeight: 600 }}>Privadas <span style={{ opacity: 0.6 }}>(P1, P2, P3, P5)</span></span>
-                  <div style={{ textAlign: 'right' }}><span style={{ color: oComp > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oComp}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rComp)}</span></div>
+                  <div style={{ textAlign: 'right' }}><span style={{ color: oComp > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oComp}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rComp)}</span>{showCmp && <Delta cur={rComp} prev={prev.comp} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
                 </div>
+                {showCmp && <CmpTitle label={cmpLabel} />}
               </div>
 
               {/* FLUJO DE CAJA (FACTURADO) */}
@@ -577,7 +651,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                   </div>
                   {!aiInsights[m.key] ? (
                     <button
-                      onClick={() => analizarRevenue(m, { trueRevenue: Math.round(m.trueRevenue), bookedRevenue: Math.round(m.bookedRevenue), bookedPct, projectedPct, projectedRevenue, gastos: m.gastos, occPct, adr, revpar, goppar, revparEntre, revparFinde, oMat, oKing, oComp })}
+                      onClick={() => analizarRevenue(m, { trueRevenue: Math.round(m.trueRevenue), bookedRevenue: Math.round(m.bookedRevenue), bookedPct, projectedPct, projectedRevenue, gastos: m.gastos, occPct, adr, revpar, goppar, revparEntre, revparFinde, oMat, oKing, oComp, prevCmp: showCmp ? { label: cmpLabel, revpar: prev.revpar, entre: prev.entre, finde: prev.finde } : null })}
                       disabled={analyzingMonth === m.key}
                       style={{
                         background: '#EEF2FF', border: '1px solid #C7D2FE', color: '#4F46E5', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: analyzingMonth === m.key ? 'wait' : 'pointer', opacity: analyzingMonth === m.key ? 0.7 : 1
