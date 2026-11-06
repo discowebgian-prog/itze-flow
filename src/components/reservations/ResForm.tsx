@@ -573,34 +573,6 @@ export function ResForm({
         onChange={(e) => sv('guestEmail', e.target.value)}
       />
 
-      {/* ── SECCIÓN TTLOCK: PIN DE ACCESO ── */}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginBottom: 12 }}>
-        <div style={{ flex: 1 }}>
-          <Inp
-            label="PIN Puerta (TTLock)"
-            value={f.pin_acceso || ''}
-            onChange={(e) => sv('pin_acceso', e.target.value)}
-            placeholder="Ej. 145892"
-            maxLength={9}
-          />
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            // Extrae los últimos 6 números del celular, o genera uno al azar si no hay
-            const digits = (f.guestPhone || '').replace(/\D/g, '');
-            const pin = digits.length >= 6 ? digits.slice(-6) : String(Math.floor(100000 + Math.random() * 900000));
-            sv('pin_acceso', pin);
-          }}
-          style={{
-            padding: '9px 14px', background: '#EEF2FF', border: '1.5px solid #C7D2FE',
-            color: '#4F46E5', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', height: 38
-          }}
-        >
-          🪄 Generar
-        </button>
-      </div>
-
       <ConflictWarn conflicts={conflicts} properties={visibleProps} />
       
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -1216,6 +1188,34 @@ export function ResForm({
               boxSizing: 'border-box',
             }}
           />
+        </div>
+
+        {/* ── SECCIÓN TTLOCK: PIN DE ACCESO ── */}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginBottom: 12 }}>
+          <div style={{ flex: 1 }}>
+            <Inp
+              label="PIN Puerta (TTLock)"
+              value={f.pin_acceso || ''}
+              onChange={(e) => sv('pin_acceso', e.target.value)}
+              placeholder="Ej. 145892"
+              maxLength={9}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              // Extrae los últimos 6 números del celular, o genera uno al azar si no hay
+              const digits = (f.guestPhone || '').replace(/\D/g, '');
+              const pin = digits.length >= 6 ? digits.slice(-6) : String(Math.floor(100000 + Math.random() * 900000));
+              sv('pin_acceso', pin);
+            }}
+            style={{
+              padding: '9px 14px', background: '#EEF2FF', border: '1.5px solid #C7D2FE',
+              color: '#4F46E5', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', height: 38
+            }}
+          >
+            🪄 Generar
+          </button>
         </div>
 
         {/* ALERTA DE ERROR SI FALTAN CAMPOS OBLIGATORIOS */}
