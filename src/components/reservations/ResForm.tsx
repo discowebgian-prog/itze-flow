@@ -8,7 +8,7 @@ import { Icon } from '../ui/Icon';
 import { Inp } from '../ui/Inp';
 import { RangeCalendar } from '../ui/RangeCalendar';
 import { Sel } from '../ui/Sel';
-import { ROOMS, SOURCES, RS, COUNTRIES } from '../../lib/constants';
+import { ROOMS, SOURCES, RS, COUNTRIES, findCountry } from '../../lib/constants';
 import { TODAY, fmt, addDays, diffDays, currency } from '../../lib/dates';
 import { findConflicts } from '../../lib/reservations';
 
@@ -85,7 +85,7 @@ export function ResForm({
   const sv = (k, v) => setF((x) => ({ ...x, [k]: v }));
   const applyScan = (scan) => {
     const name = (scan.fullName || [scan.firstName, scan.lastName].filter(Boolean).join(' ')).trim();
-    const country = COUNTRIES.find((c) => c.code === String(scan.nationality || '').toUpperCase());
+    const country = findCountry(scan.nationality);
     setF((x) => ({
       ...x,
       guestName: name || x.guestName,
