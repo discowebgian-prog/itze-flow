@@ -194,72 +194,6 @@ export function Dashboard({
         ))}
       </div>
       
-      {/* 💳 VCC DE BOOKING POR COBRAR */}
-      {vccPending.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
-          <h3
-            style={{
-              margin: '0 0 12px',
-              fontSize: 11,
-              fontWeight: 800,
-              color: '#1E40AF',
-              textTransform: 'uppercase',
-              letterSpacing: 0.5,
-            }}
-          >
-            💳 VCC de Booking por cobrar ({vccPending.length})
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {vccPending.map((r) => (
-              <div
-                key={r.id + 'vcc'}
-                onClick={() => onGoTo('abrir_reserva', r)}
-                style={{
-                  background: '#EFF6FF',
-                  borderRadius: 10,
-                  padding: '12px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  border: '1px solid #BFDBFE',
-                  cursor: 'pointer',
-                }}
-              >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 700, fontSize: 13, color: '#111' }}>
-                      {r.guestName}
-                    </span>
-                    {r.room && (
-                      <span
-                        style={{
-                          background: '#fff',
-                          color: '#475569',
-                          padding: '1px 6px',
-                          borderRadius: 5,
-                          fontSize: 11,
-                          fontWeight: 800,
-                          border: '1px solid #E2E8F0',
-                          lineHeight: 1,
-                        }}
-                      >
-                        {r.room}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: 11, color: '#64748B', marginTop: 3 }}>
-                    Ingreso {parseD(r.checkIn).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
-                  </div>
-                </div>
-                <div style={{ fontWeight: 800, fontSize: 14, color: '#1E40AF', whiteSpace: 'nowrap' }}>
-                  {currency(Number(r.totalAmount) - Number(r.paid))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* 📥 SECCIÓN DE INGRESOS DE HOY */}
       {ciToday.length > 0 && (
         <div id="seccion-ingresos" style={{ marginBottom: 24 }}>
@@ -424,6 +358,72 @@ export function Dashboard({
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* 💳 VCC DE BOOKING POR COBRAR */}
+      {vccPending.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <h3
+            style={{
+              margin: '0 0 12px',
+              fontSize: 11,
+              fontWeight: 800,
+              color: '#1E40AF',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+            }}
+          >
+            💳 VCC de Booking por cobrar ({vccPending.length})
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {vccPending.map((r) => (
+              <div
+                key={r.id + 'vcc'}
+                onClick={() => onGoTo('abrir_reserva', r)}
+                style={{
+                  background: '#EFF6FF',
+                  borderRadius: 10,
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  border: '1px solid #BFDBFE',
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: '#111' }}>
+                      {r.guestName}
+                    </span>
+                    {r.room && (
+                      <span
+                        style={{
+                          background: '#fff',
+                          color: '#475569',
+                          padding: '1px 6px',
+                          borderRadius: 5,
+                          fontSize: 11,
+                          fontWeight: 800,
+                          border: '1px solid #E2E8F0',
+                          lineHeight: 1,
+                        }}
+                      >
+                        {r.room}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#64748B', marginTop: 3 }}>
+                    Ingreso {parseD(r.checkIn).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                  </div>
+                </div>
+                <div style={{ fontWeight: 800, fontSize: 14, color: '#1E40AF', whiteSpace: 'nowrap' }}>
+                  {currency(Number(r.totalAmount) - Number(r.paid))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
