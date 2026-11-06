@@ -11,6 +11,7 @@ import { TODAY, fmt, diffDays } from './lib/dates';
 import { supabase } from './lib/supabase';
 import { findDuplicates } from './lib/duplicates';
 import { checkoutTimePassed, lateCostOf } from './lib/reservations';
+import { groupOf } from './lib/groups';
 import { Dashboard } from './pages/Dashboard';
 import { FinancePage } from './pages/FinancePage';
 import { GuestsPage } from './pages/GuestsPage';
@@ -112,7 +113,10 @@ export default function AppMejorada() {
           notas: item.notas || '',
           requiresInvoice: item.solicita_factura === 'true' || item.solicita_factura === true,
           solicita_factura: item.solicita_factura === 'true' || item.solicita_factura === true, // <--- ¡AQUÍ ESTÁ LA COMA QUE FALTABA!
-          lista_negra: item.lista_negra === true || item.lista_negra === 'true'
+          lista_negra: item.lista_negra === true || item.lista_negra === 'true',
+          // Reserva de grupo (varias habitaciones de un mismo titular)
+          grupoId: item.grupo_id || null,
+          grupoTitular: item.grupo_titular === true,
         };
       });
 
@@ -332,8 +336,8 @@ export default function AppMejorada() {
       }
     }
   };
-  const saveRes = async (newRes) => {
-    try {
+  // Convierte una reserva de la app al formato de la base (y al de la pantalla)
+  const prepRes = (newRes) => {
       // Evaluamos si el tilde está activo en cualquiera de sus variantes
       const tieneFactura = newRes.requiresInvoice === true || newRes.requiresInvoice === 'true' || newRes.solicita_factura === true || newRes.solicita_factura === 'true';
       
@@ -374,10 +378,16 @@ export default function AppMejorada() {
           tipo_descuento: newRes.pricing?.discountType || 'ninguno',
           motivo_descuento: newRes.pricing?.discountReason || '',
           adicionales: newRes.pricing?.additionals || [],
-            solicita_factura: tieneFactura ? 'true' : 'false',  
+            solicita_factura: tieneFactura ? 'true' : 'false',
             lista_negra: newRes.lista_negra || false,
             pin_acceso: newRes.pin_acceso || ''
           };
+      // Las columnas de grupo solo se mandan si la reserva es de un grupo
+      // (así las reservas comunes se siguen guardando aunque falte correr grupos.sql)
+      if (newRes.grupoId) {
+        datosLimpios.grupo_id = newRes.grupoId;
+        datosLimpios.grupo_titular = !!newRes.grupoTitular;
+      }
 
         // Mantenemos duplicados los formatos en el estado de React para no romper las vistas
         const reservaParaEstado = {
@@ -392,19 +402,35 @@ export default function AppMejorada() {
           lista_negra: newRes.lista_negra || false,
           pin_acceso: newRes.pin_acceso || ''
         };
+      return { datosLimpios, reservaParaEstado };
+  };
 
-      if (newRes.id) {
-        // 1. EDICIÓN
-        const { error } = await supabase
-          .from('reservas')
-          .update(datosLimpios)
-          .eq('id', newRes.id);
+  // Guarda una reserva, o varias:
+  // - input es un array → reserva de grupo nueva (todas las habitaciones en un solo pedido:
+  //   si falla una, no se guarda ninguna)
+  // - opts.also → otras habitaciones del grupo a actualizar junto con esta
+  const saveRes = async (input, opts = {}) => {
+    try {
+      const lista = Array.isArray(input) ? input : [input];
+      const first = lista[0];
 
-        if (error) throw error;
-        setRes(res.map((r) => (r.id === newRes.id ? reservaParaEstado : r)));
+      if (!Array.isArray(input) && input.id) {
+        // 1. EDICIÓN (esta habitación y, si se eligió "todo el grupo", las demás)
+        const todas = [input, ...(opts.also || [])];
+        const preparadas = todas.map((r) => ({ id: r.id, ...prepRes(r) }));
+        for (const p of preparadas) {
+          const { error } = await supabase.from('reservas').update(p.datosLimpios).eq('id', p.id);
+          if (error) throw error;
+        }
+        setRes((prev) =>
+          prev.map((r) => {
+            const p = preparadas.find((x) => x.id === r.id);
+            return p ? p.reservaParaEstado : r;
+          })
+        );
 
       } else {
-        // 2. NUEVA RESERVA
+        // 2. NUEVA RESERVA (una o varias habitaciones)
         const momentoExacto = new Date().toLocaleString('es-MX', {
           timeZone: 'America/Merida',
           year: 'numeric', month: '2-digit', day: '2-digit',
@@ -412,37 +438,49 @@ export default function AppMejorada() {
         });
         const responsable = user?.name || 'Usuario desconocido';
 
-        datosLimpios.fecha_carga = momentoExacto;
-        datosLimpios.usuario_carga = responsable;
+        const preparadas = lista.map((r) => {
+          const p = prepRes(r);
+          p.datosLimpios.fecha_carga = momentoExacto;
+          p.datosLimpios.usuario_carga = responsable;
+          p.reservaParaEstado.fecha_carga = momentoExacto;
+          p.reservaParaEstado.usuario_carga = responsable;
+          return p;
+        });
 
         const { data, error } = await supabase
           .from('reservas')
-          .insert([datosLimpios])
+          .insert(preparadas.map((p) => p.datosLimpios))
           .select();
 
-        if (error) throw error;
-
-        reservaParaEstado.fecha_carga = momentoExacto;
-        reservaParaEstado.usuario_carga = responsable;
-
-       if (data && data.length > 0) {
-          setRes([...res, { ...reservaParaEstado, id: data[0].id }]);
-        } else {
-          setRes([...res, { ...reservaParaEstado, id: 'r' + Date.now() }]);
+        if (error) {
+          if (first.grupoId && /grupo_/.test(error.message || '')) {
+            throw new Error('falta correr supabase/grupos.sql en Supabase (columnas del grupo).');
+          }
+          throw error;
         }
+
+        const nuevas = preparadas.map((p, i) => ({
+          ...p.reservaParaEstado,
+          id: data && data[i] ? data[i].id : 'r' + Date.now() + i,
+        }));
+        setRes((prev) => [...prev, ...nuevas]);
       }
 
       setModal(null);
-      
-      setModal(null);
-      
+
       // ¡LA MAGIA DEL SALTO! Calculamos la distancia en días y movemos el calendario
-      const diasDistancia = diffDays(fmt(TODAY), newRes.checkIn);
+      const diasDistancia = diffDays(fmt(TODAY), first.checkIn);
       setCalOffset(diasDistancia - 2); // Lo centramos dejando 2 días de margen a la izquierda
       setTab('calendario'); // Forzamos ir a la pestaña del calendario para ver la reserva
       
       // Lanzamos el cartel flotante y lo borramos a los 2 segundos
-      setToastMsg('Reserva guardada');
+      setToastMsg(
+        Array.isArray(input) && input.length > 1
+          ? `Grupo guardado · ${input.length} habitaciones`
+          : opts.also?.length
+          ? 'Cambios guardados en todo el grupo'
+          : 'Reserva guardada'
+      );
       setTimeout(() => setToastMsg(null), 2000);
 
     } catch (err) {
@@ -469,7 +507,8 @@ export default function AppMejorada() {
       alert('Hubo un error al guardar el movimiento en la nube. Revisá tu conexión.');
     }
   };
-  const delRes = async (id) => {
+  const delRes = async (idOrIds) => {
+    const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds];
     // Capturamos la fecha y hora exacta con la zona horaria de Progreso, Yucatán
     const momentoExacto = new Date().toLocaleString('es-MX', {
       timeZone: 'America/Merida',
@@ -487,7 +526,7 @@ export default function AppMejorada() {
         fecha_eliminacion: momentoExacto,
         usuario_eliminacion: responsable
       })
-      .eq('id', id);
+      .in('id', ids);
 
     if (error) {
       console.error('Error al archivar en Supabase:', error);
@@ -496,8 +535,32 @@ export default function AppMejorada() {
     }
 
     // 2. La sacamos de la vista inmediatamente
-    setRes(res.filter((r) => r.id !== id));
+    setRes((prev) => prev.filter((r) => !ids.includes(r.id)));
     setDrawer(null);
+  };
+
+  // Cobro desde el panel: cambia lo pagado (y la forma de pago) de una o varias habitaciones.
+  // pagos: [{ id, paid, paymentMethod }]
+  const payRes = async (pagos) => {
+    for (const p of pagos) {
+      const { error } = await supabase
+        .from('reservas')
+        .update({ monto_pagado: String(p.paid), forma_pago: p.paymentMethod })
+        .eq('id', p.id);
+      if (error) {
+        alert('No se pudo guardar el cobro: ' + error.message);
+        return false;
+      }
+    }
+    const apply = (r) => {
+      const p = pagos.find((x) => x.id === r.id);
+      return p ? { ...r, paid: Number(p.paid) || 0, paymentMethod: p.paymentMethod } : r;
+    };
+    setRes((prev) => prev.map(apply));
+    setDrawer((prev) => (prev ? apply(prev) : prev));
+    setToastMsg(pagos.length > 1 ? `Cobro guardado · ${pagos.length} habitaciones` : 'Cobro guardado');
+    setTimeout(() => setToastMsg(null), 2000);
+    return true;
   };
   const restoreRes = async (id) => {
     // 1. Le avisamos a Supabase que la reserva vuelve a la vida
@@ -577,30 +640,37 @@ const toggleBlacklist = async (id, currentStatus) => {
     setDrawer(null);
     setCoModal(r);
   };
+  // ciModal / coModal: una reserva, o un array (check-in/out de todo el grupo)
+  const modalIds = (m) => (Array.isArray(m) ? m.map((x) => x.id) : [m.id]);
+  const modalWho = (m) =>
+    Array.isArray(m)
+      ? `el grupo de ${m[0]?.guestName || ''} (${m.map((x) => x.room).filter(Boolean).join(', ')})`
+      : m.guestName;
+
   const confCI = async (time) => {
     if (!ciModal) return;
-    const targetId = ciModal.id;
+    const ids = modalIds(ciModal);
 
     // 1. Actualizamos la vista local de inmediato para una experiencia fluida
     setRes(
       res.map((x) =>
-        x.id === targetId ? { ...x, status: 'hospedado', checkInAt: time } : x
+        ids.includes(x.id) ? { ...x, status: 'hospedado', checkInAt: time } : x
       )
     );
     setCiModal(null);
 
     // 2. Impactamos en la base de datos de Supabase de manera segura
-    await supabase.from('reservas').update({ estado: 'hospedado' }).eq('id', targetId);
+    await supabase.from('reservas').update({ estado: 'hospedado' }).in('id', ids);
   };
 
   const confCO = async (time) => {
     if (!coModal) return;
-    const targetId = coModal.id;
+    const ids = modalIds(coModal);
 
     // 1. Actualizamos la vista local
     setRes(
       res.map((x) =>
-        x.id === targetId
+        ids.includes(x.id)
           ? {
               ...x,
               status: 'finalizada',
@@ -612,7 +682,7 @@ const toggleBlacklist = async (id, currentStatus) => {
     setCoModal(null);
 
     // 2. Impactamos en la base de datos de Supabase
-    await supabase.from('reservas').update({ estado: 'finalizada' }).eq('id', targetId);
+    await supabase.from('reservas').update({ estado: 'finalizada' }).in('id', ids);
   };
 
   // 4. EL DISEÑO VISUAL (Ahora sí, adentro de la función principal)
@@ -1013,11 +1083,17 @@ const toggleBlacklist = async (id, currentStatus) => {
         <ResDrawer
           res={drawer}
           onClose={() => setDrawer(null)}
-          onEdit={(r) => {
-            setModal({ type: 'edit', data: r });
+          onEdit={(r, extra = {}) => {
+            setModal({ type: 'edit', data: r, focusDoc: !!extra.focusDoc });
             setDrawer(null);
           }}
-          onDelete={(id) => setModal({ type: 'confirmDel', id })}
+          onDelete={(id) => {
+            const r = res.find((x) => x.id === id);
+            const members = groupOf(res, r);
+            setModal({ type: 'confirmDel', id, groupIds: members.length > 1 ? members.map((m) => m.id) : null });
+          }}
+          onOpenRes={(r) => setDrawer(r)}
+          onPay={payRes}
           onToggleBlacklist={toggleBlacklist}
           properties={visProps}
           allRes={res}
@@ -1070,6 +1146,31 @@ const toggleBlacklist = async (id, currentStatus) => {
               <p style={{ margin: '0 0 20px', fontSize: 12, color: '#9CA3AF' }}>
                 Para eliminar permanentemente, contactá al administrador.
               </p>
+              {modal.groupIds && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>
+                    🔗 Esta habitación es parte de un grupo de {modal.groupIds.length}.
+                  </div>
+                  <button
+                    onClick={() => {
+                      delRes(modal.id);
+                      setModal(null);
+                    }}
+                    style={{ padding: '10px', background: '#FEF2F2', border: '1.5px solid #FECACA', borderRadius: 8, fontFamily: 'inherit', fontWeight: 700, cursor: 'pointer', color: '#DC2626' }}
+                  >
+                    Solo esta habitación
+                  </button>
+                  <button
+                    onClick={() => {
+                      delRes(modal.groupIds);
+                      setModal(null);
+                    }}
+                    style={{ padding: '10px', background: '#FEF2F2', border: '1.5px solid #FECACA', borderRadius: 8, fontFamily: 'inherit', fontWeight: 700, cursor: 'pointer', color: '#DC2626' }}
+                  >
+                    Todo el grupo ({modal.groupIds.length} habitaciones)
+                  </button>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
                   onClick={() => setModal(null)}
@@ -1087,7 +1188,7 @@ const toggleBlacklist = async (id, currentStatus) => {
                 >
                   Cancelar
                 </button>
-                <button
+                {!modal.groupIds && <button
                   onClick={() => {
                     delRes(modal.id);
                     setModal(null);
@@ -1105,7 +1206,7 @@ const toggleBlacklist = async (id, currentStatus) => {
                   }}
                 >
                   Mover a papelera
-                </button>
+                </button>}
               </div>
             </div>
           </div>
@@ -1136,6 +1237,7 @@ const toggleBlacklist = async (id, currentStatus) => {
         >
           <ResForm
             initial={modal.data}
+            focusDoc={modal.focusDoc}
             visibleProps={visProps}
             onSave={saveRes}
             onClose={() => setModal(null)}
@@ -1183,7 +1285,7 @@ const toggleBlacklist = async (id, currentStatus) => {
             </div>
             <div style={{ padding: '20px 22px' }}>
               <p style={{ fontSize: 14, color: '#374151', marginBottom: 6 }}>
-                ¿Confirmas el ingreso de <b>{ciModal.guestName}</b>?
+                ¿Confirmas el ingreso de <b>{modalWho(ciModal)}</b>?
               </p>
               <p style={{ fontSize: 12, color: '#6B7280', marginBottom: 20 }}>
                 Esta acción marcará la reserva como "Hospedado" y registrará la hora de entrada.
@@ -1266,7 +1368,7 @@ const toggleBlacklist = async (id, currentStatus) => {
             </div>
             <div style={{ padding: '20px 22px' }}>
               <p style={{ fontSize: 14, color: '#374151', marginBottom: 6 }}>
-                ¿Confirmas la salida de <b>{coModal.guestName}</b>?
+                ¿Confirmas la salida de <b>{modalWho(coModal)}</b>?
               </p>
               <p style={{ fontSize: 12, color: '#6B7280', marginBottom: 20 }}>
                 La estadía pasará a "Finalizada" y se liberará la propiedad en el calendario.

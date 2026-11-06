@@ -10,6 +10,8 @@ import { DocLink } from '../ui/DocLink';
 import { LATE_COLORS } from '../ui/LateBadge';
 import { LatePicker } from './LatePicker';
 import { lateHour, lateCostOf } from '../../lib/reservations';
+import { groupOf, groupTitular, hasOwnContact, balanceOf } from '../../lib/groups';
+import { GROUP_COLORS } from '../ui/GroupBadge';
 
 // ── DRAWER ────────────────────────────────────────────────────────────────────
 export function ResDrawer({
@@ -25,6 +27,8 @@ export function ResDrawer({
   onCheckIn,
   onCheckOut,
   onSetLate,
+  onOpenRes,
+  onPay,
 }) {
   // "No grato" es un caso raro: enlace chico al pie y pide confirmar antes de marcar
   const [askBlacklist, setAskBlacklist] = useState(false);
@@ -47,6 +51,42 @@ export function ResDrawer({
     setLateSaving(false);
     if (ok) setLateEdit(false);
   };
+  // ── GRUPO: varias habitaciones del mismo titular ──
+  const members = groupOf(allRes, res).map((m) => (m.id === res.id ? res : m));
+  const inGroup = members.length > 1;
+  const titular = inGroup ? groupTitular(members) : null;
+  const isTit = inGroup && titular.id === res.id;
+  const needsContact =
+    inGroup && !isTit && !hasOwnContact(res, titular) && (res.status === 'por_llegar' || res.status === 'hospedado');
+  const groupSaldo = inGroup ? balanceOf(members) : 0;
+  const toCheckIn = members.filter((m) => m.status === 'por_llegar');
+  const toCheckOut = members.filter((m) => m.status === 'hospedado');
+  // Cobro rápido desde el panel: 'room' (esta habitación) o 'group' (saldo de todo el grupo)
+  const [payMode, setPayMode] = useState(null);
+  const [payTarget, setPayTarget] = useState(0);
+  const [payMethod, setPayMethod] = useState('efectivo');
+  const [paySaving, setPaySaving] = useState(false);
+  useEffect(() => setPayMode(null), [res?.id]);
+  const openPay = (mode) => {
+    setPayMode(mode);
+    setPayTarget(Number(res.totalAmount) || 0);
+    setPayMethod(res.paymentMethod && res.paymentMethod !== 'vcc' ? res.paymentMethod : 'efectivo');
+  };
+  const savePay = async () => {
+    if (!onPay || paySaving) return;
+    const pagos =
+      payMode === 'group'
+        ? members
+            .filter((m) => (Number(m.totalAmount) || 0) > (Number(m.paid) || 0))
+            .map((m) => ({ id: m.id, paid: Number(m.totalAmount) || 0, paymentMethod: payMethod }))
+        : [{ id: res.id, paid: payTarget, paymentMethod: payMethod }];
+    if (!pagos.length) return setPayMode(null);
+    setPaySaving(true);
+    const ok = await onPay(pagos);
+    setPaySaving(false);
+    if (ok) setPayMode(null);
+  };
+
   const prop = properties.find((p) => p.id === res.propertyId);
   const saldo = res.totalAmount - res.paid;
   const nights = diffDays(res.checkIn, res.checkOut);
@@ -295,6 +335,69 @@ export function ResDrawer({
               </div>
             </div>
           </div>
+          {inGroup && (
+            <div
+              style={{
+                background: GROUP_COLORS.bg,
+                border: `1.5px solid ${GROUP_COLORS.border}`,
+                borderRadius: 10,
+                padding: '10px 12px',
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ fontSize: 12, fontWeight: 800, color: GROUP_COLORS.txt, marginBottom: 8 }}>
+                🔗 Grupo de {titular.guestName}
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {members.map((m) => {
+                  const here = m.id === res.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      disabled={here}
+                      onClick={() => onOpenRes && onOpenRes(m)}
+                      title={m.guestName}
+                      style={{
+                        minHeight: 32,
+                        padding: '4px 12px',
+                        borderRadius: 8,
+                        border: `1.5px solid ${here ? GROUP_COLORS.txt : GROUP_COLORS.border}`,
+                        background: here ? GROUP_COLORS.txt : '#fff',
+                        color: here ? '#fff' : GROUP_COLORS.txt,
+                        fontFamily: 'inherit',
+                        fontWeight: 800,
+                        fontSize: 13,
+                        cursor: here ? 'default' : 'pointer',
+                      }}
+                    >
+                      {m.grupoTitular ? '★ ' : ''}
+                      {m.room}
+                    </button>
+                  );
+                })}
+              </div>
+              {needsContact && (
+                <button
+                  type="button"
+                  onClick={() => onEdit(res, { focusDoc: true })}
+                  style={{
+                    ...mainBtn,
+                    width: '100%',
+                    marginTop: 10,
+                    minHeight: 40,
+                    fontSize: 13,
+                    background: '#fff',
+                    border: `1.5px solid ${GROUP_COLORS.txt}`,
+                    color: GROUP_COLORS.txt,
+                  }}
+                >
+                  📷 Cargar contacto de esta habitación
+                </button>
+              )}
+            </div>
+          )}
+
           {/* FILA SUPERIOR: Tiempos de la estadía (3 columnas en línea) */}
           <div
             style={{
@@ -483,9 +586,52 @@ export function ResDrawer({
               {currency(res.totalAmount)}
             </div>
           </div>
+          {saldo <= 0 ? (
+            // Pagado del todo: se lee primero "pagado", el saldo queda chiquito abajo
+            <div
+              style={{
+                background: '#D1FAE5',
+                border: '1.5px solid #A7F3D0',
+                borderRadius: 10,
+                padding: '12px 16px',
+                marginBottom: 10,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: '50%',
+                  background: '#10B981',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 900,
+                  fontSize: 18,
+                  flexShrink: 0,
+                }}
+              >
+                ✓
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: '#065F46', fontWeight: 800, textTransform: 'uppercase' }}>
+                  Pagado completo
+                </div>
+                <div style={{ fontWeight: 800, fontSize: 20, color: '#047857' }}>{currency(res.paid)}</div>
+                <div style={{ fontSize: 11, color: '#6B7280', marginTop: 1 }}>
+                  {saldo < 0 ? `Pagó de más ${currency(-saldo)}` : 'Saldo $0'}
+                  {res.paymentMethod ? ` · ${pmLabel[res.paymentMethod] || res.paymentMethod}` : ''}
+                </div>
+              </div>
+            </div>
+          ) : (
           <div
             style={{
-              background: saldo > 0 ? '#FEF3C7' : '#D1FAE5',
+              background: '#FEF3C7',
               borderRadius: 10,
               padding: '12px 16px',
               marginBottom: 10,
@@ -498,22 +644,31 @@ export function ResDrawer({
               <div
                 style={{
                   fontSize: 10,
-                  color: saldo > 0 ? '#92400E' : '#065F46',
+                  color: '#92400E',
                   fontWeight: 700,
                   textTransform: 'uppercase',
                 }}
               >
-                Saldo pendiente
+                {inGroup ? 'Saldo de esta habitación' : 'Saldo pendiente'}
               </div>
               <div
                 style={{
                   fontWeight: 800,
                   fontSize: 20,
-                  color: saldo > 0 ? '#B45309' : '#059669',
+                  color: '#B45309',
                 }}
               >
                 {currency(saldo)}
               </div>
+              {inGroup && onPay && payMode !== 'room' && (
+                <button
+                  type="button"
+                  onClick={() => openPay('room')}
+                  style={{ ...mainBtn, minHeight: 32, padding: '4px 12px', fontSize: 12, marginTop: 6, background: '#10B981', color: '#fff' }}
+                >
+                  Cobrar {res.room}
+                </button>
+              )}
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 10, color: '#6B7280', fontWeight: 700 }}>
@@ -527,6 +682,117 @@ export function ResDrawer({
               )}
             </div>
           </div>
+          )}
+          {payMode && (() => {
+            const total = Number(res.totalAmount) || 0;
+            const paid = Number(res.paid) || 0;
+            const half = Math.round(total / 2);
+            const isGroupPay = payMode === 'group';
+            const owing = members.filter((m) => (Number(m.totalAmount) || 0) > (Number(m.paid) || 0));
+            const cobra = isGroupPay ? groupSaldo : Math.max(0, payTarget - paid);
+            return (
+              <div style={{ background: '#F0FDF4', border: '1.5px solid #A7F3D0', borderRadius: 10, padding: 12, marginBottom: 10 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: '#065F46', marginBottom: 8 }}>
+                  {isGroupPay
+                    ? `Cobrar saldo del grupo (${owing.map((m) => m.room).join(', ')})`
+                    : `Cobrar ${res.room}`}
+                </div>
+                {!isGroupPay && (
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                    {[
+                      ...(paid < half ? [{ k: 'Hasta 50%', v: half }] : []),
+                      { k: 'Total', v: total },
+                    ].map((q) => (
+                      <button
+                        key={q.k}
+                        type="button"
+                        onClick={() => setPayTarget(q.v)}
+                        style={{
+                          ...mainBtn,
+                          flex: 1,
+                          minHeight: 36,
+                          fontSize: 12,
+                          background: payTarget === q.v ? '#10B981' : '#D1FAE5',
+                          color: payTarget === q.v ? '#fff' : '#065F46',
+                          border: '1.5px solid #10B981',
+                        }}
+                      >
+                        {q.k}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+                  <span style={{ fontSize: 12, color: '#374151', flex: 1 }}>
+                    Cobra ahora <b>{currency(cobra)}</b>
+                  </span>
+                  <select
+                    value={payMethod}
+                    onChange={(e) => setPayMethod(e.target.value)}
+                    style={{ padding: '7px 8px', border: '1.5px solid #E5E7EB', borderRadius: 8, fontFamily: 'inherit', fontSize: 12, background: '#fff' }}
+                  >
+                    {Object.entries(pmLabel)
+                      .filter(([k]) => k !== 'vcc')
+                      .map(([k, l]) => (
+                        <option key={k} value={k}>
+                          {l}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={savePay}
+                    disabled={paySaving || cobra <= 0}
+                    style={{ ...mainBtn, flex: 2, minHeight: 40, fontSize: 13, background: cobra > 0 ? '#10B981' : '#A7F3D0', color: '#fff' }}
+                  >
+                    {paySaving ? 'Guardando…' : 'Guardar cobro'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPayMode(null)}
+                    style={{ ...mainBtn, flex: 1, minHeight: 40, fontSize: 13, background: '#fff', border: '1px solid #E5E7EB', color: '#374151' }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+
+          {inGroup && payMode !== 'group' && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
+                fontSize: 12,
+                color: GROUP_COLORS.txt,
+                padding: '6px 4px 10px',
+                marginBottom: 6,
+              }}
+            >
+              {groupSaldo > 0 ? (
+                <span style={{ fontWeight: 700 }}>
+                  🔗 Saldo del grupo: <b style={{ whiteSpace: 'nowrap' }}>{currency(groupSaldo)}</b>
+                </span>
+              ) : (
+                <span style={{ fontWeight: 800, color: '#047857' }}>🔗 Grupo pagado completo ✓</span>
+              )}
+              {groupSaldo > 0 && onPay && (
+                <button
+                  type="button"
+                  onClick={() => openPay('group')}
+                  style={{ ...mainBtn, minHeight: 34, padding: '4px 14px', fontSize: 12, background: GROUP_COLORS.txt, color: '#fff', whiteSpace: 'nowrap' }}
+                >
+                  🔗 Cobrar saldo del grupo
+                </button>
+              )}
+            </div>
+          )}
+
           {(res.requiresInvoice || res.notes) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 12px', borderBottom: '1px solid #F0F0F0', borderTop: '1px solid #F0F0F0', marginBottom: 14, background: '#FAFAFA' }}>
               {res.requiresInvoice && (
@@ -796,6 +1062,26 @@ export function ResDrawer({
               <Icon name="edit" size={16} /> Editar
             </button>
           </div>
+
+          {/* Check-in / Check-out de todo el grupo de un toque */}
+          {inGroup && res.status === 'por_llegar' && toCheckIn.length > 1 && (
+            <button
+              type="button"
+              onClick={() => onCheckIn(toCheckIn)}
+              style={{ ...mainBtn, minHeight: 38, fontSize: 13, background: '#fff', border: '1.5px solid #10B981', color: '#047857' }}
+            >
+              🔗 Hacer check-in de todo el grupo ({toCheckIn.length})
+            </button>
+          )}
+          {inGroup && res.status === 'hospedado' && toCheckOut.length > 1 && (
+            <button
+              type="button"
+              onClick={() => onCheckOut(toCheckOut)}
+              style={{ ...mainBtn, minHeight: 38, fontSize: 13, background: '#fff', border: '1.5px solid #F59E0B', color: '#B45309' }}
+            >
+              🔗 Hacer check-out de todo el grupo ({toCheckOut.length})
+            </button>
+          )}
 
           {/* Acciones poco frecuentes, discretas al pie: Eliminar (pide confirmar en ventana) y No grato */}
           {askBlacklist ? (
