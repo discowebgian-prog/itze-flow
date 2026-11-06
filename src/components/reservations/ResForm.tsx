@@ -168,7 +168,14 @@ export function ResForm({
       // Pasa la habitación ya elegida (con sus huéspedes) a la primera tarjeta
       if (f.room) {
         setSelRooms([f.room]);
-        setAlloc({ [f.room]: { ...blankAlloc(), guests: f.totalGuests || 1, companions: f.companions || [] } });
+        setAlloc({
+          [f.room]: {
+            ...blankAlloc(),
+            guests: f.totalGuests || 1,
+            companions: f.companions || [],
+            rate: f.pricing.ratePerNight ?? '',
+          },
+        });
         setTitularRoom(f.room);
       }
       setMulti(true);
@@ -183,6 +190,7 @@ export function ResForm({
         companions: first ? a.companions : [],
         pricing: {
           ...x.pricing,
+          ratePerNight: first && a.rate !== '' ? a.rate : x.pricing.ratePerNight,
           additionals: Array.from({ length: Math.max(0, (first ? a.guests : 1) - 2) }, () => ({ ratePerNight: 0, bonificada: false })),
         },
       }));
@@ -200,7 +208,7 @@ export function ResForm({
   // Precio de cada habitación: su tarifa (o la general) y el extra por persona desde la 3ª
   const roomPricing = (id) => {
     const a = alloc[id] || blankAlloc();
-    const rate = a.rate !== '' && a.rate !== null && a.rate !== undefined ? a.rate : f.pricing.ratePerNight;
+    const rate = a.rate !== null && a.rate !== undefined ? a.rate : '';
     return {
       ...f.pricing,
       ratePerNight: rate,
@@ -397,7 +405,7 @@ export function ResForm({
         return r === '' || r === null || r === undefined;
       });
       if (sinTarifa.length) {
-        setValErr(`Falta la tarifa/noche de ${sinTarifa.join(', ')} (o cargá la tarifa base para todas).`);
+        setValErr(`Falta la tarifa/noche de ${sinTarifa.join(', ')}.`);
         return;
       }
       if (!splitPay && (f.paid === '' || f.paid === null)) {
@@ -1140,9 +1148,10 @@ export function ResForm({
           💰 Liquidación y Pago
         </div>
         
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <Inp
-            label={isGroupNew ? 'Tarifa base/noche $ (todas)' : 'Tarifa base/noche $'}
+        {/* Con varias habitaciones la tarifa va en cada tarjeta (pueden ser de distinto tipo) */}
+        <div style={{ display: 'grid', gridTemplateColumns: multiOn ? '1fr' : '1fr 1fr', gap: 10 }}>
+          {!multiOn && <Inp
+            label="Tarifa base/noche $"
             type="number"
             value={f.pricing.ratePerNight}
             onChange={(e) =>
@@ -1151,9 +1160,9 @@ export function ResForm({
                 ratePerNight: e.target.value === '' ? '' : Number(e.target.value),
               })
             }
-          />
+          />}
           <Inp
-            label="Etiqueta"
+            label={multiOn ? 'Etiqueta de tarifa' : 'Etiqueta'}
             value={f.pricing.rateLabel}
             onChange={(e) =>
               sv('pricing', { ...f.pricing, rateLabel: e.target.value })
@@ -2121,7 +2130,7 @@ function RoomCards({ rooms, alloc, setA, titularRoom, setTitularRoom, baseRate, 
                 type="number"
                 inputMode="numeric"
                 value={a.rate}
-                placeholder={baseRate !== '' && baseRate !== null ? `${baseRate} (base)` : 'Tarifa'}
+                placeholder="Tarifa de esta habitación"
                 onChange={(e) => setA(id, { rate: e.target.value === '' ? '' : Number(e.target.value) })}
                 style={inputSt}
               />
