@@ -5,6 +5,7 @@ import { Badge } from '../components/ui/Badge';
 import { PROPS } from '../lib/constants';
 import { TODAY, fmt, parseD, addDays, currency } from '../lib/dates';
 import dashboardCss from '../styles/dashboard.css?raw';
+import { LateBadge } from '../components/ui/LateBadge';
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 export function Dashboard({
@@ -349,6 +350,7 @@ export function Dashboard({
                           {r.room}
                         </span>
                       )}
+                      <LateBadge r={r} />
                     </div>
                     <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>
                       {prop?.name}

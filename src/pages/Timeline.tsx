@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ROOMS, srcShort, RS, PS, BLOCK_COLORS, ALERTS, getAlerts } from '../lib/constants';
 import { TODAY, fmt, fmtD, addDays, diffDays, parseD, currency, MONTHS, DAYS } from '../lib/dates';
-import { findConflicts } from '../lib/reservations';
+import { findConflicts, lateHour } from '../lib/reservations';
 import { TimelineMobile } from './TimelineMobile';
 import timelineCss from '../styles/timeline.css?raw';
 
@@ -842,6 +842,7 @@ export function Timeline({
                           >
                             {fmtD(r.checkIn).slice(0, 5)} al{' '}
                             {fmtD(r.checkOut).slice(0, 5)}
+                            {lateHour(r) ? ` · 🕐 Late ${lateHour(r)}` : ''}
                           </text>
                         </svg>
                       ) : (
@@ -890,6 +891,7 @@ export function Timeline({
                           >
                             {fmtD(r.checkIn).slice(0, 5)} al{' '}
                             {fmtD(r.checkOut).slice(0, 5)}
+                            {lateHour(r) ? ` · 🕐 Late ${lateHour(r)}` : ''}
                           </span>
                         </div>
                       )}
@@ -1031,6 +1033,11 @@ export function Timeline({
             {fmtD(tooltip.r.checkIn)} → {fmtD(tooltip.r.checkOut)} ·{' '}
             {diffDays(tooltip.r.checkIn, tooltip.r.checkOut)}n
           </div>
+          {lateHour(tooltip.r) && (
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#A5B4FC', marginBottom: 8 }}>
+              🕐 Late check-out {lateHour(tooltip.r)}
+            </div>
+          )}
           {getAlerts(tooltip.r).map((a) => (
             <div
               key={a.key}

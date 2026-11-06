@@ -13,6 +13,8 @@ import { TODAY, fmt, fmtD, addDays, diffDays, currency } from '../../lib/dates';
 import { findConflicts } from '../../lib/reservations';
 import { stayInfo, stayBadge, suggestGuests } from '../../lib/guests';
 import { DocLink } from '../ui/DocLink';
+import { LatePicker } from './LatePicker';
+import { LATE_COLORS } from '../ui/LateBadge';
 
 export function ResForm({
   initial,
@@ -34,6 +36,8 @@ export function ResForm({
     guestNationality: 'MX',
     guestEmail: '',
     company: '', // nombre de la empresa (solo si solicita factura)
+    lateCheckout: '', // hora del late check-out ('16:00') o vacío
+    lateCost: '',
     checkIn: prefillDate || fmt(TODAY),
     checkOut: fmt(addDays(TODAY, 1)),
     status: 'por_llegar',
@@ -206,7 +210,9 @@ export function ResForm({
       (s, a) => s + (a.bonificada ? 0 : (Number(a.ratePerNight) || 0) * nights),
       0
     );
-    return Math.max(0, b + addT);
+    // El late check-out se suma al total
+    const lateT = f.lateCheckout ? Number(f.lateCost) || 0 : 0;
+    return Math.max(0, b + addT + lateT);
   };
 
   useEffect(() => {
@@ -222,7 +228,20 @@ export function ResForm({
     f.pricing.discountValue,
     f.pricing.additionals,
     nights,
+    f.lateCheckout,
+    f.lateCost,
   ]);
+
+  // Late check-out: el apartado se abre con el botón; sin hora elegida no se guarda
+  const [lateOpen, setLateOpen] = useState(() => !!initial?.lateCheckout);
+  const toggleLate = () => {
+    if (lateOpen) {
+      setF((x) => ({ ...x, lateCheckout: '', lateCost: '' }));
+      setLateOpen(false);
+    } else {
+      setLateOpen(true);
+    }
+  };
 
   const handleSave = () => {
     if (isSaving) return; 
@@ -238,6 +257,10 @@ export function ResForm({
     }
     if (f.paid === '' || f.paid === null) {
       setValErr('El Monto pagado es obligatorio (podés poner 0).');
+      return;
+    }
+    if (lateOpen && !f.lateCheckout) {
+      setValErr('Elegí la hora del late check-out (o desactivalo).');
       return;
     }
     
@@ -781,6 +804,56 @@ export function ResForm({
               />
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── LATE CHECK-OUT: botón chico; al activarlo, hora acordada y costo (se suma al total) ── */}
+      <div style={{ marginBottom: lateOpen ? 8 : 14 }}>
+        <button
+          type="button"
+          onClick={toggleLate}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            minHeight: 34,
+            padding: '6px 14px',
+            borderRadius: 20,
+            border: `1.5px solid ${lateOpen ? LATE_COLORS.txt : '#E5E7EB'}`,
+            background: lateOpen ? LATE_COLORS.bg : '#fff',
+            color: lateOpen ? LATE_COLORS.txt : '#6B7280',
+            fontFamily: 'inherit',
+            fontWeight: lateOpen ? 800 : 600,
+            fontSize: 12,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {lateOpen ? '✓ ' : ''}🕐 Late check-out{f.lateCheckout ? ` · ${f.lateCheckout}` : ''}
+        </button>
+      </div>
+      {lateOpen && (
+        <div
+          style={{
+            marginBottom: 14,
+            padding: 12,
+            borderRadius: 10,
+            background: '#F5F7FF',
+            border: `1px solid ${LATE_COLORS.border}`,
+          }}
+        >
+          <LatePicker
+            hour={f.lateCheckout}
+            cost={f.lateCost}
+            onHour={(h) => {
+              sv('lateCheckout', h);
+              if (valErr.startsWith('Elegí la hora del late')) setValErr('');
+            }}
+            onCost={(c) => sv('lateCost', c)}
+          />
+          <div style={{ fontSize: 11, color: '#6B7280', marginTop: 8 }}>
+            El costo se suma solo al Total a cobrar.
+          </div>
         </div>
       )}
 
