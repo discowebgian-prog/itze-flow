@@ -103,7 +103,7 @@ export function GuestsPage({
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 12 }}>
         {allGuests.map((g, idx) => {
-          const freq = freqBadge(g.stays.length);
+          const freq = freqBadge(g.visits);
           const lastRes = reservations.find(r => r.id === g.stays[g.stays.length - 1]);
 
           return (
@@ -137,7 +137,7 @@ export function GuestsPage({
               <div style={{ display: 'flex', justifyContent: 'space-between', background: '#F8FAFC', borderRadius: 6, padding: '8px 10px', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
                   <span style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 700, textTransform: 'uppercase' }}>Visitas:</span>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: '#374151' }}>{g.stays.length}</span>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#374151' }}>{g.visits}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
                   <span style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 700, textTransform: 'uppercase' }}>Inversión:</span>

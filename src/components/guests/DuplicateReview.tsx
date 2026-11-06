@@ -55,7 +55,7 @@ function GuestSide({ g, reservations }) {
         </div>
       )}
       <div style={row}>
-        <span style={rowLabel}>Estancias ({stays.length})</span>
+        <span style={rowLabel}>Reservas ({stays.length})</span>
         {stays
           .slice(0, 3)
           .map((r) => `${fmtD(r.checkIn)}${r.room ? ' · ' + r.room : ''}`)

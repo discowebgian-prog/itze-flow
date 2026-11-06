@@ -44,6 +44,28 @@ export function makeResolver(decisions) {
   return find;
 }
 
+// Agrupa reservas de una misma persona en visitas: las que se superponen en fechas
+// (por ejemplo, dos habitaciones para un grupo) son una sola visita.
+// Devuelve las visitas ordenadas por fecha; cada visita es una lista de reservas.
+export function groupVisits(list) {
+  const sorted = [...list]
+    .filter((r) => r.checkIn)
+    .sort((a, b) => a.checkIn.localeCompare(b.checkIn));
+  const visits = [];
+  let end = '';
+  sorted.forEach((r) => {
+    const out = r.checkOut && r.checkOut > r.checkIn ? r.checkOut : r.checkIn;
+    if (visits.length && r.checkIn < end) {
+      visits[visits.length - 1].push(r);
+      if (out > end) end = out;
+    } else {
+      visits.push([r]);
+      end = out;
+    }
+  });
+  return visits;
+}
+
 const hasIdentity = (r) => normDoc(r.guestDoc) || normName(r.guestName).length >= 3;
 
 export function samePerson(a, b, resolve = (k) => k) {
@@ -75,6 +97,8 @@ export function buildGuestDB(reservations, decisions = []) {
         totalSpent: 0,
         firstStay: r.checkIn,
         lastStay: r.checkIn,
+        resList: [],
+        visits: 0, // visitas reales (reservas superpuestas cuentan una vez)
         keys: new Set(), // claves base que forman este huésped
         names: new Set(),
         phones: new Set(),
@@ -96,6 +120,7 @@ export function buildGuestDB(reservations, decisions = []) {
     // Sumamos sus estadísticas solo si no habíamos contado esta reserva antes
     if (!g.stays.includes(r.id)) {
       g.stays.push(r.id);
+      g.resList.push(r);
       g.totalSpent += r.totalAmount || 0;
     }
 
@@ -106,6 +131,9 @@ export function buildGuestDB(reservations, decisions = []) {
       if (r.guestPhone) g.phone = r.guestPhone; // Se queda con el teléfono más actual
       if (r.guestEmail) g.email = r.guestEmail;
     }
+  });
+  Object.values(db).forEach((g) => {
+    g.visits = groupVisits(g.resList).length || g.stays.length;
   });
   return db;
 }
@@ -126,13 +154,24 @@ export function stayInfo(allRes, res, decisions = []) {
   const others = (allRes || []).filter(
     (r) => r.id !== res.id && r.status !== 'cancelada' && samePerson(r, res, resolve)
   );
-  const prev = others
-    .filter((r) => !res.checkIn || (r.checkIn && r.checkIn < res.checkIn))
-    .sort((a, b) => a.checkIn.localeCompare(b.checkIn));
+  // Sin fecha todavía: sería la visita siguiente a todas las anteriores
+  if (!res.checkIn) {
+    const visits = groupVisits(others);
+    const lastVisit = visits[visits.length - 1];
+    return {
+      number: visits.length + 1,
+      total: visits.length + 1,
+      last: lastVisit ? lastVisit[lastVisit.length - 1] : null,
+    };
+  }
+  const me = { ...res, id: res.id || '__esta__' };
+  const visits = groupVisits([...others, me]);
+  const idx = visits.findIndex((v) => v.includes(me));
+  const prevVisit = idx > 0 ? visits[idx - 1] : null;
   return {
-    number: prev.length + 1,
-    total: others.length + 1,
-    last: prev.length ? prev[prev.length - 1] : null,
+    number: idx + 1,
+    total: visits.length,
+    last: prevVisit ? [...prevVisit].sort((a, b) => a.checkIn.localeCompare(b.checkIn))[prevVisit.length - 1] : null,
   };
 }
 
