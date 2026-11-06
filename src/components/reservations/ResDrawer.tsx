@@ -1,5 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
+import { useState, useEffect } from 'react';
 import { Badge } from '../ui/Badge';
 import { Icon } from '../ui/Icon';
 import { srcLabel, srcColor, BLOCK_COLORS } from '../../lib/constants';
@@ -21,6 +22,9 @@ export function ResDrawer({
   onCheckIn,
   onCheckOut,
 }) {
+  // "No grato" es un caso raro: enlace chico al pie y pide confirmar antes de marcar
+  const [askBlacklist, setAskBlacklist] = useState(false);
+  useEffect(() => setAskBlacklist(false), [res?.id]);
   const prop = properties.find((p) => p.id === res.propertyId);
   const saldo = res.totalAmount - res.paid;
   const nights = diffDays(res.checkIn, res.checkOut);
@@ -667,30 +671,6 @@ export function ResDrawer({
             </button>
           )}
           
-          {/* BOTÓN MÁGICO DE LISTA NEGRA */}
-          <button
-            onClick={() => onToggleBlacklist(res.id, res.lista_negra)}
-            style={{
-              width: '100%',
-              padding: '10px',
-              background: res.lista_negra ? '#FEF2F2' : '#fff',
-              border: res.lista_negra ? '1.5px solid #FECACA' : '1px solid #E5E7EB',
-              borderRadius: 8,
-              fontFamily: 'inherit',
-              fontWeight: 700,
-              fontSize: 13,
-              cursor: 'pointer',
-              color: res.lista_negra ? '#DC2626' : '#4B5563',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              transition: 'all 0.2s'
-            }}
-          >
-            {res.lista_negra ? '⚠️ Quitar de Lista Negra' : '🚫 Marcar como No Grato'}
-          </button>
-
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               onClick={() => onEdit(res)}
@@ -735,8 +715,61 @@ export function ResDrawer({
               <Icon name="trash" size={16} /> Eliminar
             </button>
           </div>
+
+          {/* LISTA NEGRA: discreto, al pie */}
+          {res.lista_negra ? (
+            <button
+              type="button"
+              onClick={() => onToggleBlacklist(res.id, true)}
+              style={blLink('#DC2626')}
+            >
+              Quitar de lista negra
+            </button>
+          ) : askBlacklist ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontSize: 11, color: '#6B7280' }}>
+              <span>¿Marcar como no grato?</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setAskBlacklist(false);
+                  onToggleBlacklist(res.id, false);
+                }}
+                style={{ ...blLink('#DC2626'), fontWeight: 800, padding: 0 }}
+              >
+                Sí, marcar
+              </button>
+              <button
+                type="button"
+                onClick={() => setAskBlacklist(false)}
+                style={{ ...blLink('#6B7280'), padding: 0 }}
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAskBlacklist(true)}
+              style={blLink('#9CA3AF')}
+            >
+              Marcar como no grato
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
 }
+
+const blLink = (color) => ({
+  background: 'none',
+  border: 'none',
+  padding: '2px 0',
+  fontFamily: 'inherit',
+  fontSize: 11,
+  fontWeight: 600,
+  color,
+  cursor: 'pointer',
+  textDecoration: 'underline',
+  alignSelf: 'center',
+});
