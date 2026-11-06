@@ -15,6 +15,8 @@ import { stayInfo, stayBadge, suggestGuests } from '../../lib/guests';
 import {
   groupOf,
   groupTitular,
+  groupBooker,
+  bookerOf,
   hasOwnContact,
   changedFields,
   sameName,
@@ -109,10 +111,11 @@ export function ResForm({
   // ── GRUPO AL EDITAR: esta habitación es parte de un grupo ──
   const members = useMemo(() => (initial?.grupoId ? groupOf(allRes, initial) : []), [allRes, initial?.grupoId]);
   const inGroup = !!initial?.id && members.length > 1;
-  const titular = inGroup ? groupTitular(members) : null;
+  const titular = inGroup ? groupTitular(members) : null; // null = quien reservó no se aloja
+  const booker = inGroup ? groupBooker(members) : null;
   const isTitRoom = inGroup && titular?.id === initial.id;
-  // Sigue con los datos del titular (todavía no se cargó el contacto de esta habitación)
-  const wasPlaceholder = inGroup && !isTitRoom && !hasOwnContact(initial, titular);
+  // Sigue con los datos de quien reservó (todavía no se cargó el contacto de esta habitación)
+  const wasPlaceholder = inGroup && !isTitRoom && !hasOwnContact(initial, members);
 
   const applyScan = (scan) => {
     const name = (scan.fullName || [scan.firstName, scan.lastName].filter(Boolean).join(' ')).trim();
@@ -348,7 +351,9 @@ export function ResForm({
 
   // Arma una reserva por habitación (la del titular primero). Con una sola, es una reserva común.
   const buildRooms = () => {
-    const ordered = [titularRoom, ...selRooms.filter((x) => x !== titularRoom)].filter(Boolean);
+    // "none" = quien reserva no se aloja: ninguna habitación es la del titular
+    const tr = titularRoom === 'none' ? '' : titularRoom;
+    const ordered = [tr, ...selRooms.filter((x) => x !== tr)].filter(Boolean);
     const totals = ordered.map(roomTotal);
     const paids = splitPay
       ? ordered.map((id) => Number((alloc[id] || {}).paid) || 0)
@@ -365,7 +370,8 @@ export function ResForm({
         totalAmount: totals[i],
         paid: paids[i],
         grupoId: gid,
-        grupoTitular: !!gid && i === 0,
+        grupoTitular: !!gid && id === tr,
+        grupoReservante: gid ? bookerOf(f) : null,
       };
     });
   };
@@ -446,7 +452,7 @@ export function ResForm({
       // habitaciones que todavía tienen sus datos.
       const shared = changedFields(f, initial, SHARED_FIELDS);
       const person = isTitRoom ? changedFields(f, initial, PERSON_FIELDS) : [];
-      const followers = members.filter((m) => m.id !== initial.id && !hasOwnContact(m, titular));
+      const followers = members.filter((m) => m.id !== initial.id && !hasOwnContact(m, members));
       if (shared.length || (person.length && followers.length)) {
         setScopeAsk({ shared, person: followers.length ? person : [], followers });
         return;
@@ -459,22 +465,25 @@ export function ResForm({
   const applyToGroup = () => {
     const { shared, person, followers } = scopeAsk;
     const datesChanged = shared.includes('checkIn') || shared.includes('checkOut');
+    // Si se corrigen los datos del titular para todo el grupo, también se actualiza "quien reservó"
+    const newBooker = person.length ? bookerOf(f) : null;
     const also = members
       .filter((m) => m.id !== initial.id)
       .map((m) => {
         const n = { ...m };
         shared.forEach((k) => (n[k] = f[k]));
         if (followers.some((x) => x.id === m.id)) person.forEach((k) => (n[k] = f[k]));
+        if (newBooker) n.grupoReservante = newBooker;
         // Nuevas fechas: se recalcula el total de cada habitación con su propia tarifa
         if (datesChanged) n.totalAmount = calcStayTotal(m.pricing, diffDays(n.checkIn, n.checkOut), lateCostOf(m));
         return n;
       })
       .filter((n) => {
         const m = members.find((x) => x.id === n.id);
-        return changedFields(n, m, [...SHARED_FIELDS, ...PERSON_FIELDS, 'totalAmount']).length > 0;
+        return changedFields(n, m, [...SHARED_FIELDS, ...PERSON_FIELDS, 'totalAmount']).length > 0 || !!newBooker;
       });
     setScopeAsk(null);
-    proceed(f, also.length ? { also } : undefined);
+    proceed(newBooker ? { ...f, grupoReservante: newBooker } : f, also.length ? { also } : undefined);
   };
 
   const paidShown = multiOn && splitPay ? groupPaidSplit : f.paid;
@@ -493,16 +502,17 @@ export function ResForm({
           }}
         >
           <div style={{ fontSize: 12.5, fontWeight: 800, color: GROUP_COLORS.txt }}>
-            🔗 Grupo de {titular?.guestName} · {members.map((m) => m.room).filter(Boolean).join(' · ')}
+            🔗 Grupo de {booker?.name} · {members.map((m) => m.room).filter(Boolean).join(' · ')}
           </div>
           <div style={{ fontSize: 11.5, color: '#4B5563', marginTop: 4, lineHeight: 1.4 }}>
             {isTitRoom
               ? `Estás editando ${initial.room}, la habitación del titular.`
               : `Estás editando ${initial.room}. Los datos de la persona se guardan solo en esta habitación.`}
+            {!titular && ' Quien reservó no se aloja.'}
             {wasPlaceholder && (
               <>
                 {' '}
-                <b>Todavía tiene los datos del titular:</b> sacá la foto del documento de quien se queda acá
+                <b>Todavía tiene los datos de quien reservó:</b> sacá la foto del documento de quien se queda acá
                 y se reemplazan solo en {initial.room}.
               </>
             )}
@@ -639,7 +649,7 @@ export function ResForm({
                 ¿En qué habitación duerme el titular (quien reserva)?
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {selRooms.map((id) => {
+                {[...selRooms, 'none'].map((id) => {
                   const on = titularRoom === id;
                   return (
                     <button
@@ -663,14 +673,16 @@ export function ResForm({
                         cursor: 'pointer',
                       }}
                     >
-                      {on ? '★ ' : ''}
-                      {id}
+                      {on && id !== 'none' ? '★ ' : ''}
+                      {id === 'none' ? (on ? '✓ Ninguna (no se aloja)' : 'Ninguna (no se aloja)') : id}
                     </button>
                   );
                 })}
               </div>
               <div style={{ fontSize: 11, color: '#6B7280', marginTop: 6 }}>
-                En las demás, el contacto de cada habitación se carga al llegar.
+                {titularRoom === 'none'
+                  ? 'Quien reserva no se aloja (ej. una empresa): en todas las habitaciones el contacto se carga al llegar.'
+                  : 'En las demás, el contacto de cada habitación se carga al llegar.'}
               </div>
             </div>
           )}
@@ -1439,7 +1451,8 @@ export function ResForm({
               onClick={() => {
                 // Al separar, arranca con lo que tocaría a cada habitación del pago del grupo
                 if (!splitPay) {
-                  const ordered = [titularRoom, ...selRooms.filter((x) => x !== titularRoom)].filter(Boolean);
+                  const tr = titularRoom === 'none' ? '' : titularRoom;
+                  const ordered = [tr, ...selRooms.filter((x) => x !== tr)].filter(Boolean);
                   const parts = splitPaid(f.paid, ordered.map(roomTotal));
                   ordered.forEach((id, i) => setA(id, { paid: f.paid === '' ? '' : parts[i] }));
                 } else {

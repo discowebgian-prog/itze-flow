@@ -11,7 +11,7 @@ import { TODAY, fmt, diffDays } from './lib/dates';
 import { supabase } from './lib/supabase';
 import { findDuplicates } from './lib/duplicates';
 import { checkoutTimePassed, lateCostOf } from './lib/reservations';
-import { groupOf } from './lib/groups';
+import { groupOf, groupBooker, bookerOf, newGroupId } from './lib/groups';
 import { Dashboard } from './pages/Dashboard';
 import { FinancePage } from './pages/FinancePage';
 import { GuestsPage } from './pages/GuestsPage';
@@ -117,6 +117,7 @@ export default function AppMejorada() {
           // Reserva de grupo (varias habitaciones de un mismo titular)
           grupoId: item.grupo_id || null,
           grupoTitular: item.grupo_titular === true,
+          grupoReservante: item.grupo_reservante || null,
         };
       });
 
@@ -387,6 +388,7 @@ export default function AppMejorada() {
       if (newRes.grupoId) {
         datosLimpios.grupo_id = newRes.grupoId;
         datosLimpios.grupo_titular = !!newRes.grupoTitular;
+        if (newRes.grupoReservante) datosLimpios.grupo_reservante = newRes.grupoReservante;
       }
 
         // Mantenemos duplicados los formatos en el estado de React para no romper las vistas
@@ -454,7 +456,7 @@ export default function AppMejorada() {
 
         if (error) {
           if (first.grupoId && /grupo_/.test(error.message || '')) {
-            throw new Error('falta correr supabase/grupos.sql en Supabase (columnas del grupo).');
+            throw new Error('falta correr el SQL de grupos en Supabase (supabase/grupos_reservante.sql).');
           }
           throw error;
         }
@@ -541,6 +543,103 @@ export default function AppMejorada() {
 
   // Cobro desde el panel: cambia lo pagado (y la forma de pago) de una o varias habitaciones.
   // pagos: [{ id, paid, paymentMethod }]
+  // ── SUMAR HABITACIÓN desde el panel ──
+  // Si la reserva no era de un grupo, se arma uno: ella queda como la del titular.
+  // La nueva habitación copia fechas, canal, factura, notas y PIN; queda por llegar, sin pagar
+  // y con los datos de quien reservó hasta que llegue su contacto.
+  const addRoomToGroup = async (base, extra) => {
+    const members = groupOf(res, base);
+    const isGroup = members.length > 1;
+    const gid = isGroup ? base.grupoId : base.grupoId || newGroupId();
+    const booker = isGroup ? groupBooker(members) : bookerOf(base);
+    const momento = new Date().toLocaleString('es-MX', {
+      timeZone: 'America/Merida',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    });
+    const nueva = {
+      ...base,
+      id: undefined,
+      room: extra.room,
+      totalGuests: extra.totalGuests,
+      companions: [],
+      pricing: extra.pricing,
+      totalAmount: extra.totalAmount,
+      paid: 0,
+      status: 'por_llegar',
+      checkInAt: undefined,
+      checkOutAt: undefined,
+      lateCheckout: '',
+      lateCost: '',
+      guestName: booker.name,
+      guestDoc: booker.doc,
+      guestDocType: booker.docType || base.guestDocType,
+      guestNationality: booker.nationality || base.guestNationality,
+      guestPhonePrefix: booker.phonePrefix || base.guestPhonePrefix,
+      guestPhone: booker.phone,
+      guestEmail: booker.email,
+      url_ine_frente: null,
+      url_ine_dorso: null,
+      lista_negra: false,
+      grupoId: gid,
+      grupoTitular: false,
+      grupoReservante: booker,
+    };
+    try {
+      const pn = prepRes(nueva);
+      pn.datosLimpios.fecha_carga = momento;
+      pn.datosLimpios.usuario_carga = user?.name || 'Usuario desconocido';
+      // Reserva común → pasa a ser la habitación del titular del nuevo grupo
+      let baseAct = null;
+      if (!isGroup) {
+        baseAct = { ...base, grupoId: gid, grupoTitular: true, grupoReservante: booker };
+        const { error: e1 } = await supabase
+          .from('reservas')
+          .update({ grupo_id: gid, grupo_titular: true, grupo_reservante: booker })
+          .eq('id', base.id);
+        if (e1) throw e1;
+      }
+      const { data, error } = await supabase.from('reservas').insert([pn.datosLimpios]).select();
+      if (error) throw error;
+      const creada = {
+        ...pn.reservaParaEstado,
+        fecha_carga: momento,
+        id: data && data[0] ? data[0].id : 'r' + Date.now(),
+      };
+      setRes((prev) => [...prev.map((r) => (baseAct && r.id === base.id ? baseAct : r)), creada]);
+      if (baseAct) setDrawer(baseAct);
+      setToastMsg(`${extra.room} sumada al grupo`);
+      setTimeout(() => setToastMsg(null), 2000);
+      return true;
+    } catch (err) {
+      const msg = /grupo_/.test(err?.message || '')
+        ? 'falta correr el SQL de grupos en Supabase (supabase/grupos_reservante.sql).'
+        : err?.message;
+      alert('No se pudo sumar la habitación: ' + msg);
+      return false;
+    }
+  };
+
+  // ── SEPARAR DEL GRUPO ── (si quedan menos de 2, el grupo deja de existir)
+  const ungroupRes = async (r) => {
+    const members = groupOf(res, r);
+    const ids = members.length <= 2 ? members.map((m) => m.id) : [r.id];
+    const { error } = await supabase
+      .from('reservas')
+      .update({ grupo_id: null, grupo_titular: false, grupo_reservante: null })
+      .in('id', ids);
+    if (error) {
+      alert('No se pudo separar del grupo: ' + error.message);
+      return false;
+    }
+    const clean = (x) => (ids.includes(x.id) ? { ...x, grupoId: null, grupoTitular: false, grupoReservante: null } : x);
+    setRes((prev) => prev.map(clean));
+    setDrawer((prev) => (prev ? clean(prev) : prev));
+    setToastMsg(`${r.room} separada del grupo`);
+    setTimeout(() => setToastMsg(null), 2000);
+    return true;
+  };
+
   const payRes = async (pagos) => {
     for (const p of pagos) {
       const { error } = await supabase
@@ -1094,6 +1193,8 @@ const toggleBlacklist = async (id, currentStatus) => {
           }}
           onOpenRes={(r) => setDrawer(r)}
           onPay={payRes}
+          onAddRoom={addRoomToGroup}
+          onUngroup={ungroupRes}
           onToggleBlacklist={toggleBlacklist}
           properties={visProps}
           allRes={res}

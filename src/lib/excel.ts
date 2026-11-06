@@ -3,7 +3,7 @@
 import { srcLabel, RS } from './constants';
 import { fmt, fmtD, fmtDT, diffDays } from './dates';
 import { supabase } from './supabase';
-import { groupOf, groupTitular } from './groups';
+import { groupOf, groupName } from './groups';
 
 // ── EXPORT EXCEL ──────────────────────────────────────────────────────────────
 export async function exportToExcel(reservations, properties) {
@@ -48,7 +48,7 @@ export async function exportToExcel(reservations, properties) {
         // Reserva de grupo: nombre del titular y habitaciones
         Grupo: (() => {
           const g = groupOf(reservations, r);
-          return g.length > 1 ? `${groupTitular(g).guestName} (${g.map((m) => m.room).join(', ')})` : '—';
+          return g.length > 1 ? `${groupName(g)} (${g.map((m) => m.room).join(', ')})` : '—';
         })(),
         'Check-in': fmtD(r.checkIn),
         'Check-out': fmtD(r.checkOut),
