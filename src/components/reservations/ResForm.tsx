@@ -21,6 +21,7 @@ export function ResForm({
   prefillProp,
   prefillDate,
   allRes = [],
+  guestDecisions = [],
 }) {
   const blank = {
     propertyId: prefillProp || visibleProps[0]?.id || '',
@@ -116,7 +117,7 @@ export function ResForm({
   const [valErr, setValErr] = useState(''); 
 
   // ── NÚMERO DE ESTANCIA DEL HUÉSPED (se actualiza mientras se escribe) ──
-  const stay = stayInfo(allRes, f);
+  const stay = stayInfo(allRes, f, guestDecisions);
   const stayTag = stayBadge(stay);
 
   const minDatePermitida = initial?.checkIn ? initial.checkIn : null;

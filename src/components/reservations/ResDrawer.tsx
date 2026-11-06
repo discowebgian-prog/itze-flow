@@ -15,6 +15,7 @@ export function ResDrawer({
   onToggleBlacklist,
   properties,
   allRes,
+  guestDecisions = [],
   isMobile,
   onCheckIn,
   onCheckOut,
@@ -23,7 +24,7 @@ export function ResDrawer({
   const saldo = res.totalAmount - res.paid;
   const nights = diffDays(res.checkIn, res.checkOut);
   // Qué número de estancia es esta reserva para el huésped
-  const freq = stayBadge(stayInfo(allRes, res));
+  const freq = stayBadge(stayInfo(allRes, res, guestDecisions));
   const pmLabel = {
     efectivo: 'Efectivo',
     transferencia: 'Transferencia',

@@ -8,8 +8,52 @@ export const waLink = (phone, prefix, nationality) => {
   return `https://wa.me/${cleanPrefix}${cleanPhone}`;
 };
 
+// ── MISMA PERSONA ─────────────────────────────────────────────────────────────
+// Regla base (la usan la pestaña Huéspedes y la etiqueta de estancia): si la reserva
+// tiene documento, se junta con las que tienen ese documento. Si no tiene, se junta con
+// las que tampoco tienen documento y tienen el mismo nombre (sin tildes, mayúsculas ni
+// espacios de más). Una con documento y otra sin documento no se juntan solas: puede
+// haber varios "Juan Pérez". Esos casos los decide un admin en "Posibles duplicados",
+// y esas decisiones (tabla huespedes_decisiones) se respetan acá.
+export const normName = (s) =>
+  String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+const normDoc = (s) => String(s || '').replace(/\s+/g, '').toLowerCase();
+export const guestKey = (r) => {
+  const d = normDoc(r.guestDoc);
+  return d ? 'doc:' + d : 'nom:' + normName(r.guestName);
+};
+
+// Convierte una clave base en la clave del grupo, uniendo las marcadas como "misma persona".
+export function makeResolver(decisions) {
+  const parent = {};
+  const find = (k) => {
+    while (parent[k] && parent[k] !== k) k = parent[k];
+    return k;
+  };
+  (decisions || [])
+    .filter((d) => d.decision === 'misma')
+    .forEach((d) => {
+      const a = find(d.clave_a);
+      const b = find(d.clave_b);
+      if (a !== b) {
+        // Siempre queda como raíz la menor, así el resultado no depende del orden
+        if (a < b) parent[b] = a;
+        else parent[a] = b;
+      }
+    });
+  return find;
+}
+
+const hasIdentity = (r) => normDoc(r.guestDoc) || normName(r.guestName).length >= 3;
+
+export function samePerson(a, b, resolve = (k) => k) {
+  if (!hasIdentity(a)) return false;
+  return resolve(guestKey(a)) === resolve(guestKey(b));
+}
+
 // ── GUEST DB ──────────────────────────────────────────────────────────────────
-export function buildGuestDB(reservations) {
+export function buildGuestDB(reservations, decisions = []) {
+  const resolve = makeResolver(decisions);
   const db = {};
   reservations.forEach((r) => {
     // Ignoramos si por algún error la reserva no tiene nombre
@@ -17,11 +61,12 @@ export function buildGuestDB(reservations) {
     // Las canceladas no son una visita ni suman al total gastado
     if (r.status === 'cancelada') return;
 
-    // Si tiene documento, agrupa por documento. Si no, agrupa por el nombre.
-    const k = guestKey(r);
+    const base = guestKey(r);
+    const k = resolve(base);
 
     if (!db[k]) {
       db[k] = {
+        key: k,
         doc: r.guestDoc || '',
         name: r.guestName,
         phone: r.guestPhone || '',
@@ -30,11 +75,24 @@ export function buildGuestDB(reservations) {
         totalSpent: 0,
         firstStay: r.checkIn,
         lastStay: r.checkIn,
+        keys: new Set(), // claves base que forman este huésped
+        names: new Set(),
+        phones: new Set(),
+        emails: new Set(),
+        nats: new Set(),
       };
     }
-    
+
     const g = db[k];
-    
+    g.keys.add(base);
+    g.names.add(normName(r.guestName));
+    const ph = String(r.guestPhone || '').replace(/\D/g, '');
+    if (ph.length >= 7) g.phones.add(ph.slice(-10));
+    const em = String(r.guestEmail || '').trim().toLowerCase();
+    if (em.includes('@')) g.emails.add(em);
+    if (r.guestNationality) g.nats.add(r.guestNationality);
+    if (!g.doc && r.guestDoc) g.doc = r.guestDoc;
+
     // Sumamos sus estadísticas solo si no habíamos contado esta reserva antes
     if (!g.stays.includes(r.id)) {
       g.stays.push(r.id);
@@ -42,10 +100,11 @@ export function buildGuestDB(reservations) {
     }
 
     if (r.checkIn < g.firstStay) g.firstStay = r.checkIn;
-    if (r.checkIn > g.lastStay) {
+    if (r.checkIn >= g.lastStay) {
       g.lastStay = r.checkIn;
       g.name = r.guestName; // Se queda con el último nombre registrado
       if (r.guestPhone) g.phone = r.guestPhone; // Se queda con el teléfono más actual
+      if (r.guestEmail) g.email = r.guestEmail;
     }
   });
   return db;
@@ -59,30 +118,13 @@ export function freqBadge(n) {
 }
 
 // ── NÚMERO DE ESTANCIA ────────────────────────────────────────────────────────
-// Misma persona (la misma regla que la pestaña Huéspedes): si la reserva tiene documento,
-// se junta con las que tienen ese documento. Si no tiene, se junta con las que tampoco
-// tienen documento y tienen el mismo nombre (sin tildes, mayúsculas ni espacios de más).
-// Una reserva con documento y otra sin documento nunca se juntan: puede haber varios
-// "Juan Pérez" que no son la misma persona.
-const normName = (s) =>
-  String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
-const normDoc = (s) => String(s || '').replace(/\s+/g, '').toLowerCase();
-export const guestKey = (r) => {
-  const d = normDoc(r.guestDoc);
-  return d ? 'doc:' + d : 'nom:' + normName(r.guestName);
-};
-
-export function samePerson(a, b) {
-  if (!normDoc(a.guestDoc) && normName(a.guestName).length < 3) return false;
-  return guestKey(a) === guestKey(b);
-}
-
 // Devuelve qué número de estancia es esta reserva para el huésped (sin contar canceladas),
 // cuántas tiene en total y cuál fue la anterior. null si todavía no hay nombre ni documento.
-export function stayInfo(allRes, res) {
-  if (!normDoc(res.guestDoc) && normName(res.guestName).length < 3) return null;
+export function stayInfo(allRes, res, decisions = []) {
+  if (!hasIdentity(res)) return null;
+  const resolve = makeResolver(decisions);
   const others = (allRes || []).filter(
-    (r) => r.id !== res.id && r.status !== 'cancelada' && samePerson(r, res)
+    (r) => r.id !== res.id && r.status !== 'cancelada' && samePerson(r, res, resolve)
   );
   const prev = others
     .filter((r) => !res.checkIn || (r.checkIn && r.checkIn < res.checkIn))
