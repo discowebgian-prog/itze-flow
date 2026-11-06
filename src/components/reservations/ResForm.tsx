@@ -659,19 +659,36 @@ export function ResForm({
                         setTitularRoom(id);
                         setValErr('');
                       }}
-                      style={{
-                        minWidth: 56,
-                        minHeight: 36,
-                        padding: '4px 12px',
-                        borderRadius: 20,
-                        border: `1.5px solid ${on ? GROUP_COLORS.txt : '#E5E7EB'}`,
-                        background: on ? GROUP_COLORS.txt : '#fff',
-                        color: on ? '#fff' : '#374151',
-                        fontFamily: 'inherit',
-                        fontWeight: 800,
-                        fontSize: 13,
-                        cursor: 'pointer',
-                      }}
+                      style={
+                        id === 'none'
+                          ? {
+                              // Caso poco frecuente: botón chico y discreto
+                              alignSelf: 'center',
+                              minHeight: 26,
+                              padding: '2px 9px',
+                              borderRadius: 14,
+                              border: `1px solid ${on ? GROUP_COLORS.txt : '#E5E7EB'}`,
+                              background: on ? GROUP_COLORS.txt : 'transparent',
+                              color: on ? '#fff' : '#6B7280',
+                              fontFamily: 'inherit',
+                              fontWeight: 600,
+                              fontSize: 11,
+                              cursor: 'pointer',
+                            }
+                          : {
+                              minWidth: 56,
+                              minHeight: 36,
+                              padding: '4px 12px',
+                              borderRadius: 20,
+                              border: `1.5px solid ${on ? GROUP_COLORS.txt : '#E5E7EB'}`,
+                              background: on ? GROUP_COLORS.txt : '#fff',
+                              color: on ? '#fff' : '#374151',
+                              fontFamily: 'inherit',
+                              fontWeight: 800,
+                              fontSize: 13,
+                              cursor: 'pointer',
+                            }
+                      }
                     >
                       {on && id !== 'none' ? '★ ' : ''}
                       {id === 'none' ? (on ? '✓ Ninguna (no se aloja)' : 'Ninguna (no se aloja)') : id}
