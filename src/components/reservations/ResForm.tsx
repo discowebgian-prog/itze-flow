@@ -525,8 +525,21 @@ export function ResForm({
                 flexDirection: 'column',
                 gap: 6,
                 marginBottom: 10,
+                padding: 10,
+                background: '#F9FAFB',
+                border: '1px solid #EEF0F2',
+                borderRadius: 10,
               }}
             >
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: '#6B7280',
+                }}
+              >
+                Acompañante {i + 1}
+              </div>
               <input
                 value={c.name}
                 onChange={(e) =>
@@ -537,7 +550,7 @@ export function ResForm({
                     )
                   )
                 }
-                placeholder={`Nombre ${i + 1}`}
+                placeholder="Nombre"
                 style={{
                   width: '100%',
                   minWidth: 0,
