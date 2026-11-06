@@ -300,6 +300,59 @@ export function ResForm({
         />
       )}
 
+      <ConflictWarn conflicts={conflicts} properties={visibleProps} />
+      
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <Sel
+          label="Estado"
+          value={f.status}
+          onChange={(e) => sv('status', e.target.value)}
+          options={['por_llegar', 'hospedado', 'finalizada', 'cancelada'].map(
+            (v) => ({ value: v, label: RS[v]?.label })
+          )}
+        />
+        <div>
+          <label
+            style={{
+              display: 'block',
+              fontSize: 11,
+              fontWeight: 800,
+              color: f.source === 'Booking' ? '#1E3A8A' : '#065F46',
+              marginBottom: 4,
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+            }}
+          >
+            Canal
+          </label>
+          <select
+            value={f.source}
+            onChange={(e) => sv('source', e.target.value)}
+            style={{
+              width: '100%',
+              padding: '9px 12px',
+              border: `2px solid ${f.source === 'Booking' ? '#3B82F6' : '#10B981'}`,
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 800,
+              fontFamily: 'inherit',
+              outline: 'none',
+              background: f.source === 'Booking' ? '#EFF6FF' : '#ECFDF5',
+              color: f.source === 'Booking' ? '#1E40AF' : '#065F46',
+              boxSizing: 'border-box',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {SOURCES.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       <Inp
         label="Nombre completo"
         value={f.guestName}
@@ -572,59 +625,6 @@ export function ResForm({
         value={f.guestEmail}
         onChange={(e) => sv('guestEmail', e.target.value)}
       />
-
-      <ConflictWarn conflicts={conflicts} properties={visibleProps} />
-      
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <Sel
-          label="Estado"
-          value={f.status}
-          onChange={(e) => sv('status', e.target.value)}
-          options={['por_llegar', 'hospedado', 'finalizada', 'cancelada'].map(
-            (v) => ({ value: v, label: RS[v]?.label })
-          )}
-        />
-        <div>
-          <label
-            style={{
-              display: 'block',
-              fontSize: 11,
-              fontWeight: 800,
-              color: f.source === 'Booking' ? '#1E3A8A' : '#065F46',
-              marginBottom: 4,
-              textTransform: 'uppercase',
-              letterSpacing: 0.5,
-            }}
-          >
-            Canal
-          </label>
-          <select
-            value={f.source}
-            onChange={(e) => sv('source', e.target.value)}
-            style={{
-              width: '100%',
-              padding: '9px 12px',
-              border: `2px solid ${f.source === 'Booking' ? '#3B82F6' : '#10B981'}`,
-              borderRadius: 8,
-              fontSize: 13,
-              fontWeight: 800,
-              fontFamily: 'inherit',
-              outline: 'none',
-              background: f.source === 'Booking' ? '#EFF6FF' : '#ECFDF5',
-              color: f.source === 'Booking' ? '#1E40AF' : '#065F46',
-              boxSizing: 'border-box',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            {SOURCES.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
 
       {(!isHostel || selRoom) && maxG > 1 && (
         <div style={{ marginBottom: 14 }}>
