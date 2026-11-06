@@ -204,7 +204,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
       key: keyStr, label: `${mName} ${y}`, total: 0, paid: 0, count: 0, occupiedNights: 0, trueRevenue: 0,
       bookedNights: 0, bookedRevenue: 0,
       pmTotals: { efectivo: 0, transferencia: 0, debito: 0, credito: 0, vcc: 0, otro: 0 },
-      srcTotals: { Booking: 0, 'Directo-Puerta': 0, 'Directo-Celular': 0 },
+      srcTotals: { Booking: 0, 'Directo-Puerta': 0, 'Directo-Celular': 0, Redes: 0 },
       dow: { entre: { revenue: 0, nights: 0 }, finde: { revenue: 0, nights: 0 } },
       rooms: { matrimonial: { revenue: 0, nights: 0 }, king: { revenue: 0, nights: 0 }, compartidas: { revenue: 0, nights: 0 } },
       gastos: 0

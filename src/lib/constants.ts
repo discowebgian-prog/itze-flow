@@ -37,6 +37,7 @@ export const SOURCES = [
     short: 'Por celular',
     color: '#059669',
   },
+  { value: 'Redes', label: 'Redes', short: 'Redes', color: '#DB2777' },
 ];
 
 export const srcShort = (v) => SOURCES.find((s) => s.value === v)?.short || v;

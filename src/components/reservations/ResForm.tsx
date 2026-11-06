@@ -103,7 +103,8 @@ export function ResForm({
   const selRoom = isHostel ? ROOMS.find((r) => r.id === f.room) : null;
   const maxG = selRoom ? selRoom.maxGuests : isHostel ? 1 : 6;
   const addlCount = Math.max(0, f.totalGuests - 2);
-  const conflicts = findConflicts(
+  // En el hostel, sin habitación elegida no hay con qué comparar: no se avisa conflicto
+  const conflicts = isHostel && !f.room ? [] : findConflicts(
     allRes,
     f.propertyId,
     f.room || '',
@@ -282,23 +283,100 @@ export function ResForm({
       />
 
       {isHostel && (
-        <Sel
-          label="Habitación"
-          value={f.room}
-          onChange={(e) => {
-            sv('room', e.target.value);
-            sv('companions', []);
-            sv('totalGuests', 1);
-          }}
-          options={[
-            { value: '', label: '— Seleccionar habitación —' },
-            ...ROOMS.map((r) => ({
-              value: r.id,
-              label: `${r.name} (hasta ${r.maxGuests} personas)`,
-            })),
-          ]}
-        />
+        <div style={{ marginBottom: 12 }}>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: '#888',
+              marginBottom: 6,
+              textTransform: 'uppercase',
+              letterSpacing: 0.4,
+            }}
+          >
+            Habitación
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+            {ROOMS.map((r) => {
+              const on = f.room === r.id;
+              // Ocupada en estas fechas (se puede elegir igual: aparece el aviso de conflicto)
+              const busy =
+                findConflicts(allRes, f.propertyId, r.id, f.checkIn, f.checkOut, initial?.id).length > 0;
+              const border = on ? (busy ? '#DC2626' : '#3B82F6') : '#E5E7EB';
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => {
+                    if (on) return;
+                    sv('room', r.id);
+                    sv('companions', []);
+                    sv('totalGuests', 1);
+                  }}
+                  style={{
+                    padding: '7px 4px',
+                    borderRadius: 10,
+                    border: `${on ? 2 : 1.5}px solid ${border}`,
+                    background: on ? (busy ? '#FEF2F2' : '#EFF6FF') : busy ? '#F3F4F6' : '#fff',
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    lineHeight: 1.2,
+                    opacity: busy && !on ? 0.75 : 1,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 800,
+                      color: on ? (busy ? '#B91C1C' : '#1E40AF') : busy ? '#9CA3AF' : '#374151',
+                    }}
+                  >
+                    {on ? '✓ ' : ''}
+                    {r.name}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: busy ? 700 : 500,
+                      color: busy ? (on ? '#B91C1C' : '#9CA3AF') : '#9CA3AF',
+                    }}
+                  >
+                    {busy ? 'Ocupada' : `hasta ${r.maxGuests}`}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
+
+      <ConflictWarn conflicts={conflicts} properties={visibleProps} />
+      
+      <ChipGroup
+        label="Estado"
+        value={f.status}
+        onChange={(v) => sv('status', v)}
+        options={['por_llegar', 'hospedado', 'finalizada', 'cancelada'].map((v) => ({
+          value: v,
+          label: RS[v]?.label || v,
+          bg: RS[v]?.bg,
+          txt: RS[v]?.txt,
+        }))}
+      />
+      <ChipGroup
+        label="Canal"
+        value={f.source}
+        onChange={(v) => sv('source', v)}
+        options={SOURCES.map((s) => ({
+          value: s.value,
+          label: s.short || s.label,
+          ...(s.value === 'Booking'
+            ? { bg: '#DBEAFE', txt: '#1E40AF' }
+            : s.value === 'Redes'
+            ? { bg: '#FCE7F3', txt: '#9D174D' }
+            : { bg: '#D1FAE5', txt: '#065F46' }),
+        }))}
+      />
 
       <Inp
         label="Nombre completo"
@@ -572,59 +650,6 @@ export function ResForm({
         value={f.guestEmail}
         onChange={(e) => sv('guestEmail', e.target.value)}
       />
-
-      <ConflictWarn conflicts={conflicts} properties={visibleProps} />
-      
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <Sel
-          label="Estado"
-          value={f.status}
-          onChange={(e) => sv('status', e.target.value)}
-          options={['por_llegar', 'hospedado', 'finalizada', 'cancelada'].map(
-            (v) => ({ value: v, label: RS[v]?.label })
-          )}
-        />
-        <div>
-          <label
-            style={{
-              display: 'block',
-              fontSize: 11,
-              fontWeight: 800,
-              color: f.source === 'Booking' ? '#1E3A8A' : '#065F46',
-              marginBottom: 4,
-              textTransform: 'uppercase',
-              letterSpacing: 0.5,
-            }}
-          >
-            Canal
-          </label>
-          <select
-            value={f.source}
-            onChange={(e) => sv('source', e.target.value)}
-            style={{
-              width: '100%',
-              padding: '9px 12px',
-              border: `2px solid ${f.source === 'Booking' ? '#3B82F6' : '#10B981'}`,
-              borderRadius: 8,
-              fontSize: 13,
-              fontWeight: 800,
-              fontFamily: 'inherit',
-              outline: 'none',
-              background: f.source === 'Booking' ? '#EFF6FF' : '#ECFDF5',
-              color: f.source === 'Booking' ? '#1E40AF' : '#065F46',
-              boxSizing: 'border-box',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            {SOURCES.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
 
       {(!isHostel || selRoom) && maxG > 1 && (
         <div style={{ marginBottom: 14 }}>
@@ -1369,6 +1394,64 @@ export function ResForm({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── OPCIONES EN PÍLDORAS (un solo toque) ──────────────────────────────────────
+// La elegida se pinta con su color; si la reserva tiene un valor viejo que no está
+// en la lista, se muestra igual para no perderlo.
+function ChipGroup({ label, value, onChange, options }) {
+  const opts =
+    value && !options.some((o) => o.value === value)
+      ? [...options, { value, label: value }]
+      : options;
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          color: '#888',
+          marginBottom: 6,
+          textTransform: 'uppercase',
+          letterSpacing: 0.4,
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {opts.map((o) => {
+          const on = o.value === value;
+          return (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => onChange(o.value)}
+              style={{
+                flex: '1 1 0',
+                minWidth: 0,
+                minHeight: 38,
+                padding: '8px 6px',
+                borderRadius: 20,
+                border: `1.5px solid ${on ? o.txt || '#3B82F6' : '#E5E7EB'}`,
+                background: on ? o.bg || '#EFF6FF' : '#fff',
+                color: on ? o.txt || '#1E40AF' : '#6B7280',
+                fontFamily: 'inherit',
+                fontWeight: on ? 800 : 600,
+                fontSize: 12,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {on ? '✓ ' : ''}
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
