@@ -103,7 +103,8 @@ export function ResForm({
   const selRoom = isHostel ? ROOMS.find((r) => r.id === f.room) : null;
   const maxG = selRoom ? selRoom.maxGuests : isHostel ? 1 : 6;
   const addlCount = Math.max(0, f.totalGuests - 2);
-  const conflicts = findConflicts(
+  // En el hostel, sin habitación elegida no hay con qué comparar: no se avisa conflicto
+  const conflicts = isHostel && !f.room ? [] : findConflicts(
     allRes,
     f.propertyId,
     f.room || '',
