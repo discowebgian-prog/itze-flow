@@ -22,6 +22,7 @@ export async function exportToExcel(reservations, properties) {
       transferencia: 'Transferencia',
       debito: 'Débito',
       credito: 'Crédito',
+      vcc: 'Tarjeta virtual (VCC)',
       otro: 'Otro',
     };
 

@@ -31,6 +31,7 @@ export function ResDrawer({
     transferencia: 'Transferencia',
     debito: 'Débito',
     credito: 'Crédito',
+    vcc: 'Tarjeta virtual (VCC)',
     otro: 'Otro',
   };
 

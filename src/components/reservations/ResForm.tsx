@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { IneUploader } from './IneUploader';
 import { ConflictWarn } from '../ui/ConflictWarn';
 import { CountrySelector } from '../ui/CountrySelector';
@@ -108,6 +108,8 @@ export function ResForm({
     f.checkOut,
     initial?.id
   );
+  // Cómo estaba el pago antes de tildar "VCC cobrada", para poder destildar
+  const vccPrev = useRef(null);
   const [confModal, setConfModal] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [valErr, setValErr] = useState(''); 
@@ -836,6 +838,7 @@ export function ResForm({
                 { value: 'transferencia', label: 'Transferencia' },
                 { value: 'debito', label: 'Débito' },
                 { value: 'credito', label: 'Crédito' },
+                { value: 'vcc', label: 'Tarjeta virtual (VCC)' },
                 { value: 'otro', label: 'Otro' },
               ]}
             />
@@ -924,6 +927,73 @@ export function ResForm({
           </div>
         </div>
       </div>
+
+      {f.source === 'Booking' && (() => {
+        const vccOn = f.paymentMethod === 'vcc';
+        const toggleVcc = () => {
+          if (vccOn) {
+            // Destildar: vuelve a como estaba antes de tildar (o sin pago)
+            const prev = vccPrev.current || { paid: '', paymentMethod: 'efectivo' };
+            setF((x) => ({ ...x, paid: prev.paid, paymentMethod: prev.paymentMethod }));
+            vccPrev.current = null;
+          } else {
+            vccPrev.current = { paid: f.paid, paymentMethod: f.paymentMethod };
+            setF((x) => ({ ...x, paid: x.totalAmount, paymentMethod: 'vcc' }));
+          }
+        };
+        return (
+          <div
+            style={{
+              marginBottom: 14,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '10px 14px',
+              background: vccOn ? '#EFF6FF' : '#F9FAFB',
+              borderRadius: 10,
+              border: `1.5px solid ${vccOn ? '#3B82F6' : '#E5E7EB'}`,
+              cursor: 'pointer',
+            }}
+            onClick={toggleVcc}
+          >
+            <div
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 5,
+                border: `2px solid ${vccOn ? '#3B82F6' : '#D1D5DB'}`,
+                background: vccOn ? '#3B82F6' : '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              {vccOn && (
+                <span style={{ color: '#fff', fontSize: 13, fontWeight: 800 }}>
+                  ✓
+                </span>
+              )}
+            </div>
+            <div>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: vccOn ? '#1E40AF' : '#374151',
+                }}
+              >
+                Tarjeta virtual cobrada (VCC)
+              </div>
+              <div style={{ fontSize: 11, color: '#9CA3AF' }}>
+                {vccOn
+                  ? 'Queda pagada con la tarjeta virtual de Booking'
+                  : 'Tildalo cuando cobres la tarjeta virtual de Booking'}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <div style={{ marginBottom: 20 }}>
         <label
