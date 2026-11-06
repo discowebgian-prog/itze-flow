@@ -7,6 +7,9 @@ import { srcLabel, srcColor, BLOCK_COLORS } from '../../lib/constants';
 import { fmtD, fmtDT, diffDays, currency } from '../../lib/dates';
 import { waLink, stayInfo, stayBadge } from '../../lib/guests';
 import { DocLink } from '../ui/DocLink';
+import { LATE_COLORS } from '../ui/LateBadge';
+import { LatePicker } from './LatePicker';
+import { lateHour, lateCostOf } from '../../lib/reservations';
 
 // ── DRAWER ────────────────────────────────────────────────────────────────────
 export function ResDrawer({
@@ -21,10 +24,29 @@ export function ResDrawer({
   isMobile,
   onCheckIn,
   onCheckOut,
+  onSetLate,
 }) {
   // "No grato" es un caso raro: enlace chico al pie y pide confirmar antes de marcar
   const [askBlacklist, setAskBlacklist] = useState(false);
   useEffect(() => setAskBlacklist(false), [res?.id]);
+  // Late check-out rápido (se pide mucho durante la estancia)
+  const [lateEdit, setLateEdit] = useState(false);
+  const [lh, setLh] = useState('');
+  const [lc, setLc] = useState('');
+  const [lateSaving, setLateSaving] = useState(false);
+  useEffect(() => setLateEdit(false), [res?.id]);
+  const openLate = () => {
+    setLh(lateHour(res));
+    setLc(lateHour(res) ? lateCostOf(res) : '');
+    setLateEdit(true);
+  };
+  const saveLate = async (hora, costo) => {
+    if (!onSetLate || lateSaving) return;
+    setLateSaving(true);
+    const ok = await onSetLate(res.id, hora, costo);
+    setLateSaving(false);
+    if (ok) setLateEdit(false);
+  };
   const prop = properties.find((p) => p.id === res.propertyId);
   const saldo = res.totalAmount - res.paid;
   const nights = diffDays(res.checkIn, res.checkOut);
@@ -311,9 +333,128 @@ export function ResDrawer({
                 <div style={{ fontWeight: 700, color: '#111', fontSize: 12.5 }}>
                   {v}
                 </div>
+                {l === 'Check-out' && lateHour(res) && (
+                  <div style={{ fontSize: 10.5, fontWeight: 800, color: LATE_COLORS.txt, marginTop: 2 }}>
+                    🕐 Late {lateHour(res)}
+                  </div>
+                )}
               </div>
             ))}
           </div>
+
+          {/* LATE CHECK-OUT: ver, agregar o cambiar sin abrir el formulario */}
+          {!lateEdit && lateHour(res) && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
+                background: LATE_COLORS.bg,
+                border: `1px solid ${LATE_COLORS.border}`,
+                borderRadius: 10,
+                padding: '8px 12px',
+                marginBottom: 8,
+              }}
+            >
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: LATE_COLORS.txt }}>
+                🕐 Late check-out {lateHour(res)}
+                <span style={{ fontWeight: 600 }}>
+                  {' · '}
+                  {lateCostOf(res) > 0 ? currency(lateCostOf(res)) : 'Cortesía'}
+                </span>
+              </span>
+              {onSetLate && (
+                <button type="button" onClick={openLate} style={{ ...blLink(LATE_COLORS.txt), fontWeight: 800 }}>
+                  Cambiar
+                </button>
+              )}
+            </div>
+          )}
+          {!lateEdit && !lateHour(res) && onSetLate && (res.status === 'por_llegar' || res.status === 'hospedado') && (
+            <div style={{ marginBottom: 8 }}>
+              <button
+                type="button"
+                onClick={openLate}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  minHeight: 32,
+                  padding: '5px 12px',
+                  borderRadius: 20,
+                  border: '1.5px dashed #A5B4FC',
+                  background: '#fff',
+                  color: LATE_COLORS.txt,
+                  fontFamily: 'inherit',
+                  fontWeight: 700,
+                  fontSize: 12,
+                  cursor: 'pointer',
+                }}
+              >
+                🕐 Agregar late check-out
+              </button>
+            </div>
+          )}
+          {lateEdit && (
+            <div
+              style={{
+                background: '#F5F7FF',
+                border: `1px solid ${LATE_COLORS.border}`,
+                borderRadius: 10,
+                padding: 12,
+                marginBottom: 10,
+              }}
+            >
+              <div style={{ fontSize: 12, fontWeight: 800, color: LATE_COLORS.txt, marginBottom: 10 }}>
+                🕐 Late check-out
+              </div>
+              <LatePicker hour={lh} cost={lc} onHour={setLh} onCost={setLc} />
+              <div style={{ fontSize: 11, color: '#6B7280', margin: '8px 0 10px' }}>
+                El costo se suma solo al total de la reserva.
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  disabled={!lh || lateSaving}
+                  onClick={() => saveLate(lh, lc)}
+                  style={{
+                    ...mainBtn,
+                    flex: 2,
+                    minHeight: 40,
+                    fontSize: 13,
+                    background: lh ? LATE_COLORS.txt : '#C7D2FE',
+                    color: '#fff',
+                    cursor: lh ? 'pointer' : 'default',
+                  }}
+                >
+                  {lateSaving ? 'Guardando…' : 'Guardar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLateEdit(false)}
+                  style={{
+                    ...mainBtn,
+                    flex: 1,
+                    minHeight: 40,
+                    fontSize: 13,
+                    background: '#fff',
+                    border: '1px solid #E5E7EB',
+                    color: '#374151',
+                  }}
+                >
+                  Cancelar
+                </button>
+              </div>
+              {lateHour(res) && (
+                <div style={{ textAlign: 'center', marginTop: 8 }}>
+                  <button type="button" onClick={() => saveLate('', 0)} style={blLink('#DC2626')}>
+                    Quitar late check-out
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* FILA INFERIOR: Bloque masivo del Total General */}
           <div

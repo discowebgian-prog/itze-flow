@@ -5,6 +5,7 @@ import { Badge } from '../components/ui/Badge';
 import { Icon } from '../components/ui/Icon';
 import { TODAY, fmt, fmtD, addDays, parseD, currency, MONTHS, DAYS } from '../lib/dates';
 import { waLink } from '../lib/guests';
+import { LateBadge } from '../components/ui/LateBadge';
 
 // ── RESERVATIONS LIST (AGENDA DIARIA ESTILO PULSE) ────────────────────────────
 export function ResList({ reservations, properties, onView, onAdd }) {
@@ -117,6 +118,8 @@ export function ResList({ reservations, properties, onView, onAdd }) {
                 {r.room}
               </span>
             )}
+
+            <LateBadge r={r} />
 
             {r.guestPhone && (
               <a

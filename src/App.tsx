@@ -10,6 +10,7 @@ import { PROPS, INIT_RES, COUNTRIES } from './lib/constants';
 import { TODAY, fmt, diffDays } from './lib/dates';
 import { supabase } from './lib/supabase';
 import { findDuplicates } from './lib/duplicates';
+import { checkoutTimePassed, lateCostOf } from './lib/reservations';
 import { Dashboard } from './pages/Dashboard';
 import { FinancePage } from './pages/FinancePage';
 import { GuestsPage } from './pages/GuestsPage';
@@ -67,8 +68,8 @@ export default function AppMejorada() {
         let estado = item.estado || 'por_llegar';
         let fechaCheckout = item.fecha_salida || '';
 
-        // ── AUTO CHECK-OUT AL CARGAR LA APP (Si ya pasaron las 11:00 AM) ──
-        if (horaActual >= 14 && estado === 'hospedado' && fechaCheckout <= hoyFmt) {
+        // ── AUTO CHECK-OUT AL CARGAR LA APP (desde las 14:00, o la hora del late check-out) ──
+        if (estado === 'hospedado' && checkoutTimePassed(fechaCheckout, item.late_checkout_hora, nowMerida, hoyFmt)) {
             estado = 'finalizada';
             supabase.from('reservas').update({ estado: 'finalizada' }).eq('id', item.id).then();
         }
@@ -91,6 +92,8 @@ export default function AppMejorada() {
           guestPhone: telefonoLimpio,
           guestEmail: item.email || '',
           company: item.empresa || '',
+          lateCheckout: item.late_checkout_hora || '',
+          lateCost: item.late_checkout_costo ?? '',
           totalGuests: Number(item.cantidad_huespedes) || 1,
           companions: item.acompanantes || [],
           paymentMethod: item.forma_pago || 'Efectivo',
@@ -168,15 +171,16 @@ export default function AppMejorada() {
     const vigilante = setInterval(() => {
       const nowMerida = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Merida" }));
       
-      if (nowMerida.getHours() >= 14) {
+      {
         const hoyFmt = fmt(nowMerida);
         
         setRes((prevRes) => {
-          const paraHacerCheckout = prevRes.filter(r => r.status === 'hospedado' && r.checkOut <= hoyFmt);
+          // Desde las 14:00, o a la hora del late check-out si la reserva tiene
+          const paraHacerCheckout = prevRes.filter(r => r.status === 'hospedado' && checkoutTimePassed(r.checkOut, r.lateCheckout, nowMerida, hoyFmt));
           
           if (paraHacerCheckout.length === 0) return prevRes; // Todo en orden
           
-          console.log(`⏰ 14:00 pm en Mérida: Haciendo check-out automático para ${paraHacerCheckout.length} reservas.`);
+          console.log(`⏰ Check-out automático (Mérida) para ${paraHacerCheckout.length} reservas.`);
           
           // Actualiza en Supabase silenciosamente
           paraHacerCheckout.forEach(r => {
@@ -357,6 +361,8 @@ export default function AppMejorada() {
           telefono: newRes.guestPhonePrefix ? `${newRes.guestPhonePrefix} ${telefonoLimpioGuardar}` : telefonoLimpioGuardar,
           email: newRes.guestEmail || '',
           empresa: empresaGuardar,
+          late_checkout_hora: newRes.lateCheckout || null,
+          late_checkout_costo: newRes.lateCheckout ? Number(newRes.lateCost) || 0 : null,
           cantidad_huespedes: String(newRes.totalGuests || 1),
           acompanantes: newRes.companions || [],
           forma_pago: newRes.paymentMethod || 'Efectivo',
@@ -381,6 +387,8 @@ export default function AppMejorada() {
           requiresInvoice: tieneFactura,
           solicita_factura: tieneFactura, 
           company: empresaGuardar,
+          lateCheckout: newRes.lateCheckout || '',
+          lateCost: newRes.lateCheckout ? Number(newRes.lateCost) || 0 : '',
           lista_negra: newRes.lista_negra || false,
           pin_acceso: newRes.pin_acceso || ''
         };
@@ -534,6 +542,32 @@ const toggleBlacklist = async (id, currentStatus) => {
 
     // 2. ¡EL DETALLE VISUAL! Actualiza el panel abierto para que el botón reaccione al instante
     setDrawer(prev => prev && prev.id === id ? { ...prev, lista_negra: newStatus } : prev);
+  };
+  // Late check-out rápido desde el panel: guarda hora y costo y ajusta el total
+  // (resta el costo anterior y suma el nuevo). hora vacía = quitar late check-out.
+  const setLateCheckout = async (id, hora, costo) => {
+    const r = res.find((x) => x.id === id);
+    if (!r) return false;
+    const newCost = hora ? Number(costo) || 0 : 0;
+    const newTotal = Math.max(0, (Number(r.totalAmount) || 0) - lateCostOf(r) + newCost);
+    const { error } = await supabase
+      .from('reservas')
+      .update({
+        late_checkout_hora: hora || null,
+        late_checkout_costo: hora ? newCost : null,
+        monto: String(newTotal),
+      })
+      .eq('id', id);
+    if (error) {
+      alert('No se pudo guardar el late check-out: ' + error.message);
+      return false;
+    }
+    const changes = { lateCheckout: hora || '', lateCost: hora ? newCost : '', totalAmount: newTotal };
+    setRes((prev) => prev.map((x) => (x.id === id ? { ...x, ...changes } : x)));
+    setDrawer((prev) => (prev && prev.id === id ? { ...prev, ...changes } : prev));
+    setToastMsg(hora ? 'Late check-out guardado' : 'Late check-out quitado');
+    setTimeout(() => setToastMsg(null), 2000);
+    return true;
   };
   const handleCI = (r) => {
     setDrawer(null);
@@ -991,6 +1025,7 @@ const toggleBlacklist = async (id, currentStatus) => {
           isMobile={isMobile}
           onCheckIn={handleCI}
           onCheckOut={handleCO}
+          onSetLate={setLateCheckout}
         />
       )}
       {modal?.type === 'confirmDel' && (

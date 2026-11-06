@@ -3,6 +3,7 @@
 import { Badge } from '../components/ui/Badge';
 import { BLOCK_COLORS, getAlerts } from '../lib/constants';
 import { TODAY, fmt, addDays, parseD, MONTHS, DAYS } from '../lib/dates';
+import { LateBadge } from '../components/ui/LateBadge';
 
 // ── TIMELINE MOBILE ───────────────────────────────────────────────────────────
 export function TimelineMobile({ reservations, properties, onClickRes, onAddRes, highlightStatus }) {
@@ -173,6 +174,7 @@ export function TimelineMobile({ reservations, properties, onClickRes, onAddRes,
                           </span>
                         )}
                         {r.requiresInvoice && <span style={{ color: '#7C3AED', fontWeight: 700 }}>· 🧾 Factura</span>}
+                        <LateBadge r={r} size={10} />
                         {r.notes && <span style={{ color: '#D97706', fontWeight: 700 }}>· 📝 Notas</span>}
                       </div>
                       {r.checkIn === fmt(d) && (
