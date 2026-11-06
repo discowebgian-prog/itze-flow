@@ -8,11 +8,14 @@ export function CountrySelector({ value, onChange }) {
   const country = COUNTRIES.find((c) => c.code === value) || COUNTRIES[0];
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
+  // Busca sin importar tildes ni mayúsculas ("canada" encuentra "Canadá")
+  const norm = (t) =>
+    String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const filtered =
     q.length > 0
       ? COUNTRIES.filter(
           (c) =>
-            c.name.toLowerCase().includes(q.toLowerCase()) ||
+            norm(c.name).includes(norm(q)) ||
             c.prefix.includes(q)
         ).slice(0, 8)
       : [];
