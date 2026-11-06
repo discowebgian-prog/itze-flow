@@ -9,8 +9,9 @@ import { Inp } from '../ui/Inp';
 import { RangeCalendar } from '../ui/RangeCalendar';
 import { Sel } from '../ui/Sel';
 import { ROOMS, SOURCES, RS, COUNTRIES, findCountry } from '../../lib/constants';
-import { TODAY, fmt, addDays, diffDays, currency } from '../../lib/dates';
+import { TODAY, fmt, fmtD, addDays, diffDays, currency } from '../../lib/dates';
 import { findConflicts } from '../../lib/reservations';
+import { stayInfo, stayBadge } from '../../lib/guests';
 
 export function ResForm({
   initial,
@@ -113,6 +114,10 @@ export function ResForm({
   const [confModal, setConfModal] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [valErr, setValErr] = useState(''); 
+
+  // ── NÚMERO DE ESTANCIA DEL HUÉSPED (se actualiza mientras se escribe) ──
+  const stay = stayInfo(allRes, f);
+  const stayTag = stayBadge(stay);
 
   const minDatePermitida = initial?.checkIn ? initial.checkIn : null;
 
@@ -265,6 +270,38 @@ export function ResForm({
         value={f.guestName}
         onChange={(e) => sv('guestName', e.target.value)}
       />
+
+      {stayTag && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            flexWrap: 'wrap',
+            marginTop: -4,
+            marginBottom: 12,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: stayTag.color,
+              background: stayTag.bg,
+              padding: '3px 10px',
+              borderRadius: 20,
+            }}
+          >
+            {stayTag.label}
+          </span>
+          {stay.last && (
+            <span style={{ fontSize: 11, color: '#9CA3AF' }}>
+              Anterior: {fmtD(stay.last.checkIn)}
+              {stay.last.room ? ` · ${stay.last.room}` : ''}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* ── ALERTA DE LISTA NEGRA (VISIBLE SOLO SI HAY COINCIDENCIA) ── */}
       {matchBlacklist && (

@@ -4,7 +4,7 @@ import { Badge } from '../ui/Badge';
 import { Icon } from '../ui/Icon';
 import { srcLabel, srcColor, BLOCK_COLORS } from '../../lib/constants';
 import { fmtD, fmtDT, diffDays, currency } from '../../lib/dates';
-import { waLink, buildGuestDB, freqBadge } from '../../lib/guests';
+import { waLink, stayInfo, stayBadge } from '../../lib/guests';
 
 // ── DRAWER ────────────────────────────────────────────────────────────────────
 export function ResDrawer({
@@ -22,10 +22,8 @@ export function ResDrawer({
   const prop = properties.find((p) => p.id === res.propertyId);
   const saldo = res.totalAmount - res.paid;
   const nights = diffDays(res.checkIn, res.checkOut);
-  const gdb = buildGuestDB(allRes);
-  const gkey = (res.guestDoc || '').replace(/\s+/g, '').toLowerCase();
-  const gp = gdb[gkey];
-  const freq = gp ? freqBadge(gp.stays.length) : null;
+  // Qué número de estancia es esta reserva para el huésped
+  const freq = stayBadge(stayInfo(allRes, res));
   const pmLabel = {
     efectivo: 'Efectivo',
     transferencia: 'Transferencia',
