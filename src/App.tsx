@@ -90,6 +90,7 @@ export default function AppMejorada() {
           guestPhonePrefix: prefijo,
           guestPhone: telefonoLimpio,
           guestEmail: item.email || '',
+          company: item.empresa || '',
           totalGuests: Number(item.cantidad_huespedes) || 1,
           companions: item.acompanantes || [],
           paymentMethod: item.forma_pago || 'Efectivo',
@@ -338,6 +339,9 @@ export default function AppMejorada() {
         telefonoLimpioGuardar = telefonoLimpioGuardar.replace(newRes.guestPhonePrefix, '').trim();
       }
 
+      // Empresa: solo se guarda si pidió factura (quien pide factura se considera Empresa)
+      const empresaGuardar = tieneFactura ? String(newRes.company || '').trim() : '';
+
       const datosLimpios = {
           huesped: newRes.guestName || 'Sin nombre',
           habitacion: newRes.room || null,
@@ -352,6 +356,7 @@ export default function AppMejorada() {
           num_doc: newRes.guestDoc || '',
           telefono: newRes.guestPhonePrefix ? `${newRes.guestPhonePrefix} ${telefonoLimpioGuardar}` : telefonoLimpioGuardar,
           email: newRes.guestEmail || '',
+          empresa: empresaGuardar,
           cantidad_huespedes: String(newRes.totalGuests || 1),
           acompanantes: newRes.companions || [],
           forma_pago: newRes.paymentMethod || 'Efectivo',
@@ -375,6 +380,7 @@ export default function AppMejorada() {
           notas: newRes.notes || newRes.notas || '',
           requiresInvoice: tieneFactura,
           solicita_factura: tieneFactura, 
+          company: empresaGuardar,
           lista_negra: newRes.lista_negra || false,
           pin_acceso: newRes.pin_acceso || ''
         };

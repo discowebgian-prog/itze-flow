@@ -40,6 +40,8 @@ export async function exportToExcel(reservations, properties) {
         'Tipo doc.': r.guestDocType || '—',
         Teléfono: r.guestPhone || '—',
         Email: r.guestEmail || '—',
+        'Tipo de cliente': String(r.company || '').trim() ? 'Empresa' : 'Particular',
+        Empresa: String(r.company || '').trim() || '—',
         Propiedad: prop?.name || r.propertyId,
         Habitación: r.room || '—',
         'Check-in': fmtD(r.checkIn),
