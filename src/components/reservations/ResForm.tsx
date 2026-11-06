@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { IneUploader } from './IneUploader';
 import { ConflictWarn } from '../ui/ConflictWarn';
 import { CountrySelector } from '../ui/CountrySelector';
@@ -11,7 +11,7 @@ import { Sel } from '../ui/Sel';
 import { ROOMS, SOURCES, RS, COUNTRIES, findCountry } from '../../lib/constants';
 import { TODAY, fmt, fmtD, addDays, diffDays, currency } from '../../lib/dates';
 import { findConflicts } from '../../lib/reservations';
-import { stayInfo, stayBadge } from '../../lib/guests';
+import { stayInfo, stayBadge, suggestGuests } from '../../lib/guests';
 
 export function ResForm({
   initial,
@@ -119,6 +119,39 @@ export function ResForm({
   // ── NÚMERO DE ESTANCIA DEL HUÉSPED (se actualiza mientras se escribe) ──
   const stay = stayInfo(allRes, f, guestDecisions);
   const stayTag = stayBadge(stay);
+
+  // ── SUGERENCIA DE HUÉSPED ANTERIOR (al escribir el nombre a mano) ──
+  // Solo aparece mientras se escribe en "Nombre completo" (no al abrir una reserva
+  // ni cuando el escáner completa el nombre). Al confirmar, carga sus datos.
+  const [nameTyped, setNameTyped] = useState(false);
+  const [sugDismissed, setSugDismissed] = useState(false);
+  const [picked, setPicked] = useState(null); // { name, prev } para poder deshacer
+  const suggestions = useMemo(
+    () =>
+      nameTyped && !sugDismissed && !picked
+        ? suggestGuests(allRes, f.guestName, guestDecisions, initial?.id)
+        : [],
+    [nameTyped, sugDismissed, picked, allRes, f.guestName, guestDecisions, initial?.id]
+  );
+  const GUEST_FIELDS = ['guestName', 'guestDoc', 'guestDocType', 'guestNationality', 'guestPhonePrefix', 'guestPhone', 'guestEmail'];
+  const pickGuest = (s) => {
+    const prev = {};
+    GUEST_FIELDS.forEach((k) => (prev[k] = f[k]));
+    setF((x) => {
+      const next = { ...x };
+      GUEST_FIELDS.forEach((k) => {
+        if (s.data[k]) next[k] = s.data[k];
+      });
+      return next;
+    });
+    setPicked({ name: s.data.guestName, visits: s.visits, prev });
+  };
+  const undoGuest = () => {
+    if (!picked) return;
+    setF((x) => ({ ...x, ...picked.prev }));
+    setPicked(null);
+    setSugDismissed(true);
+  };
 
   const minDatePermitida = initial?.checkIn ? initial.checkIn : null;
 
@@ -269,8 +302,127 @@ export function ResForm({
       <Inp
         label="Nombre completo"
         value={f.guestName}
-        onChange={(e) => sv('guestName', e.target.value)}
+        autoComplete="off"
+        onChange={(e) => {
+          sv('guestName', e.target.value);
+          setNameTyped(true);
+          if (!e.target.value.trim()) setSugDismissed(false);
+        }}
       />
+
+      {suggestions.length > 0 && (
+        <div
+          style={{
+            marginTop: -4,
+            marginBottom: 12,
+            background: '#F0F9FF',
+            border: '1.5px solid #BAE6FD',
+            borderRadius: 10,
+            padding: 10,
+          }}
+        >
+          <div style={{ fontSize: 11, fontWeight: 800, color: '#0369A1', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 }}>
+            ¿Ya se hospedó antes?
+          </div>
+          {suggestions.map((s) => {
+            const c = findCountry(s.data.guestNationality);
+            const ph = String(s.data.guestPhone || '').replace(/\D/g, '');
+            return (
+              <div
+                key={s.key}
+                style={{
+                  background: '#fff',
+                  border: `1px solid ${s.blacklisted ? '#FECACA' : '#E0F2FE'}`,
+                  borderRadius: 8,
+                  padding: '8px 10px',
+                  marginBottom: 6,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#111' }}>
+                    {c ? c.flag + ' ' : ''}{s.data.guestName}
+                    {s.blacklisted && (
+                      <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 800, color: '#fff', background: '#DC2626', padding: '2px 6px', borderRadius: 10 }}>
+                        LISTA NEGRA
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>
+                    {s.visits} {s.visits === 1 ? 'visita' : 'visitas'} · última {fmtD(s.lastStay)}
+                    {s.lastRoom ? ` · ${s.lastRoom}` : ''}
+                    {ph ? ` · 📱 …${ph.slice(-4)}` : ''}
+                    {s.data.guestDoc ? ` · ${s.data.guestDocType || 'Doc'} …${String(s.data.guestDoc).slice(-4)}` : ''}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => pickGuest(s)}
+                  style={{
+                    padding: '7px 10px',
+                    background: '#0284C7',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 7,
+                    fontWeight: 700,
+                    fontSize: 11,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Es esta persona
+                </button>
+              </div>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setSugDismissed(true)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#0369A1',
+              fontSize: 11,
+              fontWeight: 700,
+              cursor: 'pointer',
+              padding: '2px 0',
+              fontFamily: 'inherit',
+            }}
+          >
+            No, es alguien nuevo
+          </button>
+        </div>
+      )}
+
+      {picked && (
+        <div
+          style={{
+            marginTop: -4,
+            marginBottom: 10,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontSize: 11,
+            color: '#065F46',
+            background: '#ECFDF5',
+            border: '1px solid #A7F3D0',
+            borderRadius: 8,
+            padding: '6px 10px',
+          }}
+        >
+          <span style={{ flex: 1 }}>✓ Se cargaron los datos de su estancia anterior. Revisá que sigan vigentes.</span>
+          <button
+            type="button"
+            onClick={undoGuest}
+            style={{ background: 'none', border: 'none', color: '#047857', fontWeight: 800, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+          >
+            Deshacer
+          </button>
+        </div>
+      )}
 
       {stayTag && (
         <div
