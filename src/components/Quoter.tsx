@@ -22,6 +22,8 @@ const msgMoney = (n) => {
 };
 const noches = (n) => (n === 1 ? '1 noche' : `${n} noches`);
 const personas = (n) => (n === 1 ? '1 persona' : `${n} personas`);
+// "P1", "P1 y P4", "P1, P2 y P4"
+export const listY = (a) => (a.length <= 1 ? a.join('') : `${a.slice(0, -1).join(', ')} y ${a[a.length - 1]}`);
 export const HOSTEL_CAPACITY = ROOMS.reduce((s, r) => s + r.maxGuests, 0);
 
 // Texto para WhatsApp: termina en los precios (la charla sigue según venga)
@@ -60,6 +62,30 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
   const freeRooms = rooms.filter((r) => r.free);
   const busyRooms = rooms.filter((r) => !r.free);
   const freeCap = freeRooms.reduce((s, r) => s + r.maxGuests, 0);
+  const full = n > 0 && freeCap === 0;
+  // ¿Está lleno todas las noches, solo alguna, o ninguna? (cambia el mensaje)
+  const fullNights = useMemo(() => {
+    if (!full) return 0;
+    let c = 0;
+    for (let i = 0; i < n; i++) {
+      const a = fmt(addDays(parseD(checkIn), i));
+      const b = fmt(addDays(parseD(checkIn), i + 1));
+      if (!ROOMS.some((r) => findConflicts(allRes, 'hostel', r.id, a, b).length === 0)) c++;
+    }
+    return c;
+  }, [full, n, checkIn, allRes]);
+  const esosDias = n === 1 ? 'Ese día' : 'Esos días';
+  const warnBox = {
+    marginTop: 8,
+    fontSize: 13,
+    fontWeight: 600,
+    color: '#92400E',
+    background: '#FFFBEB',
+    border: '1px solid #FCD34D',
+    borderRadius: 8,
+    padding: '9px 11px',
+    lineHeight: 1.4,
+  };
 
   // Si una habitación elegida quedó ocupada con las fechas nuevas, sale de la distribución
   const distFree = {};
@@ -154,18 +180,28 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
               +
             </button>
           </div>
-          {guests > freeCap ? (
-            <div style={{ marginTop: 8, fontSize: 12.5, fontWeight: 700, color: '#B91C1C', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 8, padding: '8px 10px' }}>
-              ⚠️ En esas fechas entran hasta {personas(freeCap)}
-              {busyRooms.length ? `: ${busyRooms.map((r) => r.id).join(', ')} ${busyRooms.length === 1 ? 'está ocupada' : 'están ocupadas'}` : ''}.
+          {full ? (
+            <div style={warnBox}>
+              {fullNights === n
+                ? `${esosDias} el hostel está completo y no tenemos disponibilidad.`
+                : fullNights > 0
+                ? 'Alguna de esas noches el hostel está completo, así que no tenemos una habitación libre para toda la estadía. Probá con otras fechas.'
+                : 'No nos queda una misma habitación libre para todas esas noches. Probá con otras fechas.'}
+            </div>
+          ) : guests > freeCap ? (
+            <div style={warnBox}>
+              {esosDias} solo nos queda lugar para {personas(freeCap)}.
             </div>
           ) : (
             <div style={{ marginTop: 6, fontSize: 12, color: '#6B7280' }}>
-              En esas fechas entran hasta {personas(freeCap)}
-              {busyRooms.length ? ` (${busyRooms.map((r) => r.id).join(', ')} ${busyRooms.length === 1 ? 'ocupada' : 'ocupadas'})` : ''}.
+              {busyRooms.length
+                ? `${esosDias} tenemos lugar para hasta ${personas(freeCap)}.`
+                : `${esosDias} tenemos todo el hostel libre: lugar para hasta ${personas(freeCap)}.`}
             </div>
           )}
 
+          {!full && (
+          <>
           {/* 3 · Distribución */}
           <div style={{ ...lbl, marginTop: 18 }}>3 · ¿En qué habitación van?</div>
           <div
@@ -177,14 +213,11 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
             }}
           >
             {left === 0
-              ? '✓ Todos ubicados'
+              ? '✓ ¡Listo! Todos tienen lugar.'
               : left > 0
-              ? `Faltan ubicar ${personas(left)}`
-              : `Sobran ${personas(-left)}: sacá de alguna habitación`}
+              ? `Falta ubicar a ${personas(left)}`
+              : `Hay ${personas(-left)} de más: quitá en alguna habitación.`}
           </div>
-          {freeRooms.length === 0 && (
-            <div style={{ fontSize: 12.5, color: '#92400E' }}>No hay habitaciones libres en esas fechas.</div>
-          )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {freeRooms.map((r) => {
               const g = distFree[r.id] || 0;
@@ -329,10 +362,10 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
                 ) : (
                   <div style={{ padding: '10px 12px', fontSize: 12.5, color: '#92400E', background: '#FFFBEB' }}>
                     {missingPrice
-                      ? 'Falta el precio en el tarifario para alguna habitación.'
+                      ? 'Una de las habitaciones no tiene precio cargado en Tarifas para esas fechas.'
                       : left > 0
-                      ? `Ubicá ${left === 1 ? 'a la persona que falta' : `a las ${left} personas que faltan`} para ver el total.`
-                      : 'Sobran personas: ajustá la distribución para ver el total.'}
+                      ? 'Cuando ubiques a todos, te muestro el total.'
+                      : 'Ajustá las habitaciones y te muestro el total.'}
                   </div>
                 )}
               </div>
@@ -402,9 +435,11 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
                 )}
               </div>
               <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>
-                Libres según las reservas cargadas: lo de Booking que todavía no entró por iCal no figura.
+                Ojo: si entró una reserva de Booking que todavía no aparece en el calendario, esa habitación puede figurar libre.
               </div>
             </div>
+          )}
+          </>
           )}
         </>
       )}
