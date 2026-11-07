@@ -13,6 +13,7 @@ import {
   overlapsOf,
   isFindeDow,
 } from '../lib/rates';
+import { Collapse } from '../components/ui/Motion';
 
 const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const MES_LARGO = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -390,7 +391,7 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
           </div>
         </div>
 
-        {calOpen && (
+        <Collapse open={calOpen}>
           <div style={{ marginTop: 12, padding: '10px 0 2px', borderTop: '1px solid #F1F5F9' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <button onClick={() => moveMonth(-1)} style={navBtn} aria-label="Mes anterior">‹</button>
@@ -437,7 +438,7 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
               <span style={{ fontSize: 10, color: '#9CA3AF' }}>{monthPeriods.length ? 'Sin color: Normal' : 'Todo el mes rige la Normal'}</span>
             </div>
           </div>
-        )}
+        </Collapse>
 
         <div style={{ marginTop: 12, paddingTop: 4, borderTop: '1px solid #F1F5F9' }}>
           {selPeriod ? (
@@ -525,7 +526,7 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
           <button onClick={() => setShowPast((v) => !v)} style={{ ...smallBtn, border: 'none', background: 'transparent', color: '#6B7280', padding: '6px 0' }}>
             {showPast ? '▾' : '▸'} Terminados ({past.length})
           </button>
-          {showPast && past.map((p) => renderPeriod(p))}
+          <Collapse open={showPast}>{past.map((p) => renderPeriod(p))}</Collapse>
         </div>
       )}
 

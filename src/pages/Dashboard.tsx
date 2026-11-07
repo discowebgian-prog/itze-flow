@@ -6,6 +6,7 @@ import { PROPS } from '../lib/constants';
 import { TODAY, fmt, parseD, addDays, currency } from '../lib/dates';
 import dashboardCss from '../styles/dashboard.css?raw';
 import { LateBadge } from '../components/ui/LateBadge';
+import { CountUp } from '../components/ui/Motion';
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 export function Dashboard({
@@ -148,11 +149,11 @@ export function Dashboard({
             bg: '#EDE9FE',
             onClick: () => onGoTo('calendario', 'hospedado'),
           },
-        ].map((k) => (
-          <div
+        ].map((k, liI) => (
+          <div className="li-in"
             key={k.label}
             onClick={k.onClick}
-            style={{
+            style={{ '--i': liI,
               background: '#fff',
               borderRadius: 12,
               padding: '16px',
@@ -177,7 +178,7 @@ export function Dashboard({
           >
             <div style={{ fontSize: 24, marginBottom: 6 }}>{k.icon}</div>
             <div style={{ fontSize: 26, fontWeight: 800, color: k.col }}>
-              {k.val}
+              <CountUp value={k.val} />
             </div>
             <div
               style={{
@@ -211,13 +212,13 @@ export function Dashboard({
             📥 Ingresos de hoy ({ciToday.length})
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {ciToday.map((r) => {
+            {ciToday.map((r, liI) => {
               const prop = PROPS.find((p) => p.id === r.propertyId);
               return (
-                <div
+                <div className="li-in"
                   key={r.id + 'in'}
                   onClick={() => onGoTo('abrir_reserva', r)}
-                  style={{
+                  style={{ '--i': liI,
                     background: '#fff',
                     borderRadius: 10,
                     padding: '12px 16px',
@@ -295,13 +296,13 @@ export function Dashboard({
             📤 Salidas de hoy ({coToday.length})
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {coToday.map((r) => {
+            {coToday.map((r, liI) => {
               const prop = PROPS.find((p) => p.id === r.propertyId);
               return (
-                <div
+                <div className="li-in"
                   key={r.id + 'out'}
                   onClick={() => onGoTo('abrir_reserva', r)}
-                  style={{
+                  style={{ '--i': liI,
                     background: '#fff',
                     borderRadius: 10,
                     padding: '12px 16px',
@@ -380,11 +381,11 @@ export function Dashboard({
             💳 VCC de Booking por cobrar ({vccPending.length})
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {vccPending.map((r) => (
-              <div
+            {vccPending.map((r, liI) => (
+              <div className="li-in"
                 key={r.id + 'vcc'}
                 onClick={() => onGoTo('abrir_reserva', r)}
-                style={{
+                style={{ '--i': liI,
                   background: '#EFF6FF',
                   borderRadius: 10,
                   padding: '12px 16px',

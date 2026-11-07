@@ -7,6 +7,7 @@ export function ConflictWarn({ conflicts, properties }) {
   if (!conflicts || !conflicts.length) return null;
   return (
     <div
+      className="pop-in"
       style={{
         background: '#FEF2F2',
         border: '1.5px solid #FECACA',

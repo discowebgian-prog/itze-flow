@@ -128,14 +128,14 @@ export function TimelineMobile({ reservations, properties, onClickRes, onAddRes,
                   </div>
                 </div>
               </div>
-              {dRes.map((r) => {
+              {dRes.map((r, liI) => {
                 const p = properties.find((x) => x.id === r.propertyId);
                 const bc = BLOCK_COLORS[r.status] || BLOCK_COLORS.por_llegar;
                 const alerts = getAlerts(r);
                 return (
-                  <div
+                  <div className="li-in"
                     key={r.id}
-                    style={{
+                    style={{ '--i': liI,
                       padding: '10px 14px',
                       display: 'flex',
                       alignItems: 'center',

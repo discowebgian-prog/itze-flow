@@ -56,7 +56,7 @@ export function GuestsPage({
     <div>
       {/* ── AVISO DE POSIBLES DUPLICADOS (solo admin) ── */}
       {canReview && dupPairs.length > 0 && (
-        <div
+        <div className="pop-in"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -145,10 +145,10 @@ export function GuestsPage({
           const lastRes = reservations.find(r => r.id === g.stays[g.stays.length - 1]);
 
           return (
-            <div
+            <div className="li-in"
               key={idx}
               onClick={() => lastRes && onView(lastRes)}
-              style={{
+              style={{ '--i': idx,
                 background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1px solid #E5E7EB',
                 cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 10,
                 boxShadow: '0 1px 3px rgba(0,0,0,.02)', transition: 'transform 0.1s'
