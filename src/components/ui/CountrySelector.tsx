@@ -2,6 +2,7 @@
 // @ts-nocheck
 import { useState } from 'react';
 import { COUNTRIES } from '../../lib/constants';
+import { motion, AnimatePresence } from 'motion/react';
 
 // ── COUNTRY SELECTOR ──────────────────────────────────────────────────────────
 export function CountrySelector({ value, onChange }) {
@@ -57,9 +58,14 @@ export function CountrySelector({ value, onChange }) {
           boxSizing: 'border-box',
         }}
       />
-      {open && filtered.length > 0 && (
-        <div
-          style={{
+      <AnimatePresence>{open && filtered.length > 0 && (
+        <motion.div
+          key="list"
+          initial={{ opacity: 0, y: -6, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -4, transition: { duration: 0.12 } }}
+          transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+          style={{ transformOrigin: 'top center',
             position: 'absolute',
             top: '100%',
             left: 0,
@@ -101,8 +107,8 @@ export function CountrySelector({ value, onChange }) {
               <span style={{ color: '#9CA3AF', fontSize: 12 }}>{c.prefix}</span>
             </div>
           ))}
-        </div>
-      )}
+        </motion.div>
+      )}</AnimatePresence>
     </div>
   );
 }

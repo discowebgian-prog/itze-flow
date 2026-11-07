@@ -461,9 +461,9 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
             </button>
           </div>
           {full ? (
-            <div style={warnBox}>{noRoomText(av, checkIn, checkOut, guests)}</div>
+            <div className="pop-in" style={warnBox}>{noRoomText(av, checkIn, checkOut, guests)}</div>
           ) : guests > freeCap ? (
-            <div style={warnBox}>
+            <div className="pop-in" style={warnBox}>
               {esosDias} solo nos queda lugar para {personas(freeCap)}. {busyText(av, busyRooms.map((r) => r.id))}
               {plan ? ` Pero ${planText(plan, guests)}.` : ''}
             </div>

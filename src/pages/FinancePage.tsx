@@ -7,7 +7,7 @@ import { exportToExcel } from '../lib/excel';
 import { supabase } from '../lib/supabase';
 import { isFindeDow } from '../lib/rates';
 import { AnimatePresence } from 'motion/react';
-import { Backdrop, PopCard } from '../components/ui/Motion';
+import { Backdrop, PopCard, CountUp, Collapse } from '../components/ui/Motion';
 
 const PROJECTION_START_DAY = 8; // Antes hay muy pocos días para estimar
 
@@ -542,7 +542,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                 </div>
                 <div title="Tarifa Promedio Diaria" style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '10px 6px', borderRadius: 8, cursor: 'help' }}>
                   <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#64748B', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>ADR</div>
-                  <div style={{ fontWeight: 800, fontSize: 14, color: '#374151' }}>{currency(adr)}</div>
+                  <div style={{ fontWeight: 800, fontSize: 14, color: '#374151' }}><CountUp value={currency(adr)} /></div>
                   <div style={{ fontSize: 9, color: '#9CA3AF', marginTop: 2, fontWeight: 600 }}>Tarifa Promedio</div>
                 </div>
               </div>
@@ -568,19 +568,19 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
               <div style={{ background: '#F8FAFC', borderRadius: 10, padding: 12, border: '1px solid #E5E7EB', marginBottom: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
                   <span style={{ color: '#4B5563', fontWeight: 600 }}>{isCurrent ? 'Ingreso a Hoy:' : 'Ingreso Base Real:'}</span>
-                  <span style={{ fontWeight: 800, color: '#111' }}>{currency(m.trueRevenue)}</span>
+                  <span style={{ fontWeight: 800, color: '#111' }}><CountUp value={currency(m.trueRevenue)} /></span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #E2E8F0' }}>
                   <span style={{ color: '#4B5563', fontWeight: 600 }}>Egresos Operativos:</span>
-                  <span style={{ fontWeight: 800, color: '#EF4444' }}>-{currency(m.gastos)}</span>
+                  <span style={{ fontWeight: 800, color: '#EF4444' }}>-<CountUp value={currency(m.gastos)} /></span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: 11, fontWeight: 800, color: '#047857', background: '#D1FAE5', padding: '2px 8px', borderRadius: 6 }}>GANANCIA NETA</span>
-                  <span style={{ fontWeight: 900, fontSize: 15, color: '#065F46' }}>{currency(netProfit)}</span>
+                  <span style={{ fontWeight: 900, fontSize: 15, color: '#065F46' }}><CountUp value={currency(netProfit)} /></span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Ind. GOPPAR</span>
-                  <span style={{ fontWeight: 800, fontSize: 12, color: '#3B82F6' }}>{currency(goppar)}</span>
+                  <span style={{ fontWeight: 800, fontSize: 12, color: '#3B82F6' }}><CountUp value={currency(goppar)} /></span>
                 </div>
               </div>
 
@@ -593,17 +593,17 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
                   <div style={{ background: '#FFFBEB', border: '1px solid #FEF3C7', padding: '8px 4px', borderRadius: 8, textAlign: 'center' }}>
                     <div style={{ fontSize: 9, color: '#D97706', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Lun - Mié</div>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: '#92400E' }}>{currency(revparEntre)}</div>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: '#92400E' }}><CountUp value={currency(revparEntre)} /></div>
                     {showCmp && <div style={{ marginTop: 2 }}><Delta cur={revparEntre} prev={prev.entre} /></div>}
                   </div>
                   <div style={{ background: '#F5F3FF', border: '1px solid #EDE9FE', padding: '8px 4px', borderRadius: 8, textAlign: 'center' }}>
                     <div style={{ fontSize: 9, color: '#7C3AED', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Jue - Dom</div>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: '#5B21B6' }}>{currency(revparFinde)}</div>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: '#5B21B6' }}><CountUp value={currency(revparFinde)} /></div>
                     {showCmp && <div style={{ marginTop: 2 }}><Delta cur={revparFinde} prev={prev.finde} /></div>}
                   </div>
                   <div title="Ingreso por Habitación Disponible" style={{ background: isCurrent ? '#DBEAFE' : '#fff', border: `1px solid ${isCurrent ? '#BFDBFE' : '#E5E7EB'}`, padding: '8px 4px', borderRadius: 8, textAlign: 'center', cursor: 'help' }}>
                     <div style={{ fontSize: 9, color: isCurrent ? '#1E40AF' : '#4B5563', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Global</div>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: isCurrent ? '#1D4ED8' : '#111' }}>{currency(revpar)}</div>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: isCurrent ? '#1D4ED8' : '#111' }}><CountUp value={currency(revpar)} /></div>
                     {showCmp && <div style={{ marginTop: 2 }}><Delta cur={revpar} prev={prev.revpar} /></div>}
                   </div>
                 </div>
@@ -615,15 +615,15 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                 <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: 8 }}>Segmentación Física</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4, alignItems: 'center' }}>
                   <span style={{ color: '#4B5563', fontWeight: 600 }}>Habitaciones 1, 2, 3 y 5</span>
-                  <div style={{ textAlign: 'right' }}><span style={{ color: oComp > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oComp}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rComp)}</span>{showCmp && <Delta cur={rComp} prev={prev.comp} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
+                  <div style={{ textAlign: 'right' }}><span style={{ color: oComp > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}><CountUp value={oComp + '%'} /></span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rComp)}</span>{showCmp && <Delta cur={rComp} prev={prev.comp} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4, alignItems: 'center' }}>
                   <span style={{ color: '#4B5563', fontWeight: 600 }}>Habitación 4</span>
-                  <div style={{ textAlign: 'right' }}><span style={{ color: oKing > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oKing}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rKing)}</span>{showCmp && <Delta cur={rKing} prev={prev.king} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
+                  <div style={{ textAlign: 'right' }}><span style={{ color: oKing > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}><CountUp value={oKing + '%'} /></span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rKing)}</span>{showCmp && <Delta cur={rKing} prev={prev.king} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, alignItems: 'center' }}>
                   <span style={{ color: '#4B5563', fontWeight: 600 }}>Habitación 6</span>
-                  <div style={{ textAlign: 'right' }}><span style={{ color: oMat > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oMat}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rMat)}</span>{showCmp && <Delta cur={rMat} prev={prev.mat} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
+                  <div style={{ textAlign: 'right' }}><span style={{ color: oMat > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}><CountUp value={oMat + '%'} /></span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rMat)}</span>{showCmp && <Delta cur={rMat} prev={prev.mat} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
                 </div>
                 {showCmp && <CmpTitle label={cmpLabel} />}
               </div>
@@ -694,7 +694,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 800, fontSize: 17, color: '#111' }}>{currency(total)}</div>
+                  <div style={{ fontWeight: 800, fontSize: 17, color: '#111' }}><CountUp value={currency(total)} /></div>
                   <div style={{ fontSize: 11, color: total - paid > 0 ? '#EF4444' : '#10B981' }}>Pendiente: {currency(total - paid)}</div>
                 </div>
               </div>
@@ -708,10 +708,10 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
 
       <h3 id="seccion-saldos-pendientes" style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700, color: '#374151' }}>Huéspedes con saldos pendientes</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {pending.map((r) => {
+        {pending.map((r, liI) => {
           const prop = properties.find((p) => p.id === r.propertyId);
           return (
-            <div key={r.id} onClick={() => onGoTo && onGoTo('abrir_reserva', r)} style={{ background: '#fff', borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #F0F0F0', cursor: 'pointer' }}>
+            <div className="li-in" key={r.id} onClick={() => onGoTo && onGoTo('abrir_reserva', r)} style={{ '--i': liI, background: '#fff', borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #F0F0F0', cursor: 'pointer' }}>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 13, color: '#111' }}>{r.guestName}</div>
                 <div style={{ fontSize: 11, color: '#9CA3AF' }}>{prop?.name} · CI: {fmtD(r.checkIn)}</div>

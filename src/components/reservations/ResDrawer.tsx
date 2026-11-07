@@ -508,7 +508,7 @@ export function ResDrawer({
             const inp = { width: '100%', padding: '9px 12px', border: '1.5px solid #E5E7EB', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff' };
             const mine = new Set(members.length ? members.map((m) => m.room) : [res.room]);
             return (
-              <div id="add-room-panel" style={{ background: '#fff', border: `1.5px solid ${GROUP_COLORS.border}`, borderRadius: 12, padding: 12, marginBottom: 12, scrollMarginTop: 12 }}>
+              <div id="add-room-panel" className="pop-in" style={{ background: '#fff', border: `1.5px solid ${GROUP_COLORS.border}`, borderRadius: 12, padding: 12, marginBottom: 12, scrollMarginTop: 12 }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: GROUP_COLORS.txt, marginBottom: 4 }}>
                   ➕ Sumar habitación {inGroup ? 'al grupo' : `a la reserva de ${res.guestName}`}
                 </div>
@@ -756,6 +756,7 @@ export function ResDrawer({
           )}
           {lateEdit && (
             <div
+              className="pop-in"
               style={{
                 background: '#F5F7FF',
                 border: `1px solid ${LATE_COLORS.border}`,

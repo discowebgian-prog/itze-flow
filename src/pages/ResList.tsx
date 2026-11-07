@@ -86,13 +86,18 @@ export function ResList({ reservations, properties, onView, onAdd, onQuote }) {
   const canceladas = reservations.filter(r => r.checkIn === selectedDate && r.status === 'cancelada');
 
   // Componente interno para dibujar cada tarjetita de reserva
-  const ResCard = ({ r }) => {
+  // Se llama como función (ResCard({ r, i })), no como <ResCard/>: al estar definida adentro,
+  // como componente se rearmaba en cada render y la animación de entrada se repetía
+  const ResCard = ({ r, i = 0 }) => {
     const prop = properties.find((p) => p.id === r.propertyId);
     const saldo = r.totalAmount - r.paid;
     return (
       <div
+        key={r.id}
+        className="li-in"
         onClick={() => onView(r)}
         style={{
+          '--i': i,
           background: '#fff', borderRadius: 12, padding: '14px 16px', border: '1px solid #F0F0F0',
           cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           boxShadow: '0 1px 3px rgba(0,0,0,.02)', marginBottom: 8, gap: 12
@@ -210,7 +215,7 @@ export function ResList({ reservations, properties, onView, onAdd, onQuote }) {
           <div style={{ fontSize: 12, fontWeight: 700, color: '#6B7280', marginBottom: 10, textTransform: 'uppercase' }}>
             Resultados de búsqueda ({searchedRes.length})
           </div>
-          {searchedRes.map((r) => <ResCard key={r.id} r={r} />)}
+          {searchedRes.map((r, i) => ResCard({ r, i }))}
           {searchedRes.length === 0 && <div style={{ textAlign: 'center', color: '#9CA3AF', padding: 20 }}>No se encontraron huéspedes.</div>}
         </div>
       ) : (
@@ -293,7 +298,7 @@ export function ResList({ reservations, properties, onView, onAdd, onQuote }) {
                 <h3 style={{ fontSize: 12, color: '#059669', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
                   📥 Llegadas ({llegadas.length})
                 </h3>
-                {llegadas.map(r => <ResCard key={r.id} r={r} />)}
+                {llegadas.map((r, i) => ResCard({ r, i }))}
               </div>
             )}
 
@@ -302,7 +307,7 @@ export function ResList({ reservations, properties, onView, onAdd, onQuote }) {
                 <h3 style={{ fontSize: 12, color: '#D97706', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
                   📤 Salidas ({salidas.length})
                 </h3>
-                {salidas.map(r => <ResCard key={r.id} r={r} />)}
+                {salidas.map((r, i) => ResCard({ r, i }))}
               </div>
             )}
 
@@ -311,7 +316,7 @@ export function ResList({ reservations, properties, onView, onAdd, onQuote }) {
                 <h3 style={{ fontSize: 12, color: '#2563EB', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
   🛏️ Alojados ({hospedados.length})
 </h3>
-                {hospedados.map(r => <ResCard key={r.id} r={r} />)}
+                {hospedados.map((r, i) => ResCard({ r, i }))}
               </div>
             )}
 
@@ -320,7 +325,7 @@ export function ResList({ reservations, properties, onView, onAdd, onQuote }) {
                 <h3 style={{ fontSize: 12, color: '#DC2626', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
                   🚫 Canceladas ({canceladas.length})
                 </h3>
-                {canceladas.map(r => <ResCard key={r.id} r={r} />)}
+                {canceladas.map((r, i) => ResCard({ r, i }))}
               </div>
             )}
           </div>

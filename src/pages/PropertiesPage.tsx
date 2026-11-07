@@ -93,14 +93,14 @@ export function PropertiesPage({
           paddingBottom: 4,
         }}
       >
-        {properties.map((p) => (
-          <button
+        {properties.map((p, liI) => (
+          <button className="li-in"
             key={p.id}
             onClick={() => {
               setAp(p.id);
               setSub('notas'); 
             }}
-            style={{
+            style={{ '--i': liI,
               flexShrink: 0,
               padding: '7px 14px',
               borderRadius: 20,
