@@ -448,9 +448,12 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
                   <span style={{ fontWeight: 700, color: '#111' }}>
                     {ty.label}
                   </span>
-                  <span style={{ textAlign: 'right' }}>
-                    <b style={{ fontSize: 16, color: '#111' }}>{n.price ? currency(n.price) : '—'}</b>
-                    {ty.extra && n.extra > 0 && <span style={{ fontSize: 11, color: '#6B7280' }}> · +{currency(n.extra)} por persona</span>}
+                  {/* Precio y adicional en columnas fijas: todos los precios quedan alineados; sin adicional, un guion centrado */}
+                  <span style={{ display: 'grid', gridTemplateColumns: 'auto 128px', alignItems: 'baseline', columnGap: 8, flexShrink: 0 }}>
+                    <b style={{ fontSize: 16, color: '#111', textAlign: 'right' }}>{n.price ? currency(n.price) : '—'}</b>
+                    {ty.extra && n.extra > 0
+                      ? <span style={{ fontSize: 11, color: '#6B7280', whiteSpace: 'nowrap' }}>+{currency(n.extra)} por persona</span>
+                      : <span style={{ fontSize: 13, color: '#CBD5E1', textAlign: 'center' }}>–</span>}
                   </span>
                 </div>
               );
