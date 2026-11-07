@@ -5,9 +5,10 @@ import { BLOCK_COLORS, getAlerts } from '../lib/constants';
 import { TODAY, fmt, addDays, parseD, MONTHS, DAYS } from '../lib/dates';
 import { LateBadge } from '../components/ui/LateBadge';
 import { GroupBadge } from '../components/ui/GroupBadge';
+import { QuoteButton } from '../components/Quoter';
 
 // ── TIMELINE MOBILE ───────────────────────────────────────────────────────────
-export function TimelineMobile({ reservations, properties, onClickRes, onAddRes, highlightStatus }) {
+export function TimelineMobile({ reservations, properties, onClickRes, onAddRes, onQuote, highlightStatus }) {
   const next14 = Array.from({ length: 14 }, (_, i) => addDays(TODAY, i - 1));
   const dayRes = (d) =>
     reservations.filter(
@@ -29,6 +30,7 @@ export function TimelineMobile({ reservations, properties, onClickRes, onAddRes,
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#111' }}>
           Calendario
         </h2>
+        {onQuote && <QuoteButton onClick={onQuote} style={{ marginRight: 6, borderRadius: 9 }} />}
         <button
           onClick={() => onAddRes()}
           style={{

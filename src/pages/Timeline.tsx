@@ -7,6 +7,7 @@ import { findConflicts, lateHour } from '../lib/reservations';
 import { groupOf } from '../lib/groups';
 import { TimelineMobile } from './TimelineMobile';
 import timelineCss from '../styles/timeline.css?raw';
+import { QuoteButton } from '../components/Quoter';
 
 // ── TIMELINE DESKTOP ──────────────────────────────────────────────────────────
 export function Timeline({
@@ -14,6 +15,7 @@ export function Timeline({
   properties,
   onClickRes,
   onAddRes,
+  onQuote,
   onUpdateRes,
   isMobile,
   calView,
@@ -97,6 +99,7 @@ export function Timeline({
                 📅 Timeline
               </button>
             </div>
+            {onQuote && <QuoteButton onClick={onQuote} style={{ marginRight: 6, padding: '5px 12px' }} />}
             <button
               onClick={() => onAddRes()}
               style={{
@@ -120,6 +123,7 @@ export function Timeline({
           properties={properties}
           onClickRes={onClickRes}
           onAddRes={onAddRes}
+          onQuote={onQuote}
           highlightStatus={highlightStatus}
         />
       </div>
@@ -430,6 +434,7 @@ export function Timeline({
           </div>
 
           {/* Botón de Acción Principal */}
+          {onQuote && <QuoteButton onClick={onQuote} style={{ marginRight: 6, borderRadius: 10 }} />}
           <button
             onClick={() => onAddRes()}
             style={{

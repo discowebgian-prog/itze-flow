@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ResDrawer } from './components/reservations/ResDrawer';
 import { ResForm } from './components/reservations/ResForm';
+import { Quoter, QuoteButton } from './components/Quoter';
 import { Icon } from './components/ui/Icon';
 import { Modal } from './components/ui/Modal';
 import { useW } from './hooks/useW';
@@ -348,10 +349,13 @@ export default function AppMejorada() {
       : TABS_ALL;
 
   // Funciones operativas restauradas
-  const openAdd = (pid = '', date = '') => {
-    setPrefill({ pid, date });
+  const openAdd = (pid = '', date = '', initial = null) => {
+    setPrefill({ pid, date, initial });
     setModal('new');
   };
+  // Cotizar: ventana sin crear reserva; "Reservar" abre el formulario ya cargado
+  const [quoterOpen, setQuoterOpen] = useState(false);
+  const openQuote = () => setQuoterOpen(true);
   const goTo = (newTab, data) => {
     if (newTab === 'abrir_reserva') {
       setDrawer(data);
@@ -904,6 +908,8 @@ const toggleBlacklist = async (id, currentStatus) => {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {isMobile ? (
+            <>
+            <QuoteButton onClick={openQuote} />
             <button
               onClick={() => openAdd()}
               style={{
@@ -923,6 +929,7 @@ const toggleBlacklist = async (id, currentStatus) => {
             >
               + Nueva
             </button>
+            </>
           ) : (
             <>
               <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>
@@ -1033,6 +1040,11 @@ const toggleBlacklist = async (id, currentStatus) => {
                   Nueva reserva
                 </span>
               </button>
+              <QuoteButton
+                onClick={openQuote}
+                compact={isTablet}
+                style={{ width: '100%', marginTop: 8, borderRadius: 9, padding: isTablet ? '9px' : '8px 12px' }}
+              />
             </div>
             {!isTablet && (
               <button
@@ -1077,6 +1089,7 @@ const toggleBlacklist = async (id, currentStatus) => {
               properties={propsWS}
               onClickRes={(r) => setDrawer(r)}
               onAddRes={openAdd}
+              onQuote={openQuote}
               onUpdateRes={updateRes}
               isMobile={isMobile}
               calView={effectiveCalView}
@@ -1092,6 +1105,7 @@ const toggleBlacklist = async (id, currentStatus) => {
               properties={visProps}
               onView={(r) => setDrawer(r)}
               onAdd={openAdd}
+              onQuote={openQuote}
             />
           )}
           {tab === 'propiedades' && (
@@ -1354,6 +1368,18 @@ const toggleBlacklist = async (id, currentStatus) => {
           </div>
         </div>
       )}
+      {quoterOpen && (
+        <Modal title="🧮 Cotizar" onClose={() => setQuoterOpen(false)} isMobile={isMobile}>
+          <Quoter
+            allRes={res}
+            tarifas={tarifas}
+            onReserve={(init) => {
+              setQuoterOpen(false);
+              openAdd('hostel', init.checkIn, init);
+            }}
+          />
+        </Modal>
+      )}
       {modal === 'new' && (
         <Modal
           title="Nueva reserva"
@@ -1366,6 +1392,7 @@ const toggleBlacklist = async (id, currentStatus) => {
             onClose={() => setModal(null)}
             prefillProp={prefill.pid}
             prefillDate={prefill.date}
+            initial={prefill.initial || undefined}
             allRes={res}
             guestDecisions={guestDecisions}
             tarifas={tarifas}
