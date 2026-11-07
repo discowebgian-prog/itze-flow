@@ -1,7 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 import { useState, useMemo, useEffect } from 'react';
-import { ROOMS, ROOM_DESC } from '../lib/constants';
+import { ROOMS, ROOM_DESC, ROOM_BEDS } from '../lib/constants';
 import { roomTypeOf, quoteStay } from '../lib/rates';
 import { findConflicts } from '../lib/reservations';
 import { TODAY, fmt, addDays, parseD, diffDays, currency, DAYS } from '../lib/dates';
@@ -15,6 +15,7 @@ import {
   stayPlan,
   planText,
   nearestDates,
+  listY,
   lateOutOn,
   entradaSalida,
   roomNum,
@@ -31,6 +32,13 @@ const msgMoney = (n) => {
 const noches = (n) => (n === 1 ? '1 noche' : `${n} noches`);
 const personas = (n) => (n === 1 ? '1 persona' : `${n} personas`);
 export { listY } from '../lib/availability';
+
+// Animaciones: entrada de pasos y habitaciones (una debajo de otra) y expansión al tocar
+const QT_CSS = `
+@keyframes qtIn { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+.qt-in { animation: qtIn .38s cubic-bezier(.2,.8,.2,1) both; }
+@media (prefers-reduced-motion: reduce) { .qt-in { animation: none; } }
+`;
 export const HOSTEL_CAPACITY = ROOMS.reduce((s, r) => s + r.maxGuests, 0);
 
 // Texto para WhatsApp: termina en los precios (la charla sigue según venga)
@@ -56,6 +64,7 @@ export function quoteMessage({ checkIn, checkOut, guests, items, total }) {
 function Step({ num, title, done = false, children }) {
   return (
     <section
+      className="qt-in"
       style={{
         background: '#fff',
         border: '1px solid #E5E7EB',
@@ -93,7 +102,8 @@ function Step({ num, title, done = false, children }) {
 export function Quoter({ allRes = [], tarifas = [], onReserve }) {
   const [checkIn, setCheckIn] = useState(fmt(TODAY));
   const [checkOut, setCheckOut] = useState(fmt(addDays(TODAY, 1)));
-  const [guests, setGuests] = useState(2);
+  const [guests, setGuests] = useState(0); // 0 = todavía no eligieron (las habitaciones aparecen al elegir)
+  const [share, setShare] = useState(null); // ¿pueden compartir cama? null = sin responder
   const [dist, setDist] = useState({}); // habitación → personas
   const [openRoom, setOpenRoom] = useState(''); // habitación con el selector desplegado
   const [copied, setCopied] = useState(false);
@@ -198,23 +208,53 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
     return q && !q.missing ? q.total : null;
   };
   const unassigned = freeRooms.filter((r) => !distFree[r.id]);
-  let rec = null;
+  const bedsOf = (r) => ROOM_BEDS[r.id] || r.maxGuests;
+  // Elige habitaciones para "need" personas: una que alcance (la de menos lugar; empate, la más barata);
+  // si ninguna alcanza, la más grande y sigue con las que faltan. capOf: lugares de cada habitación.
+  const pickRooms = (need, capOf) => {
+    const byPrice = (a, b) => (priceFor(a.id, Math.min(need, a.maxGuests)) || 0) - (priceFor(b.id, Math.min(need, b.maxGuests)) || 0);
+    let pool = unassigned.filter((r) => capOf(r) > 0);
+    let rest = need;
+    const out = [];
+    while (rest > 0 && pool.length) {
+      const fit = pool.filter((r) => capOf(r) >= rest);
+      const r = fit.length
+        ? [...fit].sort((a, b) => capOf(a) - capOf(b) || byPrice(a, b))[0]
+        : [...pool].sort((a, b) => capOf(b) - capOf(a) || byPrice(a, b))[0];
+      out.push({ id: r.id, g: Math.min(rest, capOf(r)), cap: capOf(r) });
+      rest -= capOf(r);
+      pool = pool.filter((x) => x !== r);
+    }
+    return rest > 0 ? null : out;
+  };
+  const roomsTxt = (sel) =>
+    sel.length === 1
+      ? `la habitación ${roomNum(sel[0].id)}`
+      : listY(sel.map((x, k) => `${k === 0 ? 'la habitación' : 'la'} ${roomNum(x.id)} (${x.g})`));
+  let recRooms = [];
   let recText = '';
   if (left > 0 && unassigned.length > 1) {
-    const fitting = unassigned.filter((r) => r.maxGuests >= left);
-    const byPrice = (a, b) => (priceFor(a.id, Math.min(left, a.maxGuests)) || 0) - (priceFor(b.id, Math.min(left, b.maxGuests)) || 0);
-    // Antes de elegir: "Para 2 personas…"; con alguna habitación elegida: "Para las 2 que faltan…"
+    // Antes de elegir: "Para 4 personas…"; con alguna habitación elegida: "Para las 2 que faltan…"
     const para = placed === 0 ? `Para ${personas(left)}` : left === 1 ? 'Para la persona que falta' : `Para las ${left} que faltan`;
-    if (fitting.length) {
-      rec = [...fitting].sort((a, b) => a.maxGuests - b.maxGuests || byPrice(a, b))[0];
-      const biggest = Math.max(...unassigned.map((r) => r.maxGuests));
-      recText =
-        rec.maxGuests < biggest
-          ? `⭐ ${para} te conviene la habitación ${roomNum(rec.id)}: así quedan libres las más grandes para grupos.`
-          : `⭐ ${para} te conviene la habitación ${roomNum(rec.id)}.`;
-    } else {
-      rec = [...unassigned].sort((a, b) => b.maxGuests - a.maxGuests || byPrice(a, b))[0];
-      recText = `⭐ ${placed === 0 ? 'Te conviene empezar' : 'Seguí'} por la habitación ${roomNum(rec.id)}: entran ${rec.maxGuests}.`;
+    const shared = pickRooms(left, (r) => r.maxGuests);
+    const solo = left > 1 ? pickRooms(left, bedsOf) : shared;
+    const biggest = Math.max(...unassigned.map((r) => r.maxGuests));
+    const why = (sel) => (sel.length === 1 && sel[0].cap < biggest ? ': así quedan libres las más grandes para grupos' : '');
+    const same = shared && solo && shared.map((x) => x.id + x.g).join() === solo.map((x) => x.id + x.g).join();
+    if (left === 1 || same || (share === true && shared) || (share === false && solo)) {
+      const sel = share === false ? solo : shared || solo;
+      if (sel) {
+        recRooms = sel.map((x) => x.id);
+        const como = left > 1 && share === true ? ', compartiendo cama,' : left > 1 && share === false ? ', cada uno en su cama,' : '';
+        recText = `⭐ ${para}${como} te conviene ${roomsTxt(sel)}${share === false ? '' : why(sel)}.`;
+      }
+    } else if (shared && solo) {
+      recRooms = [...new Set([...shared, ...solo].map((x) => x.id))];
+      recText = `⭐ ${para}: si pueden compartir cama, te conviene ${roomsTxt(shared)}; si cada uno quiere su cama, ${roomsTxt(solo)}.`;
+    } else if (shared || solo) {
+      const sel = shared || solo;
+      recRooms = sel.map((x) => x.id);
+      recText = `⭐ ${para} te conviene ${roomsTxt(sel)}.`;
     }
   }
   const msg = done ? quoteMessage({ checkIn, checkOut, guests, items, total }) : '';
@@ -263,6 +303,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
 
   return (
     <div>
+      <style>{QT_CSS}</style>
       {/* 1 · Fechas */}
       <Step num={1} title="Fechas" done={n > 0}>
       <RangeCalendar
@@ -282,12 +323,13 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
       {n > 0 && (
         <>
           {/* 2 · Personas */}
-          <Step num={2} title="Personas" done={!short || planActive}>
+          <Step num={2} title="Personas" done={guests > 0 && (!short || planActive)}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button type="button" disabled={guests <= 1} onClick={() => setGuests((g) => Math.max(1, g - 1))} style={stepBtn(guests <= 1)}>
               −
             </button>
-            <div style={{ fontSize: 26, fontWeight: 800, minWidth: 40, textAlign: 'center', color: '#111' }}>{guests}</div>
+            <div style={{ fontSize: 26, fontWeight: 800, minWidth: 40, textAlign: 'center', color: guests ? '#111' : '#D1D5DB' }}>{guests}</div>
+            {!guests && <div style={{ fontSize: 12.5, color: '#6B7280' }}>Tocá + para elegir</div>}
             <button
               type="button"
               disabled={guests >= HOSTEL_CAPACITY}
@@ -383,10 +425,41 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
             </Step>
           )}
 
-          {!full && !planActive && (
+          {guests > 0 && !full && !planActive && (
           <>
           {/* 3 · Distribución */}
           <Step num={3} title="¿Qué habitación/es prefieren?" done={left === 0}>
+          {/* ¿Comparten cama? cambia la sugerencia (amigos o compañeros de trabajo suelen querer cada uno la suya) */}
+          {guests >= 2 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: '#374151', marginRight: 2 }}>¿Pueden compartir cama?</span>
+              {[
+                [true, 'Sí'],
+                [false, 'No, cada uno en su cama'],
+              ].map(([v, l]) => (
+                <button
+                  key={String(v)}
+                  type="button"
+                  onClick={() => setShare(share === v ? null : v)}
+                  style={{
+                    minHeight: 32,
+                    padding: '0 12px',
+                    borderRadius: 999,
+                    fontFamily: 'inherit',
+                    fontWeight: 700,
+                    fontSize: 12.5,
+                    cursor: 'pointer',
+                    background: share === v ? '#2563EB' : '#fff',
+                    color: share === v ? '#fff' : '#2563EB',
+                    border: '1.5px solid #2563EB',
+                  }}
+                >
+                  {share === v ? '✓ ' : ''}
+                  {l}
+                </button>
+              ))}
+            </div>
+          )}
           {/* Va apareciendo según el proceso: sugerencia → (al elegir) cuántos faltan → listo */}
           {placed > 0 && (
             <div
@@ -411,7 +484,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
           )}
           {placed === 0 && <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 8 }}>Tocá la habitación que prefieran.</div>}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {freeRooms.map((r) => {
+            {freeRooms.map((r, idx) => {
               const g = distFree[r.id] || 0;
               const isOpen = openRoom === r.id;
               const canAdd = left > 0 || g > 0;
@@ -419,11 +492,15 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
               return (
                 <div
                   key={r.id}
+                  className="qt-in"
                   style={{
+                    animationDelay: `${idx * 60}ms`,
                     border: `1.5px solid ${g ? '#2563EB' : isOpen ? '#93C5FD' : '#E5E7EB'}`,
                     background: g ? '#EFF6FF' : '#fff',
                     borderRadius: 10,
                     overflow: 'hidden',
+                    boxShadow: isOpen ? '0 4px 14px rgba(37,99,235,.12)' : 'none',
+                    transition: 'border-color .2s, background .2s, box-shadow .25s',
                   }}
                 >
                   <div
@@ -451,9 +528,16 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
                               {pr !== null && (
                                 <span style={{ color: '#374151', fontWeight: 600 }}>
                                   {g ? currency(pr) : `${personas(k)}: ${currency(pr)}`}
+                                  {g > bedsOf(r) && (
+                                    <span style={{ color: share === false ? '#B45309' : '#6B7280', fontWeight: share === false ? 800 : 600 }}>
+                                      {' '}
+                                      · {share === false ? '⚠️ ' : ''}
+                                      {(g - bedsOf(r)) * 2} comparten cama
+                                    </span>
+                                  )}
                                 </span>
                               )}
-                              {rec && rec.id === r.id && (
+                              {recRooms.includes(r.id) && (
                                 <span style={{ marginLeft: 6, color: '#B45309', fontWeight: 800 }}>⭐ Recomendada</span>
                               )}
                               {late && (
@@ -532,7 +616,10 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
                       </span>
                     )}
                   </div>
-                  {isOpen && !g && (
+                  {!g && (
+                    // Expansión suave al tocar la habitación
+                    <div style={{ display: 'grid', gridTemplateRows: isOpen ? '1fr' : '0fr', transition: 'grid-template-rows .28s ease' }}>
+                      <div style={{ overflow: 'hidden', opacity: isOpen ? 1 : 0, transition: 'opacity .22s ease' }}>
                     <div style={{ padding: '0 12px 12px' }}>
                       <div style={{ fontSize: 12.5, fontWeight: 800, color: '#1D4ED8', marginBottom: 6 }}>¿Cuántas van aquí?</div>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -583,6 +670,8 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
                         )}
                       </div>
                     </div>
+                      </div>
+                    </div>
                   )}
                 </div>
               );
@@ -591,10 +680,12 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
 
           {busyRooms.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
-              {busyRooms.map((r) => (
+              {busyRooms.map((r, idx) => (
                 <div
                   key={r.id}
+                  className="qt-in"
                   style={{
+                    animationDelay: `${(freeRooms.length + idx) * 60}ms`,
                     padding: '7px 12px',
                     borderRadius: 10,
                     background: '#F9FAFB',
