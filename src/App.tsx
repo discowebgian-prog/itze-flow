@@ -41,7 +41,8 @@ export default function AppMejorada() {
   const [highlightStatus, setHighlightStatus] = useState(null);
   const winW = useW();
   const isMobile = winW < 769;
-  const isTablet = winW >= 769 && winW < 1280;
+  // Igual que el CSS (app-layout.css): tablet/compu angosta de 769 a 1280 px inclusive (menú lateral angosto)
+  const isTablet = winW >= 769 && winW <= 1280;
 
   // Tarifas: si la tabla todavía no existe, la pestaña Tarifas avisa que falta el SQL
   const fetchTarifas = async () => {
@@ -1205,7 +1206,7 @@ const toggleBlacklist = async (id, currentStatus) => {
           borderTop: '1px solid #F0F0F0',
           zIndex: 99,
           paddingBottom: 'calc(env(safe-area-inset-bottom, 8px) + 20px)',
-          display: 'flex',
+          // Sin display acá: lo maneja el CSS (.bn), así en compu/tablet no aparece (está el menú lateral)
           overflowX: 'auto',
           WebkitOverflowScrolling: 'touch',
         }}
