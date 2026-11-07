@@ -147,6 +147,7 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows 
           const isCI = s === checkIn;
           const isCO = s === checkOut;
           const isEnd = isCI || isCO;
+          const isToday = s === fmt(TODAY);
           let inRange = false;
           if (checkIn && checkOut) inRange = s > checkIn && s < checkOut;
           else if (checkIn && hover && step === 1)
@@ -182,9 +183,15 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows 
                 color: col,
                 borderRadius: radius,
                 cursor: isDisabled ? 'not-allowed' : 'pointer',
+                position: 'relative',
+                ...(isToday && !isEnd ? { color: '#2563EB', fontWeight: 900 } : {}),
               }}
             >
               {d.getDate()}
+              {/* Hoy: puntito azul debajo del número */}
+              {isToday && !isEnd && (
+                <span style={{ position: 'absolute', bottom: 4, width: 4, height: 4, borderRadius: '50%', background: '#2563EB' }} />
+              )}
             </div>
           );
         })}

@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { ROOMS, ROOM_DESC, ROOM_BEDS } from '../lib/constants';
 import { roomTypeOf, quoteStay } from '../lib/rates';
 import { findConflicts } from '../lib/reservations';
@@ -38,8 +38,19 @@ export { listY } from '../lib/availability';
 const QT_CSS = `
 @keyframes qtIn { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
 .qt-in { animation: qtIn .38s cubic-bezier(.2,.8,.2,1) both; }
-@media (prefers-reduced-motion: reduce) { .qt-in { animation: none; } }
+/* Resaltado de una vez (Personas al elegir fechas): aro azul que se apaga */
+@keyframes qtGlow {
+  0% { box-shadow: 0 0 0 0 rgba(37,99,235,.5); border-color: #2563EB; background: #EFF6FF; }
+  65% { box-shadow: 0 0 0 10px rgba(37,99,235,0); border-color: #93C5FD; background: #fff; }
+  100% { box-shadow: 0 1px 3px rgba(0,0,0,.04); border-color: #E5E7EB; background: #fff; }
+}
+.qt-in.qt-glow { animation: qtIn .38s cubic-bezier(.2,.8,.2,1) both, qtGlow 1.4s .3s ease-out both; }
+@media (prefers-reduced-motion: reduce) { .qt-in, .qt-in.qt-glow { animation: none; } }
 `;
+const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+// Desliza la ventana hasta el paso (arriba de todo, o lo justo para que se vea entero con 'nearest')
+const scrollToStep = (ref, block = 'start') =>
+  ref.current?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block });
 export const HOSTEL_CAPACITY = ROOMS.reduce((s, r) => s + r.maxGuests, 0);
 
 // Texto para WhatsApp: termina en los precios (la charla sigue según venga)
@@ -73,11 +84,13 @@ export function quoteMessage({ checkIn, checkOut, guests, items, total }) {
 }
 
 // Tarjeta de cada paso: número en un círculo (✓ verde cuando el paso está resuelto) y título
-function Step({ num, title, done = false, children }) {
+function Step({ num, title, done = false, glow = false, boxRef = undefined, children }) {
   return (
     <section
-      className="qt-in"
+      ref={boxRef}
+      className={glow ? 'qt-in qt-glow' : 'qt-in'}
       style={{
+        scrollMarginTop: 12,
         background: '#fff',
         border: '1px solid #E5E7EB',
         borderRadius: 14,
@@ -112,8 +125,9 @@ function Step({ num, title, done = false, children }) {
 }
 
 export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
-  const [checkIn, setCheckIn] = useState(fmt(TODAY));
-  const [checkOut, setCheckOut] = useState(fmt(addDays(TODAY, 1)));
+  // Arranca sin fechas: Personas aparece recién al elegir entrada y salida
+  const [checkIn, setCheckIn] = useState('');
+  const [checkOut, setCheckOut] = useState('');
   const [guests, setGuests] = useState(0); // 0 = todavía no eligieron (las habitaciones aparecen al elegir)
   const [share, setShare] = useState(null); // ¿pueden compartir cama? null = sin responder
   const [sofa, setSofa] = useState(null); // ¿quieren usar el sofá cama? null = sin responder
@@ -125,6 +139,17 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
   // Entrada tocada, esperando la salida: lo de abajo sigue con las fechas anteriores (atenuado) para que nada salte
   const [draftIn, setDraftIn] = useState(null);
   const picking = draftIn !== null;
+  // Recorrido guiado: fechas → Personas (resaltado) → habitaciones → cotización
+  const [glowKey, setGlowKey] = useState(0); // sube al elegir fechas: Personas entra con resaltado
+  const personasRef = useRef(null);
+  const planRef = useRef(null);
+  const quoteRef = useRef(null);
+  const commitDates = (ci, co) => {
+    setCheckIn(ci);
+    setCheckOut(co);
+    setDraftIn(null);
+    setGlowKey((k) => k + 1);
+  };
   const n = checkIn && checkOut ? diffDays(checkIn, checkOut) : 0;
   useEffect(() => setPlanOn(false), [checkIn, checkOut, guests]);
 
@@ -151,9 +176,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
     [short, allRes, checkIn, n, guests]
   );
   const goDates = (ci) => {
-    setDraftIn(null);
-    setCheckIn(ci);
-    setCheckOut(fmt(addDays(parseD(ci), n)));
+    commitDates(ci, fmt(addDays(parseD(ci), n)));
     setCalKey((k) => k + 1);
   };
   const warnBox = {
@@ -190,6 +213,35 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
   const missingPrice = items.some((it) => it.total === null);
   const total = items.reduce((s, it) => s + (it.total || 0), 0);
   const done = n > 0 && (planActive || left === 0) && items.length > 0 && !missingPrice;
+
+  // Deslizamientos del recorrido guiado
+  const allPlaced = n > 0 && guests > 0 && !planActive && left === 0 && items.length > 0;
+  const allPlacedRef = useRef(allPlaced);
+  allPlacedRef.current = allPlaced;
+  // Al elegir fechas: que Personas (recién aparecida) se vea entera
+  useEffect(() => {
+    if (!glowKey) return;
+    const t = setTimeout(() => scrollToStep(personasRef, 'nearest'), 380);
+    return () => clearTimeout(t);
+  }, [glowKey]);
+  // Al dejar de tocar + / −: el almanaque sube y quedan Personas arriba y las habitaciones a la vista
+  useEffect(() => {
+    if (!guests) return;
+    const t = setTimeout(() => !allPlacedRef.current && scrollToStep(personasRef), 850);
+    return () => clearTimeout(t);
+  }, [guests]);
+  // Todos ubicados: las habitaciones suben y queda a la vista la cotización
+  useEffect(() => {
+    if (!allPlaced) return;
+    const t = setTimeout(() => scrollToStep(quoteRef), 650);
+    return () => clearTimeout(t);
+  }, [allPlaced]);
+  // Con cambio de habitación: lo mismo, desde ese paso
+  useEffect(() => {
+    if (!planActive) return;
+    const t = setTimeout(() => scrollToStep(planRef), 450);
+    return () => clearTimeout(t);
+  }, [planActive]);
 
   // Para la reserva: una o varias (con cambio de habitación, una tras otra con los mismos datos del huésped)
   const reserveQueue = () => {
@@ -365,13 +417,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
         fixedRows
         checkIn={picking ? draftIn : checkIn}
         checkOut={picking ? '' : checkOut}
-        onChange={(ci, co) => {
-          if (co) {
-            setCheckIn(ci);
-            setCheckOut(co);
-            setDraftIn(null);
-          } else setDraftIn(ci);
-        }}
+        onChange={(ci, co) => (co ? commitDates(ci, co) : setDraftIn(ci))}
       />
       {/* Alto fijo de dos renglones: el texto cambia sin mover lo de abajo */}
       <div style={{ fontSize: 13.5, fontWeight: 700, color: '#1E40AF', marginTop: 10, lineHeight: 1.35, minHeight: 37 }}>
@@ -379,7 +425,9 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
           ? `Entrada el ${oneDay(draftIn)}. Ahora tocá la fecha de salida.`
           : n > 0
           ? `${cap1(entradaSalida(checkIn, checkOut))} · ${noches(n)}`
-          : 'Elegí la fecha de salida'}
+          : checkIn
+          ? 'Elegí la fecha de salida'
+          : 'Tocá la fecha de entrada'}
       </div>
       </Step>
 
@@ -389,7 +437,14 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
           style={{ opacity: picking ? 0.4 : 1, pointerEvents: picking ? 'none' : 'auto', transition: 'opacity .2s' }}
         >
           {/* 2 · Personas */}
-          <Step num={2} title="Personas" done={guests > 0 && (!short || planActive)}>
+          <Step
+            key={'personas' + glowKey}
+            num={2}
+            title="Personas"
+            done={guests > 0 && (!short || planActive)}
+            glow={glowKey > 0}
+            boxRef={personasRef}
+          >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button type="button" disabled={guests <= 1} onClick={() => setGuests((g) => Math.max(1, g - 1))} style={stepBtn(guests <= 1)}>
               −
@@ -484,7 +539,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
           </Step>
 
           {planActive && (
-            <Step num={3} title="Con cambio de habitación" done>
+            <Step num={3} title="Con cambio de habitación" done boxRef={planRef}>
             <div style={{ fontSize: 12.5, color: '#5B21B6', background: '#F5F3FF', border: '1px solid #DDD6FE', borderRadius: 8, padding: '8px 10px' }}>
               🔀 Cotizando con cambio de habitación. Al reservar se cargan una tras otra, con los mismos datos del huésped.
             </div>
@@ -822,7 +877,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
 
           {/* 4 · Cotización */}
           {items.length > 0 && (
-            <Step num={4} title="Cotización" done={done}>
+            <Step num={4} title="Cotización" done={done} boxRef={quoteRef}>
               <div style={{ border: '1px solid #E5E7EB', borderRadius: 10, overflow: 'hidden' }}>
                 {items.map((it) => (
                   <div key={it.key} style={{ padding: '10px 12px', borderBottom: '1px solid #F3F4F6' }}>
