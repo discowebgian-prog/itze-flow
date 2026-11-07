@@ -33,6 +33,8 @@ import { DocLink } from '../ui/DocLink';
 import { LatePicker } from './LatePicker';
 import { LATE_COLORS } from '../ui/LateBadge';
 import { GROUP_COLORS } from '../ui/GroupBadge';
+import { AnimatePresence } from 'motion/react';
+import { Backdrop, PopCard } from '../ui/Motion';
 
 export function ResForm({
   initial,
@@ -1998,8 +2000,8 @@ export function ResForm({
         </button>
       </div>
 
-      {requoteOpen && (
-        <div
+      <AnimatePresence>{requoteOpen && (
+        <Backdrop key="requote"
           style={{
             position: 'fixed',
             inset: 0,
@@ -2011,7 +2013,7 @@ export function ResForm({
             padding: 16,
           }}
         >
-          <div style={{ background: '#fff', borderRadius: 16, maxWidth: 400, width: '100%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.25)' }}>
+          <PopCard style={{ background: '#fff', borderRadius: 16, maxWidth: 400, width: '100%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.25)' }}>
             <div style={{ background: '#2563EB', padding: '16px 22px' }}>
               <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>🧮 Con las fechas nuevas cambia el precio</div>
               <div style={{ fontSize: 12, color: '#DBEAFE', marginTop: 4 }}>
@@ -2064,11 +2066,11 @@ export function ResForm({
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </PopCard>
+        </Backdrop>
+      )}</AnimatePresence>
 
-      {scopeAsk && (() => {
+      <AnimatePresence>{scopeAsk && (() => {
         const others = members.filter((m) => m.id !== initial.id);
         const labels = [...new Set(scopeAsk.shared.map((k) => SHARED_LABELS[k]))];
         const datesChanged = scopeAsk.shared.includes('checkIn') || scopeAsk.shared.includes('checkOut');
@@ -2088,7 +2090,7 @@ export function ResForm({
           cursor: 'pointer',
         };
         return (
-          <div
+          <Backdrop key="scopeAsk"
             style={{
               position: 'fixed',
               inset: 0,
@@ -2100,7 +2102,7 @@ export function ResForm({
               padding: 16,
             }}
           >
-            <div style={{ background: '#fff', borderRadius: 16, maxWidth: 380, width: '100%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.25)' }}>
+            <PopCard style={{ background: '#fff', borderRadius: 16, maxWidth: 380, width: '100%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.25)' }}>
               <div style={{ background: GROUP_COLORS.txt, padding: '16px 22px' }}>
                 <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>🔗 ¿Aplicar a todo el grupo?</div>
               </div>
@@ -2158,13 +2160,13 @@ export function ResForm({
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
+            </PopCard>
+          </Backdrop>
         );
-      })()}
+      })()}</AnimatePresence>
 
-      {confModal && (
-        <div
+      <AnimatePresence>{confModal && (
+        <Backdrop key="confModal"
           style={{
             position: 'fixed',
             inset: 0,
@@ -2176,7 +2178,7 @@ export function ResForm({
             padding: 16,
           }}
         >
-          <div
+          <PopCard
             style={{
               background: '#fff',
               borderRadius: 16,
@@ -2241,9 +2243,9 @@ export function ResForm({
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </PopCard>
+        </Backdrop>
+      )}</AnimatePresence>
     </div>
   );
 }

@@ -22,6 +22,8 @@ import { RatesPage } from './pages/RatesPage';
 import { ResList } from './pages/ResList';
 import { Timeline } from './pages/Timeline';
 import appLayoutCss from './styles/app-layout.css?raw';
+import { AnimatePresence, motion } from 'motion/react';
+import { Backdrop, PopCard, SPRING_POP } from './components/ui/Motion';
 
 
 // ── APP ───────────────────────────────────────────────────────────────────────
@@ -1236,8 +1238,9 @@ const toggleBlacklist = async (id, currentStatus) => {
       </div>
 
      {/* Modales y Paneles flotantes */}
-      {drawer && (
+      <AnimatePresence>{drawer && (
         <ResDrawer
+          key="drawer"
           res={drawer}
           onClose={() => setDrawer(null)}
           onEdit={(r, extra = {}) => {
@@ -1263,9 +1266,9 @@ const toggleBlacklist = async (id, currentStatus) => {
           onCheckOut={handleCO}
           onSetLate={setLateCheckout}
         />
-      )}
-      {modal?.type === 'confirmDel' && (
-        <div
+      )}</AnimatePresence>
+      <AnimatePresence>{modal?.type === 'confirmDel' && (
+        <Backdrop key="confirmDel"
           style={{
             position: 'fixed',
             inset: 0,
@@ -1277,7 +1280,7 @@ const toggleBlacklist = async (id, currentStatus) => {
             padding: 16,
           }}
         >
-          <div
+          <PopCard
             style={{
               background: '#fff',
               borderRadius: 16,
@@ -1369,11 +1372,11 @@ const toggleBlacklist = async (id, currentStatus) => {
                 </button>}
               </div>
             </div>
-          </div>
-        </div>
-      )}
-      {quoterOpen && (
-        <Modal title="🧮 Cotizar" onClose={() => setQuoterOpen(false)} isMobile={isMobile} tall>
+          </PopCard>
+        </Backdrop>
+      )}</AnimatePresence>
+      <AnimatePresence>{quoterOpen && (
+        <Modal key="quoter" title="🧮 Cotizar" onClose={() => setQuoterOpen(false)} isMobile={isMobile} tall>
           <Quoter
             allRes={res}
             tarifas={tarifas}
@@ -1385,9 +1388,9 @@ const toggleBlacklist = async (id, currentStatus) => {
             }}
           />
         </Modal>
-      )}
-      {modal === 'new' && (
-        <Modal
+      )}</AnimatePresence>
+      <AnimatePresence>{modal === 'new' && (
+        <Modal key="new"
           title={prefill.chain ? `Nueva reserva · ${prefill.chain.i} de ${prefill.chain.total} (cambio de habitación)` : 'Nueva reserva'}
           onClose={() => setModal(null)}
           isMobile={isMobile}
@@ -1419,9 +1422,9 @@ const toggleBlacklist = async (id, currentStatus) => {
             tarifas={tarifas}
           />
         </Modal>
-      )}
-      {modal?.type === 'edit' && (
-        <Modal
+      )}</AnimatePresence>
+      <AnimatePresence>{modal?.type === 'edit' && (
+        <Modal key="edit"
           title="Editar reserva"
           onClose={() => setModal(null)}
           isMobile={isMobile}
@@ -1437,10 +1440,10 @@ const toggleBlacklist = async (id, currentStatus) => {
             tarifas={tarifas}
           />
         </Modal>
-      )}
+      )}</AnimatePresence>
      {/* MODAL DE CONFIRMACIÓN CHECK-IN */}
-      {ciModal && (
-        <div
+      <AnimatePresence>{ciModal && (
+        <Backdrop key="ciModal"
           style={{
             position: 'fixed',
             inset: 0,
@@ -1452,7 +1455,7 @@ const toggleBlacklist = async (id, currentStatus) => {
             padding: 16,
           }}
         >
-          <div
+          <PopCard
             style={{
               background: '#fff',
               borderRadius: 16,
@@ -1517,13 +1520,13 @@ const toggleBlacklist = async (id, currentStatus) => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </PopCard>
+        </Backdrop>
+      )}</AnimatePresence>
 
       {/* MODAL DE CONFIRMACIÓN CHECK-OUT */}
-      {coModal && (
-        <div
+      <AnimatePresence>{coModal && (
+        <Backdrop key="coModal"
           style={{
             position: 'fixed',
             inset: 0,
@@ -1535,7 +1538,7 @@ const toggleBlacklist = async (id, currentStatus) => {
             padding: 16,
           }}
         >
-          <div
+          <PopCard
             style={{
               background: '#fff',
               borderRadius: 16,
@@ -1600,12 +1603,12 @@ const toggleBlacklist = async (id, currentStatus) => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </PopCard>
+        </Backdrop>
+      )}</AnimatePresence>
       {/* DISEÑO DEL CARTEL FLOTANTE (TOAST) */}
-      {toastMsg && (
-        <div
+      <AnimatePresence>{toastMsg && (
+        <div key="toast"
           style={{
             position: 'fixed',
             bottom: isMobile ? 90 : 40,
@@ -1617,7 +1620,11 @@ const toggleBlacklist = async (id, currentStatus) => {
             pointerEvents: 'none',
           }}
         >
-          <div
+          <motion.div
+            initial={{ opacity: 0, y: 24, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.96, transition: { duration: 0.18 } }}
+            transition={SPRING_POP}
             style={{
               background: '#10B981',
               color: '#fff',
@@ -1629,13 +1636,12 @@ const toggleBlacklist = async (id, currentStatus) => {
               display: 'flex',
               alignItems: 'center',
               gap: 8,
-              animation: 'slideUp 0.2s ease-out'
             }}
           >
             <span style={{ fontSize: 16 }}>✓</span> {toastMsg}
-          </div>
+          </motion.div>
         </div>
-      )}
+      )}</AnimatePresence>
 
     </div>
   );

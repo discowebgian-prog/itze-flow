@@ -1,6 +1,8 @@
 /* eslint-disable */
 // @ts-nocheck
 import { useState, useEffect } from 'react';
+import { motion, useDragControls } from 'motion/react';
+import { FADE, SPRING_SHEET, shouldClose, dragStartOk } from '../ui/Motion';
 import { Badge } from '../ui/Badge';
 import { Icon } from '../ui/Icon';
 import { srcLabel, srcColor, BLOCK_COLORS, ROOMS } from '../../lib/constants';
@@ -35,6 +37,7 @@ export function ResDrawer({
   onUngroup,
   tarifas = [],
 }) {
+  const drag = useDragControls(); // gesto para cerrar arrastrando (ver la hoja más abajo)
   // "No grato" es un caso raro: enlace chico al pie y pide confirmar antes de marcar
   const [askBlacklist, setAskBlacklist] = useState(false);
   useEffect(() => setAskBlacklist(false), [res?.id]);
@@ -171,11 +174,30 @@ export function ResDrawer({
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div
+      <motion.div
         style={{ background: 'rgba(0,0,0,.4)', position: 'absolute', inset: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0, pointerEvents: 'none' }}
+        transition={FADE}
         onClick={onClose}
       />
-      <div
+      {/* Animación tipo iOS: en el celular sube desde abajo y se cierra deslizando hacia abajo desde la barrita
+          o el encabezado de color; en compu entra desde la derecha y se cierra deslizándolo hacia la derecha.
+          La X y tocar afuera siguen funcionando. */}
+      <motion.div
+        initial={isMobile ? { y: '100%' } : { x: '100%' }}
+        animate={isMobile ? { y: 0 } : { x: 0 }}
+        exit={{ ...(isMobile ? { y: '100%' } : { x: '100%' }), transition: { duration: 0.24, ease: [0.32, 0.72, 0, 1] } }}
+        transition={SPRING_SHEET}
+        drag={isMobile ? 'y' : 'x'}
+        dragListener={false}
+        dragControls={drag}
+        dragConstraints={isMobile ? { top: 0, bottom: 0 } : { left: 0, right: 0 }}
+        dragElastic={isMobile ? { top: 0, bottom: 1 } : { left: 0, right: 1 }}
+        onDragEnd={(e, info) => shouldClose(info, isMobile ? 'y' : 'x') && onClose()}
+        // Con mouse no se arrastra (así se puede seleccionar y copiar el nombre); con el dedo sí
+        onPointerDown={(e) => e.pointerType !== 'mouse' && e.target.closest('[data-drag-handle]') && dragStartOk(e) && drag.start(e)}
         style={{
           position: 'relative',
           width: isMobile ? '100vw' : 380,
@@ -192,18 +214,24 @@ export function ResDrawer({
         }}
       >
         {isMobile && (
+          <div data-drag-handle style={{ padding: '12px 0 4px', touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}>
           <div
             style={{
               width: 36,
               height: 4,
               background: '#E5E7EB',
               borderRadius: 2,
-              margin: '12px auto 4px',
+              margin: '0 auto',
             }}
           />
+          </div>
         )}
         <div
+          data-drag-handle
           style={{
+            touchAction: 'none',
+            userSelect: isMobile ? 'none' : undefined,
+            WebkitUserSelect: isMobile ? 'none' : undefined,
             padding: '16px 20px',
             borderBottom: '1px solid #F0F0F0',
             // MAGIA: Si está en lista negra usa rojo oscuro, si no, usa el color exacto del estado en el calendario
@@ -1399,7 +1427,7 @@ export function ResDrawer({
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

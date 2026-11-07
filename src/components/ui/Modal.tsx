@@ -1,11 +1,17 @@
 /* eslint-disable */
 // @ts-nocheck
+import { motion, useDragControls } from 'motion/react';
+import { Backdrop, SPRING_SHEET, SPRING_POP, shouldClose, dragStartOk } from './Motion';
 
 // ── MODAL ─────────────────────────────────────────────────────────────────────
 // tall: en el celular la hoja ocupa siempre el 92% del alto, así no crece ni se achica (y no mueve lo que estás tocando)
+// Animación tipo iOS: en el celular la hoja sube desde abajo y se cierra deslizándola hacia abajo desde la barrita
+// o el título (además de la X y tocar afuera). En compu aparece al centro con un leve zoom.
+// Para que también se anime al salir, quien la usa la envuelve en <AnimatePresence> con una key.
 export function Modal({ title, onClose, children, isMobile, tall = false }) {
+  const drag = useDragControls();
   return (
-    <div
+    <Backdrop
       style={{
         position: 'fixed',
         inset: 0,
@@ -18,7 +24,17 @@ export function Modal({ title, onClose, children, isMobile, tall = false }) {
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div
+      <motion.div
+        initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.94, y: 14 }}
+        animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
+        exit={isMobile ? { y: '100%', transition: { duration: 0.24, ease: [0.32, 0.72, 0, 1] } } : { opacity: 0, scale: 0.96, y: 8, transition: { duration: 0.16 } }}
+        transition={isMobile ? SPRING_SHEET : SPRING_POP}
+        drag={isMobile ? 'y' : false}
+        dragListener={false}
+        dragControls={drag}
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0, bottom: 1 }}
+        onDragEnd={(e, info) => shouldClose(info) && onClose()}
         style={{
           background: '#fff',
           borderRadius: isMobile ? '20px 20px 0 0' : '16px',
@@ -30,6 +46,11 @@ export function Modal({ title, onClose, children, isMobile, tall = false }) {
           boxShadow: '0 -4px 40px rgba(0,0,0,.18)',
         }}
       >
+        {/* Barrita y título: de acá se arrastra la hoja para cerrarla */}
+        <div
+          onPointerDown={(e) => isMobile && dragStartOk(e) && drag.start(e)}
+          style={{ touchAction: isMobile ? 'none' : undefined, cursor: isMobile ? 'grab' : undefined, userSelect: isMobile ? 'none' : undefined, WebkitUserSelect: isMobile ? 'none' : undefined }}
+        >
         {isMobile && (
           <div
             style={{
@@ -80,12 +101,13 @@ export function Modal({ title, onClose, children, isMobile, tall = false }) {
             ×
           </button>
         </div>
+        </div>
         <div
           style={{ padding: isMobile ? '16px 20px 32px' : '20px 24px 28px' }}
         >
           {children}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </Backdrop>
   );
 }
