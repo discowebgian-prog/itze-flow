@@ -384,7 +384,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
           {!full && !planActive && (
           <>
           {/* 3 · Distribución */}
-          <Step num={3} title="¿En qué habitación van?" done={left === 0}>
+          <Step num={3} title="¿Qué habitación/es prefieren?" done={left === 0}>
           <div
             style={{
               fontSize: 13,
