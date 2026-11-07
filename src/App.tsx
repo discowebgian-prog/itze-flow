@@ -1205,7 +1205,9 @@ const toggleBlacklist = async (id, currentStatus) => {
           background: '#fff',
           borderTop: '1px solid #F0F0F0',
           zIndex: 99,
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 8px) + 20px)',
+          // Más aire abajo para que los íconos no queden pegados al borde del teléfono (pedido de Gian).
+          // Si se cambia, ajustar también el espacio final de .main-content (app-layout.css) y el cartelito verde.
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 34px)',
           // Sin display acá: lo maneja el CSS (.bn), así en compu/tablet no aparece (está el menú lateral)
           overflowX: 'auto',
           WebkitOverflowScrolling: 'touch',
@@ -1644,7 +1646,7 @@ const toggleBlacklist = async (id, currentStatus) => {
         <div key="toast"
           style={{
             position: 'fixed',
-            bottom: isMobile ? 90 : 40,
+            bottom: isMobile ? 106 : 40, // en el celular, arriba del menú de abajo
             left: 0,
             width: '100%',
             display: 'flex',
