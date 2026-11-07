@@ -38,10 +38,24 @@ function runs(nights) {
   });
   return out;
 }
-// "el lun 30 de nov" · "del sáb 28 al lun 30 de nov" · "el vie 27 de nov y el dom 29 de nov"
+// Noches (siempre dice "noche/noches" para que quede claro que esa noche cuenta):
+// "la noche del lun 30 de nov" · "las noches del sáb 28 y dom 29 de nov" ·
+// "las noches del sáb 28 al lun 30 de nov" · "las noches del vie 27 y dom 29 de nov"
 export function nightsText(nights) {
-  return listY(runs(nights).map(([a, b]) => (a === b ? `el ${oneDay(a)}` : dayRange(a, b))));
+  if (!nights.length) return '';
+  if (nights.length === 1) return `la noche del ${oneDay(nights[0])}`;
+  const r = runs(nights);
+  const sameMonth = nights.every((d) => mes(d) === mes(nights[0]));
+  if (r.length === 1 && nights.length > 2) return `las noches ${dayRange(r[0][0], r[0][1])}`;
+  if (sameMonth && r.every(([a, b]) => a === b || nextDay(a) === b))
+    return `las noches del ${listY(nights.map(dayNum))} de ${mes(nights[0])}`;
+  return listY(r.map(([a, b]) => (a === b ? `la noche del ${oneDay(a)}` : `las noches ${dayRange(a, b)}`)));
 }
+// Estadía con entrada y salida: "entrando el sáb 28 y saliendo el lun 30 de nov"
+export const stayText = (ci, co) =>
+  mes(ci) === mes(co)
+    ? `entrando el ${dayNum(ci)} y saliendo el ${dayNum(co)} de ${mes(co)}`
+    : `entrando el ${oneDay(ci)} y saliendo el ${oneDay(co)}`;
 
 export function nightAvailability(allRes, checkIn, checkOut, n, rooms = ROOMS) {
   const nights = Array.from({ length: Math.max(0, n) }, (_, i) => fmt(addDays(parseD(checkIn), i)));
@@ -98,17 +112,17 @@ export function noRoomText(av, checkIn, checkOut, guests, rooms = ROOMS) {
     const fullTxt = `${cap(nightsText(full))} el hostel está completo`;
     if (r.length === 1) {
       const [a, b] = r[0];
-      if (a === av.nights[0]) return `${fullTxt}. Sí tenemos lugar ${dayRange(nextDay(b), checkOut)}.`;
-      if (b === av.nights[n - 1]) return `${fullTxt}. Sí tenemos lugar ${dayRange(checkIn, a)}.`;
-      return `${fullTxt}: tendría que irse ${a === b ? 'ese día' : `el ${oneDay(a)}`} y volver el ${oneDay(nextDay(b))}.`;
+      if (a === av.nights[0]) return `${fullTxt}. Sí tenemos lugar ${stayText(nextDay(b), checkOut)}.`;
+      if (b === av.nights[n - 1]) return `${fullTxt}. Sí tenemos lugar ${stayText(checkIn, a)}.`;
+      return `${fullTxt}: tendría que salir ${a === b ? 'ese día' : `el ${oneDay(a)}`} y volver a entrar el ${oneDay(nextDay(b))}.`;
     }
-    return `${fullTxt}. Las demás noches sí tenemos lugar, pero tendría que irse y volver.`;
+    return `${fullTxt}. Las demás noches sí tenemos lugar, pero tendría que salir y volver a entrar.`;
   }
 
   // Ninguna noche completa: ¿se puede cambiando de habitación? (las que alcanzan para el grupo)
   const fit = rooms.filter((r) => r.maxGuests >= guests);
   const pool = fit.length ? fit : rooms;
-  const plan = [];
+  const plan = []; // [{ room, from }]: en qué habitación arranca y qué día se cambia
   let i = 0;
   while (i < n) {
     let best = null;
@@ -122,13 +136,13 @@ export function noRoomText(av, checkIn, checkOut, guests, rooms = ROOMS) {
       }
     });
     if (!best) return 'No tenemos una misma habitación libre todas esas noches. Probá con otras fechas.';
-    const from = av.nights[i];
-    const to = i + bestLen < n ? av.nights[i + bestLen] : checkOut;
-    plan.push(`la habitación ${roomNum(best)} ${dayRange(from, to)}`);
+    plan.push({ room: best, from: av.nights[i] });
     i += bestLen;
   }
+  // "arranca en la habitación 4 y el dom 29 de nov se pasa a la 1" (más cambios: ", el … se pasa a la 3 y el … a la 2")
+  const moves = plan.slice(1).map((p, k) => `el ${oneDay(p.from)} ${k === 0 ? 'se pasa ' : ''}a la ${roomNum(p.room)}`);
   const changes = plan.length - 1;
   return `No tenemos una misma habitación libre todas esas noches, pero se puede con ${
     changes === 1 ? 'un cambio' : `${changes} cambios`
-  } de habitación: ${listY(plan)}.`;
+  } de habitación: arranca en la habitación ${roomNum(plan[0].room)} y ${listY(moves)}.`;
 }
