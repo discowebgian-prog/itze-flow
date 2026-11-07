@@ -876,7 +876,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
                   type="button"
                   onClick={copy}
                   style={{
-                    flex: 2,
+                    flex: 1,
                     minHeight: 44,
                     borderRadius: 9,
                     fontFamily: 'inherit',
@@ -890,30 +890,42 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
                 >
                   {copied ? '✓ Copiado' : '📋 Copiar para WhatsApp'}
                 </button>
-                {onReserve && (
-                  <button
-                    type="button"
-                    onClick={() => onReserve({ queue: reserveQueue() })}
-                    style={{
-                      flex: 1,
-                      minHeight: 44,
-                      borderRadius: 9,
-                      fontFamily: 'inherit',
-                      fontWeight: 800,
-                      fontSize: 14,
-                      cursor: 'pointer',
-                      background: '#fff',
-                      color: '#2563EB',
-                      border: '1.5px solid #2563EB',
-                    }}
-                  >
-                    ➕ Reservar
-                  </button>
-                )}
               </div>
               <div style={{ fontSize: 12, color: '#4B5563', fontWeight: 500, marginTop: 10, lineHeight: 1.45 }}>
                 * Ojo: si entró una reserva de Booking que todavía no aparece en el calendario, esa habitación puede figurar libre.
               </div>
+            </Step>
+          )}
+
+          {/* 6 · Reservar: en su propia tarjeta, separado del mensaje */}
+          {done && onReserve && (
+            <Step num={6} title="Reservar">
+              <div style={{ fontSize: 12.5, color: '#4B5563', marginBottom: 10, lineHeight: 1.45 }}>
+                {planActive
+                  ? `Se abren ${reserveQueue().length} reservas una tras otra (cambio de habitación), con los datos del huésped de la primera.`
+                  : items.length > 1
+                  ? `Abre el formulario como reserva de grupo, con las ${items.length} habitaciones, sus personas y tarifas cargadas.`
+                  : 'Abre el formulario con fechas, habitación, personas y tarifa cargadas.'}
+              </div>
+              <button
+                type="button"
+                onClick={() => onReserve({ queue: reserveQueue() })}
+                style={{
+                  width: '100%',
+                  minHeight: 46,
+                  borderRadius: 10,
+                  fontFamily: 'inherit',
+                  fontWeight: 800,
+                  fontSize: 15,
+                  cursor: 'pointer',
+                  background: 'linear-gradient(135deg,#3B82F6,#6366F1)',
+                  color: '#fff',
+                  border: 'none',
+                  boxShadow: '0 2px 8px rgba(99,102,241,.3)',
+                }}
+              >
+                + Reservar
+              </button>
             </Step>
           )}
         </>
