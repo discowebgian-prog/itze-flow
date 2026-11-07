@@ -13,6 +13,7 @@ import { TODAY, fmt, fmtD, addDays, diffDays, currency } from '../../lib/dates';
 import { findConflicts, calcStayTotal, lateCostOf } from '../../lib/reservations';
 import { quoteRoom, pricingMatches, applyQuote } from '../../lib/rates';
 import { QuoteInfo, money } from './QuoteInfo';
+import { listY } from '../Quoter';
 import { stayInfo, stayBadge, suggestGuests } from '../../lib/guests';
 import {
   groupOf,
@@ -676,7 +677,7 @@ export function ResForm({
             fontWeight: 600,
           }}
         >
-          <span>🧮 Con estas fechas el tarifario da distinto</span>
+          <span>🧮 Con las fechas nuevas, el tarifario tiene otro precio</span>
           <button
             type="button"
             onClick={() => setRequoteOpen(true)}
@@ -713,7 +714,10 @@ export function ResForm({
             fontWeight: 600,
           }}
         >
-          <span>✓ Tarifario aplicado a {requotedRooms.join(', ')} · se guarda al tocar Guardar</span>
+          <span>
+            ✓ Listo, {listY(requotedRooms)} {requotedRooms.length === 1 ? 'queda' : 'quedan'} con el precio del tarifario. Se
+            guarda al tocar Guardar.
+          </span>
           <button
             type="button"
             onClick={undoRequote}
@@ -2009,7 +2013,7 @@ export function ResForm({
         >
           <div style={{ background: '#fff', borderRadius: 16, maxWidth: 400, width: '100%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.25)' }}>
             <div style={{ background: '#2563EB', padding: '16px 22px' }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>🧮 El tarifario da distinto para estas fechas</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>🧮 Con las fechas nuevas cambia el precio</div>
               <div style={{ fontSize: 12, color: '#DBEAFE', marginTop: 4 }}>
                 {fmtD(f.checkIn)} → {fmtD(f.checkOut)} · {nights === 1 ? '1 noche' : `${nights} noches`}
               </div>
@@ -2028,20 +2032,20 @@ export function ResForm({
                     </div>
                     {pending ? (
                       <div style={{ lineHeight: 1.5 }}>
-                        ahora {money(x.nowRate)}/noche ({currency(x.nowTotal)}) →{' '}
+                        Cargado: {money(x.nowRate)}/noche ({currency(x.nowTotal)}) →{' '}
                         <b style={{ color: '#1D4ED8' }}>
-                          tarifario {money(x.q.avg)}/noche ({currency(x.newTotal)})
+                          Tarifario: {money(x.q.avg)}/noche ({currency(x.newTotal)})
                         </b>
                       </div>
                     ) : (
-                      <div style={{ color: '#6B7280' }}>igual, no cambia</div>
+                      <div style={{ color: '#6B7280' }}>Queda igual</div>
                     )}
                   </div>
                 );
               })}
               <p style={{ fontSize: 11.5, color: '#6B7280', margin: '12px 0 14px', lineHeight: 1.45 }}>
-                Se guarda al tocar Guardar. Si elegís "Solo esta habitación", se aplica solo a {initial?.room}. Lo
-                cobrado no cambia: si sube el total, sube el saldo.
+                Se guarda cuando tocás Guardar. Si después elegís "Solo esta habitación", solo cambia {initial?.room}.
+                Lo que ya pagaron no se toca: si el total sube, queda más saldo por cobrar.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <button
@@ -2117,9 +2121,8 @@ export function ResForm({
                 </p>
                 {datesChanged && (
                   <p style={{ fontSize: 11.5, color: '#6B7280', margin: '0 0 12px' }}>
-                    Con nuevas fechas, el total de cada habitación se recalcula con su propia tarifa
-                    {requotedRooms.length ? ` (con la del tarifario en ${requotedRooms.join(', ')})` : ''}
-                    .
+                    Con las fechas nuevas, cada habitación recalcula su total con su tarifa
+                    {requotedRooms.length ? ` (${listY(requotedRooms)} con la del tarifario)` : ''}.
                   </p>
                 )}
                 {otherConf.length > 0 && (

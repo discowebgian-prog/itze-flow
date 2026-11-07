@@ -17,7 +17,7 @@ export function QuoteInfo({ q, matches, onUse }) {
   if (q.missing) {
     return (
       <div style={{ marginTop: 8, fontSize: 11.5, color: '#6B7280', background: '#F9FAFB', border: '1px dashed #D1D5DB', borderRadius: 8, padding: '7px 10px' }}>
-        🧮 Sin precio en el tarifario para esta habitación en esas fechas: cargá la tarifa a mano.
+        🧮 Esta habitación no tiene precio cargado en Tarifas para esas fechas. Escribí la tarifa a mano.
       </div>
     );
   }
@@ -62,7 +62,7 @@ export function QuoteInfo({ q, matches, onUse }) {
       {!matches && onUse && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
           <span style={{ color: '#1D4ED8', fontWeight: 600 }}>
-            El tarifario da {money(q.avg)}/noche ({currency(q.total)})
+            Según el tarifario: {money(q.avg)} por noche ({currency(q.total)} en total)
           </span>
           <button
             type="button"
