@@ -5,12 +5,10 @@ import { TODAY, fmt, fmtD, addDays, diffDays, parseD, currency, MONTHS } from '.
 import { askClaude } from '../lib/claude';
 import { exportToExcel } from '../lib/excel';
 import { supabase } from '../lib/supabase';
+import { isFindeDow } from '../lib/rates';
 
 const PROJECTION_START_DAY = 8; // Antes hay muy pocos días para estimar
 
-// Fin de semana = noches de jueves, viernes, sábado y domingo (igual que las tarifas).
-// Entre semana = lunes, martes y miércoles.
-const isFindeDow = (d) => d === 0 || d >= 4;
 
 const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 

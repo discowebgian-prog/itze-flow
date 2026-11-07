@@ -17,6 +17,7 @@ import { FinancePage } from './pages/FinancePage';
 import { GuestsPage } from './pages/GuestsPage';
 import { Login } from './pages/Login';
 import { PropertiesPage } from './pages/PropertiesPage';
+import { RatesPage } from './pages/RatesPage';
 import { ResList } from './pages/ResList';
 import { Timeline } from './pages/Timeline';
 import appLayoutCss from './styles/app-layout.css?raw';
@@ -29,11 +30,28 @@ export default function AppMejorada() {
   // Decisiones de "misma persona / son distintas" sobre huéspedes (tabla huespedes_decisiones)
   const [guestDecisions, setGuestDecisions] = useState([]);
   const [decisionsOk, setDecisionsOk] = useState(false);
+  // Tarifario (tabla tarifas): períodos Normal, promos y fechas especiales
+  const [tarifas, setTarifas] = useState([]);
+  const [tarifasOk, setTarifasOk] = useState(false);
+  const [tarifasLoading, setTarifasLoading] = useState(true);
   const [tab, setTab] = useState('dashboard');
   const [highlightStatus, setHighlightStatus] = useState(null);
   const winW = useW();
   const isMobile = winW < 769;
   const isTablet = winW >= 769 && winW < 1280;
+
+  // Tarifas: si la tabla todavía no existe, la pestaña Tarifas avisa que falta el SQL
+  const fetchTarifas = async () => {
+    const { data, error } = await supabase.from('tarifas').select('*');
+    setTarifasLoading(false);
+    if (error) {
+      console.error('Error al cargar tarifas:', error);
+      setTarifasOk(false);
+      return;
+    }
+    setTarifas(data || []);
+    setTarifasOk(true);
+  };
 
   // 1. CARGA DE DATOS Y VIGILANTE DE INICIO
   // Espera al login: con RLS activo, sin sesión la base no devuelve datos.
@@ -138,6 +156,7 @@ export default function AppMejorada() {
 
     fetchReservas();
     fetchDecisiones();
+    fetchTarifas();
 
     const canalReservas = supabase
       .channel('cambios-en-vivo')
@@ -155,12 +174,18 @@ export default function AppMejorada() {
         { event: '*', schema: 'public', table: 'huespedes_decisiones' },
         () => fetchDecisiones()
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tarifas' },
+        () => fetchTarifas()
+      )
       .subscribe();
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         fetchReservas();
         fetchDecisiones();
+        fetchTarifas();
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
@@ -315,6 +340,7 @@ export default function AppMejorada() {
     { id: 'propiedades', label: 'Propiedades', icon: 'building' },
     { id: 'huespedes', label: 'Huéspedes', icon: 'users' },
     { id: 'finanzas', label: 'Finanzas', icon: 'finance' },
+    { id: 'tarifas', label: 'Tarifas', icon: 'tag' },
   ];
   const TABS =
     user.role === 'staff'
@@ -1092,6 +1118,17 @@ const toggleBlacklist = async (id, currentStatus) => {
               canReview={isAdmin && decisionsOk}
               onDecide={decideGuests}
               onUndo={undoGuestDecision}
+            />
+          )}
+          {tab === 'tarifas' && (
+            <RatesPage
+              periods={tarifas}
+              ok={tarifasOk}
+              loading={tarifasLoading}
+              canEdit={isAdmin}
+              user={user}
+              onReload={fetchTarifas}
+              isMobile={isMobile}
             />
           )}
           {tab === 'finanzas' && (
