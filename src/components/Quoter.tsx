@@ -45,10 +45,21 @@ export const HOSTEL_CAPACITY = ROOMS.reduce((s, r) => s + r.maxGuests, 0);
 // items con nightsLabel (cambio de habitación): "• Habitación con … (3 personas), las noches del vie 27 y sáb 28 de nov: $X"
 export function quoteMessage({ checkIn, checkOut, guests, items, total }) {
   const n = diffDays(checkIn, checkOut);
-  const lines = [`¡Hola! Para ${personas(guests)}, ${entradaSalida(checkIn, checkOut)} (${noches(n)}):`];
-  items.forEach((it) =>
+  // Sin saludo: es un insert en una charla que ya empezó
+  const lines = [`Para ${personas(guests)}, ${entradaSalida(checkIn, checkOut)} (${noches(n)}):`];
+  // Habitaciones iguales (mismas camas, personas y precio) van en una línea: "• 2 habitaciones con … c/u"
+  const groups = [];
+  items.forEach((it) => {
+    const key = `${it.desc}|${it.guests}|${it.total}|${it.nightsLabel || ''}`;
+    const g = groups.find((x) => x.key === key);
+    if (g) g.count++;
+    else groups.push({ key, it, count: 1 });
+  });
+  groups.forEach(({ it, count }) =>
     lines.push(
-      `• Habitación con ${it.desc} (${personas(it.guests)})${it.nightsLabel ? `, ${it.nightsLabel}` : ''}: ${msgMoney(it.total)}`
+      count === 1
+        ? `• Habitación con ${it.desc} (${personas(it.guests)})${it.nightsLabel ? `, ${it.nightsLabel}` : ''}: ${msgMoney(it.total)}`
+        : `• ${count} habitaciones con ${it.desc} (${personas(it.guests)} c/u)${it.nightsLabel ? `, ${it.nightsLabel}` : ''}: ${msgMoney(it.total)} c/u`
     )
   );
   if (items.length > 1 || guests > 1) {
@@ -900,8 +911,8 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
                   </button>
                 )}
               </div>
-              <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>
-                Ojo: si entró una reserva de Booking que todavía no aparece en el calendario, esa habitación puede figurar libre.
+              <div style={{ fontSize: 12, color: '#4B5563', fontWeight: 500, marginTop: 10, lineHeight: 1.45 }}>
+                * Ojo: si entró una reserva de Booking que todavía no aparece en el calendario, esa habitación puede figurar libre.
               </div>
             </Step>
           )}
