@@ -211,15 +211,16 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
   const unassigned = freeRooms.filter((r) => !distFree[r.id]);
   const bedInfo = (r) => ROOM_BEDS[r.id] || { camas: r.maxGuests, plazas: r.maxGuests, sofa: 0 };
   const sofaOK = sofa !== false;
-  const sofaMode = sofa === null ? 'avoid' : sofa ? 'ok' : 'no';
+  // Por defecto el sofá cama cuenta como una cama más (a la mayoría no le molesta); "No" lo saca
+  const sofaMode = sofa === false ? 'no' : 'ok';
   const selKey = (sel) => (sel ? sel.map((x) => x.id + x.g).join() : '-');
   // Lugares de una habitación según si comparten cama (sh) y si usan el sofá cama (sf)
   const noSofaCap = (r, sh) => (sh ? bedInfo(r).plazas : bedInfo(r).camas);
   const capFor = (r, sh, sf) => noSofaCap(r, sh) + (sf ? bedInfo(r).sofa : 0);
-  // Elige habitaciones para "need" personas: primero las que alcanzan sin mandar a nadie al sofá cama,
-  // después la de menos lugar (así quedan libres las grandes) y, empate, la más barata.
+  // Elige habitaciones para "need" personas: la de menos lugar que alcance (así quedan libres las grandes);
+  // empate, la que no necesita el sofá cama y después la más barata.
   // Si ninguna alcanza sola, la más grande y sigue con las que faltan.
-  // mode: 'avoid' (sin responder: el sofá cama solo si hace falta) · 'ok' (sí: vale igual que una cama) · 'no'
+  // mode: 'ok' (por defecto: el sofá cama vale igual que una cama) · 'no' (no quieren usarlo)
   const pickRooms = (need, sh, mode) => {
     const capOf = (r) => capFor(r, sh, mode !== 'no');
     const byPrice = (a, b) => (priceFor(a.id, Math.min(need, a.maxGuests)) || 0) - (priceFor(b.id, Math.min(need, b.maxGuests)) || 0);
@@ -263,12 +264,8 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
     if (left === 1 || share !== null) {
       const sh = left === 1 ? true : share;
       const sel = pickRooms(left, sh, sofaMode);
-      // La pregunta del sofá cama aparece si la sugerencia lo usa, si usándolo hay una opción más chica,
-      // o si ya la respondieron
-      const avoid = pickRooms(left, sh, 'avoid');
-      sofaAsk =
-        left > 1 &&
-        (sofa !== null || !!(avoid || []).some((x) => x.sofa) || selKey(avoid) !== selKey(pickRooms(left, sh, 'ok')));
+      // La pregunta del sofá cama aparece cuando la sugerencia lo usa (o si ya la respondieron)
+      sofaAsk = left > 1 && (sofa !== null || !!(pickRooms(left, sh, 'ok') || []).some((x) => x.sofa));
       const como = left === 1 ? '' : share ? ', compartiendo cama' : ', cada uno en su cama';
       if (sel) {
         recRooms = sel.map((x) => x.id);
