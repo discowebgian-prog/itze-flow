@@ -2,73 +2,92 @@
 // @ts-nocheck
 import { useState, useMemo } from 'react';
 import { ROOMS, ROOM_DESC } from '../lib/constants';
-import { ROOM_TYPES, roomTypeOf, quoteStay } from '../lib/rates';
+import { roomTypeOf, quoteStay } from '../lib/rates';
 import { findConflicts } from '../lib/reservations';
 import { TODAY, fmt, addDays, parseD, diffDays, currency, DAYS } from '../lib/dates';
 import { RangeCalendar } from './ui/RangeCalendar';
 import { money } from './reservations/QuoteInfo';
 
 // ── COTIZAR (sin crear reserva) ───────────────────────────────────────────────
-// Fechas + personas → precio de cada tipo de habitación con el tarifario, qué habitaciones
-// están libres, y un texto listo para pegar en WhatsApp (solo libres que alcanzan).
+// Se arma paso a paso: fechas → personas → en qué habitación va cada uno → cotización
+// (subtotal por habitación, total, por persona y promedio por persona por noche) y texto para WhatsApp.
 
 const dayLabel = (s) => {
   const d = parseD(s);
   return `${DAYS[d.getDay()].toLowerCase()} ${d.getDate()}/${d.getMonth() + 1}`;
 };
-const msgMoney = (n) => '$' + Math.round(Number(n) || 0).toLocaleString('es-MX');
+const msgMoney = (n) => {
+  const v = Math.round((Number(n) || 0) * 100) / 100;
+  return '$' + v.toLocaleString('es-MX', { minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 });
+};
 const noches = (n) => (n === 1 ? '1 noche' : `${n} noches`);
+const personas = (n) => (n === 1 ? '1 persona' : `${n} personas`);
+export const HOSTEL_CAPACITY = ROOMS.reduce((s, r) => s + r.maxGuests, 0);
 
 // Texto para WhatsApp: termina en los precios (la charla sigue según venga)
-export function quoteMessage({ checkIn, checkOut, guests, options }) {
+export function quoteMessage({ checkIn, checkOut, guests, items, total }) {
   const n = diffDays(checkIn, checkOut);
-  const head = `¡Hola! Para ${guests === 1 ? '1 persona' : `${guests} personas`}, del ${dayLabel(checkIn)} al ${dayLabel(
-    checkOut
-  )} (${noches(n)}):`;
-  const lines = options.map((o) =>
-    o.count === 1
-      ? `• Habitación con ${o.desc}: ${msgMoney(o.total)}`
-      : `• ${o.count} habitaciones con ${o.desc}: ${msgMoney(o.total)} c/u`
-  );
-  return [head, ...lines].join('\n');
+  const lines = [`¡Hola! Para ${personas(guests)}, del ${dayLabel(checkIn)} al ${dayLabel(checkOut)} (${noches(n)}):`];
+  items.forEach((it) => lines.push(`• Habitación con ${it.desc} (${personas(it.guests)}): ${msgMoney(it.total)}`));
+  if (items.length > 1 || guests > 1) {
+    lines.push(`Total: ${msgMoney(total)}${guests > 1 ? ` (${msgMoney(total / guests)} por persona)` : ''}`);
+    lines.push(`Promedio por persona por noche: ${msgMoney(total / guests / n)}`);
+  } else {
+    lines.push(`Promedio por noche: ${msgMoney(total / n)}`);
+  }
+  return lines.join('\n');
 }
 
 export function Quoter({ allRes = [], tarifas = [], onReserve }) {
   const [checkIn, setCheckIn] = useState(fmt(TODAY));
   const [checkOut, setCheckOut] = useState(fmt(addDays(TODAY, 1)));
   const [guests, setGuests] = useState(2);
+  const [dist, setDist] = useState({}); // habitación → personas
+  const [openRoom, setOpenRoom] = useState(''); // habitación con el selector desplegado
   const [copied, setCopied] = useState(false);
   const n = checkIn && checkOut ? diffDays(checkIn, checkOut) : 0;
 
-  const data = useMemo(() => {
-    if (n <= 0) return null;
-    const rooms = ROOMS.map((r) => {
-      const t = roomTypeOf(r.id);
-      const fits = r.maxGuests >= guests;
-      const free = findConflicts(allRes, 'hostel', r.id, checkIn, checkOut).length === 0;
-      return { ...r, typeId: t?.id, fits, free };
-    });
-    const types = ROOM_TYPES.map((t) => ({
-      ...t,
-      q: quoteStay(checkIn, checkOut, t.id, guests, tarifas),
-      rooms: rooms.filter((r) => r.typeId === t.id),
-    }));
-    // Opciones del mensaje: libres que alcanzan, juntas por descripción, en el orden de las habitaciones
-    const options = [];
-    rooms
-      .filter((r) => r.fits && r.free)
-      .forEach((r) => {
-        const t = types.find((x) => x.id === r.typeId);
-        if (!t || !t.q || t.q.missing) return;
-        const desc = ROOM_DESC[r.id] || r.name;
-        const o = options.find((x) => x.desc === desc && x.total === t.q.total);
-        if (o) o.count++;
-        else options.push({ desc, total: t.q.total, count: 1 });
-      });
-    return { types, options };
-  }, [checkIn, checkOut, guests, allRes, tarifas, n]);
+  // Habitaciones libres en esas fechas (una ocupada no suma lugar)
+  const rooms = useMemo(
+    () =>
+      ROOMS.map((r) => ({
+        ...r,
+        desc: ROOM_DESC[r.id] || r.name,
+        free: n > 0 && findConflicts(allRes, 'hostel', r.id, checkIn, checkOut).length === 0,
+      })),
+    [allRes, checkIn, checkOut, n]
+  );
+  const freeRooms = rooms.filter((r) => r.free);
+  const busyRooms = rooms.filter((r) => !r.free);
+  const freeCap = freeRooms.reduce((s, r) => s + r.maxGuests, 0);
 
-  const msg = data && data.options.length ? quoteMessage({ checkIn, checkOut, guests, options: data.options }) : '';
+  // Si una habitación elegida quedó ocupada con las fechas nuevas, sale de la distribución
+  const distFree = {};
+  Object.keys(dist).forEach((id) => {
+    if (dist[id] > 0 && freeRooms.some((r) => r.id === id)) distFree[id] = dist[id];
+  });
+  const placed = Object.values(distFree).reduce((s, v) => s + v, 0);
+  const left = guests - placed;
+
+  const items = ROOMS.filter((r) => distFree[r.id]).map((r) => {
+    const t = roomTypeOf(r.id);
+    const q = t ? quoteStay(checkIn, checkOut, t.id, distFree[r.id], tarifas) : null;
+    return { room: r.id, desc: ROOM_DESC[r.id] || r.name, guests: distFree[r.id], q, total: q && !q.missing ? q.total : null };
+  });
+  const missingPrice = items.some((it) => it.total === null);
+  const total = items.reduce((s, it) => s + (it.total || 0), 0);
+  const done = n > 0 && left === 0 && items.length > 0 && !missingPrice;
+  const msg = done ? quoteMessage({ checkIn, checkOut, guests, items, total }) : '';
+
+  const setRoomGuests = (id, g) => {
+    setDist((d) => {
+      const x = { ...d };
+      if (g > 0) x[id] = g;
+      else delete x[id];
+      return x;
+    });
+    setOpenRoom('');
+  };
 
   const copy = async () => {
     try {
@@ -88,10 +107,23 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
   };
 
   const lbl = { fontSize: 11, fontWeight: 800, color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 };
+  const stepBtn = (disabled) => ({
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    border: '1.5px solid #E5E7EB',
+    background: disabled ? '#F9FAFB' : '#fff',
+    color: disabled ? '#D1D5DB' : '#111',
+    fontSize: 22,
+    fontWeight: 800,
+    cursor: disabled ? 'default' : 'pointer',
+    fontFamily: 'inherit',
+  });
 
   return (
     <div>
-      <div style={lbl}>Fechas</div>
+      {/* 1 · Fechas */}
+      <div style={lbl}>1 · Fechas</div>
       <RangeCalendar
         checkIn={checkIn}
         checkOut={checkOut}
@@ -100,114 +132,216 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
           setCheckOut(co);
         }}
       />
-      <div style={{ fontSize: 13, fontWeight: 700, color: '#1E40AF', margin: '8px 0 14px' }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: '#1E40AF', margin: '8px 0 16px' }}>
         {n > 0 ? `${dayLabel(checkIn)} → ${dayLabel(checkOut)} · ${noches(n)}` : 'Elegí la fecha de salida'}
       </div>
 
-      <div style={lbl}>Personas</div>
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-        {[1, 2, 3, 4, 5, 6].map((g) => (
-          <button
-            key={g}
-            type="button"
-            onClick={() => setGuests(g)}
+      {n > 0 && (
+        <>
+          {/* 2 · Personas */}
+          <div style={lbl}>2 · Personas</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button type="button" disabled={guests <= 1} onClick={() => setGuests((g) => Math.max(1, g - 1))} style={stepBtn(guests <= 1)}>
+              −
+            </button>
+            <div style={{ fontSize: 26, fontWeight: 800, minWidth: 40, textAlign: 'center', color: '#111' }}>{guests}</div>
+            <button
+              type="button"
+              disabled={guests >= HOSTEL_CAPACITY}
+              onClick={() => setGuests((g) => Math.min(HOSTEL_CAPACITY, g + 1))}
+              style={stepBtn(guests >= HOSTEL_CAPACITY)}
+            >
+              +
+            </button>
+          </div>
+          {guests > freeCap ? (
+            <div style={{ marginTop: 8, fontSize: 12.5, fontWeight: 700, color: '#B91C1C', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 8, padding: '8px 10px' }}>
+              ⚠️ En esas fechas entran hasta {personas(freeCap)}
+              {busyRooms.length ? `: ${busyRooms.map((r) => r.id).join(', ')} ${busyRooms.length === 1 ? 'está ocupada' : 'están ocupadas'}` : ''}.
+            </div>
+          ) : (
+            <div style={{ marginTop: 6, fontSize: 12, color: '#6B7280' }}>
+              En esas fechas entran hasta {personas(freeCap)}
+              {busyRooms.length ? ` (${busyRooms.map((r) => r.id).join(', ')} ${busyRooms.length === 1 ? 'ocupada' : 'ocupadas'})` : ''}.
+            </div>
+          )}
+
+          {/* 3 · Distribución */}
+          <div style={{ ...lbl, marginTop: 18 }}>3 · ¿En qué habitación van?</div>
+          <div
             style={{
-              flex: 1,
-              minHeight: 40,
-              borderRadius: 8,
-              fontFamily: 'inherit',
+              fontSize: 13,
               fontWeight: 800,
-              fontSize: 14,
-              cursor: 'pointer',
-              background: guests === g ? '#2563EB' : '#fff',
-              color: guests === g ? '#fff' : '#374151',
-              border: `1.5px solid ${guests === g ? '#2563EB' : '#E5E7EB'}`,
+              marginBottom: 8,
+              color: left === 0 ? '#047857' : left > 0 ? '#B45309' : '#B91C1C',
             }}
           >
-            {g}
-          </button>
-        ))}
-      </div>
-
-      {data &&
-        data.types.map((t) => {
-          const anyFits = t.rooms.some((r) => r.fits);
-          const freeFit = t.rooms.filter((r) => r.fits && r.free);
-          const q = t.q;
-          return (
-            <div
-              key={t.id}
-              style={{
-                border: '1px solid #E5E7EB',
-                borderRadius: 10,
-                padding: '10px 12px',
-                marginBottom: 10,
-                background: anyFits && freeFit.length ? '#fff' : '#F9FAFB',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                <div style={{ fontWeight: 800, fontSize: 13.5, color: '#111' }}>{t.label}</div>
-                <div style={{ fontWeight: 800, fontSize: 16, color: anyFits ? '#111' : '#9CA3AF' }}>
-                  {!anyFits ? `No admite ${guests} personas` : !q ? '—' : q.missing ? 'Sin precio' : currency(q.total)}
-                </div>
-              </div>
-              {anyFits && q && !q.missing && (
-                <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 3, lineHeight: 1.45 }}>
-                  {q.lines.map((l) => `${l.count} × ${currency(l.price)}`).join(' · ')}
-                  {q.varied ? ` · promedio ${money(q.avg)}/noche` : ''}
-                  {q.extraGuests > 0 &&
-                    ` · + ${q.extraGuests === 1 ? '1 persona extra' : `${q.extraGuests} personas extra`} ${currency(q.extraTotal)}`}
-                </div>
-              )}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                {t.rooms.map((r) => {
-                  const ok = r.fits && r.free;
-                  return ok && onReserve ? (
-                    <button
-                      key={r.id}
-                      type="button"
-                      onClick={() => onReserve({ propertyId: 'hostel', room: r.id, checkIn, checkOut, totalGuests: guests })}
-                      style={{
-                        padding: '5px 10px',
-                        borderRadius: 7,
-                        fontFamily: 'inherit',
-                        fontWeight: 700,
-                        fontSize: 12,
-                        cursor: 'pointer',
-                        background: '#ECFDF5',
-                        color: '#047857',
-                        border: '1.5px solid #6EE7B7',
-                      }}
-                    >
-                      ✓ {r.id} libre · ➕ Reservar
-                    </button>
-                  ) : (
-                    <span
-                      key={r.id}
-                      style={{
-                        padding: '5px 10px',
-                        borderRadius: 7,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        background: '#F3F4F6',
-                        color: '#9CA3AF',
-                        border: '1px solid #E5E7EB',
-                      }}
-                    >
-                      {r.id} {!r.fits ? `· hasta ${r.maxGuests}` : '· ocupada'}
+            {left === 0
+              ? '✓ Todos ubicados'
+              : left > 0
+              ? `Faltan ubicar ${personas(left)}`
+              : `Sobran ${personas(-left)}: sacá de alguna habitación`}
+          </div>
+          {freeRooms.length === 0 && (
+            <div style={{ fontSize: 12.5, color: '#92400E' }}>No hay habitaciones libres en esas fechas.</div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {freeRooms.map((r) => {
+              const g = distFree[r.id] || 0;
+              const isOpen = openRoom === r.id;
+              const canAdd = left > 0 || g > 0;
+              const maxHere = Math.min(r.maxGuests, g + Math.max(0, left));
+              return (
+                <div
+                  key={r.id}
+                  style={{
+                    border: `1.5px solid ${g ? '#2563EB' : isOpen ? '#93C5FD' : '#E5E7EB'}`,
+                    background: g ? '#EFF6FF' : '#fff',
+                    borderRadius: 10,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <button
+                    type="button"
+                    disabled={!canAdd}
+                    onClick={() => setOpenRoom(isOpen ? '' : r.id)}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 8,
+                      padding: '10px 12px',
+                      background: 'none',
+                      border: 'none',
+                      cursor: canAdd ? 'pointer' : 'default',
+                      fontFamily: 'inherit',
+                      textAlign: 'left',
+                      opacity: canAdd ? 1 : 0.5,
+                    }}
+                  >
+                    <span>
+                      <span style={{ fontWeight: 800, fontSize: 14, color: '#111' }}>{r.id}</span>
+                      <span style={{ fontSize: 12, color: '#6B7280' }}> · {r.desc} · hasta {r.maxGuests}</span>
                     </span>
-                  );
-                })}
+                    <span style={{ fontSize: 12.5, fontWeight: 800, color: g ? '#1D4ED8' : '#9CA3AF', whiteSpace: 'nowrap' }}>
+                      {g ? `${personas(g)} ✏️` : isOpen ? '▲' : '▼'}
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div style={{ padding: '0 12px 12px' }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 6 }}>
+                        ¿Cuántas personas van en {r.id}?
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {Array.from({ length: r.maxGuests }, (_, i) => i + 1).map((k) => {
+                          const dis = k > maxHere;
+                          return (
+                            <button
+                              key={k}
+                              type="button"
+                              disabled={dis}
+                              onClick={() => setRoomGuests(r.id, k)}
+                              style={{
+                                minWidth: 44,
+                                minHeight: 40,
+                                borderRadius: 8,
+                                fontFamily: 'inherit',
+                                fontWeight: 800,
+                                fontSize: 14,
+                                cursor: dis ? 'default' : 'pointer',
+                                background: g === k ? '#2563EB' : dis ? '#F9FAFB' : '#fff',
+                                color: g === k ? '#fff' : dis ? '#D1D5DB' : '#111',
+                                border: `1.5px solid ${g === k ? '#2563EB' : '#E5E7EB'}`,
+                              }}
+                            >
+                              {k}
+                            </button>
+                          );
+                        })}
+                        {g > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setRoomGuests(r.id, 0)}
+                            style={{
+                              minHeight: 40,
+                              padding: '0 12px',
+                              borderRadius: 8,
+                              fontFamily: 'inherit',
+                              fontWeight: 700,
+                              fontSize: 12.5,
+                              cursor: 'pointer',
+                              background: '#fff',
+                              color: '#B91C1C',
+                              border: '1.5px solid #FCA5A5',
+                            }}
+                          >
+                            Quitar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 4 · Cotización */}
+          {items.length > 0 && (
+            <div style={{ marginTop: 18 }}>
+              <div style={lbl}>4 · Cotización</div>
+              <div style={{ border: '1px solid #E5E7EB', borderRadius: 10, overflow: 'hidden' }}>
+                {items.map((it) => (
+                  <div key={it.room} style={{ padding: '10px 12px', borderBottom: '1px solid #F3F4F6' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
+                      <div style={{ fontSize: 13, color: '#111' }}>
+                        <b>{it.room}</b> · {personas(it.guests)}
+                      </div>
+                      <div style={{ fontWeight: 800, fontSize: 14, color: '#111' }}>
+                        {it.total === null ? 'Sin precio' : currency(it.total)}
+                      </div>
+                    </div>
+                    {it.q && !it.q.missing && (
+                      <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 2, lineHeight: 1.45 }}>
+                        {it.q.lines.map((l) => `${l.count} × ${currency(l.price)}`).join(' + ')}
+                        {it.q.extraGuests > 0 &&
+                          ` + ${it.q.extraGuests === 1 ? '1 persona extra' : `${it.q.extraGuests} personas extra`} ${currency(it.q.extraTotal)}`}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {done ? (
+                  <div style={{ padding: '12px', background: '#F8FAFC' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: '#111' }}>Total</div>
+                      <div style={{ fontSize: 20, fontWeight: 900, color: '#111' }}>
+                        {currency(total)}
+                        {guests > 1 && (
+                          <span style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}> ({money(total / guests)} por persona)</span>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', fontSize: 12.5, color: '#6B7280', marginTop: 4 }}>
+                      Promedio por persona por noche: <b style={{ color: '#111' }}>{money(Math.round((total / guests / n) * 100) / 100)}</b>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ padding: '10px 12px', fontSize: 12.5, color: '#92400E', background: '#FFFBEB' }}>
+                    {missingPrice
+                      ? 'Falta el precio en el tarifario para alguna habitación.'
+                      : left > 0
+                      ? `Ubicá ${left === 1 ? 'a la persona que falta' : `a las ${left} personas que faltan`} para ver el total.`
+                      : 'Sobran personas: ajustá la distribución para ver el total.'}
+                  </div>
+                )}
               </div>
             </div>
-          );
-        })}
+          )}
 
-      {data && (
-        <div style={{ marginTop: 14 }}>
-          <div style={lbl}>Mensaje para WhatsApp</div>
-          {msg ? (
-            <>
+          {done && (
+            <div style={{ marginTop: 14 }}>
+              <div style={lbl}>Mensaje para WhatsApp</div>
               <div
                 style={{
                   whiteSpace: 'pre-wrap',
@@ -222,35 +356,57 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
               >
                 {msg}
               </div>
-              <button
-                type="button"
-                onClick={copy}
-                style={{
-                  width: '100%',
-                  marginTop: 8,
-                  minHeight: 44,
-                  borderRadius: 9,
-                  fontFamily: 'inherit',
-                  fontWeight: 800,
-                  fontSize: 14,
-                  cursor: 'pointer',
-                  background: copied ? '#047857' : '#16A34A',
-                  color: '#fff',
-                  border: 'none',
-                }}
-              >
-                {copied ? '✓ Copiado' : '📋 Copiar para WhatsApp'}
-              </button>
-            </>
-          ) : (
-            <div style={{ fontSize: 12.5, color: '#92400E', background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: 8, padding: '8px 10px' }}>
-              No hay habitaciones libres para {guests === 1 ? '1 persona' : `${guests} personas`} en esas fechas.
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={copy}
+                  style={{
+                    flex: 2,
+                    minHeight: 44,
+                    borderRadius: 9,
+                    fontFamily: 'inherit',
+                    fontWeight: 800,
+                    fontSize: 14,
+                    cursor: 'pointer',
+                    background: copied ? '#047857' : '#16A34A',
+                    color: '#fff',
+                    border: 'none',
+                  }}
+                >
+                  {copied ? '✓ Copiado' : '📋 Copiar para WhatsApp'}
+                </button>
+                {onReserve && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onReserve({
+                        initial: { propertyId: 'hostel', checkIn, checkOut, room: items[0].room, totalGuests: items[0].guests },
+                        rooms: items.length > 1 ? items.map((it) => ({ room: it.room, guests: it.guests })) : null,
+                      })
+                    }
+                    style={{
+                      flex: 1,
+                      minHeight: 44,
+                      borderRadius: 9,
+                      fontFamily: 'inherit',
+                      fontWeight: 800,
+                      fontSize: 14,
+                      cursor: 'pointer',
+                      background: '#fff',
+                      color: '#2563EB',
+                      border: '1.5px solid #2563EB',
+                    }}
+                  >
+                    ➕ Reservar
+                  </button>
+                )}
+              </div>
+              <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>
+                Libres según las reservas cargadas: lo de Booking que todavía no entró por iCal no figura.
+              </div>
             </div>
           )}
-          <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>
-            Libres según las reservas cargadas: lo de Booking que todavía no entró por iCal no figura.
-          </div>
-        </div>
+        </>
       )}
     </div>
   );

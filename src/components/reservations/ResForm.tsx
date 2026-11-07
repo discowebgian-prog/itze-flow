@@ -44,6 +44,7 @@ export function ResForm({
   guestDecisions = [],
   focusDoc = false,
   tarifas = [],
+  initialRooms = null, // desde Cotizar: [{ room, guests }] → con 2 o más arranca como grupo
 }) {
   const blank = {
     propertyId: prefillProp || visibleProps[0]?.id || '',
@@ -162,9 +163,17 @@ export function ResForm({
   // ── VARIAS HABITACIONES (solo al crear una reserva del hostel) ──
   // Titular, fechas, estado, canal y pago se cargan una vez; cada habitación tiene su tarjeta
   // con huéspedes, acompañantes y tarifa. Al guardar se crea una reserva por habitación.
-  const [multi, setMulti] = useState(false);
-  const [selRooms, setSelRooms] = useState([]);
-  const [alloc, setAlloc] = useState({}); // habitación → { guests, companions, rate, extra, paid }
+  const fromQuote = Array.isArray(initialRooms) && initialRooms.length > 1 ? initialRooms : null;
+  const [multi, setMulti] = useState(!!fromQuote);
+  const [selRooms, setSelRooms] = useState(() => (fromQuote ? fromQuote.map((r) => r.room) : []));
+  const [alloc, setAlloc] = useState(() => {
+    // habitación → { guests, companions, rate, extra, paid }
+    const a = {};
+    (fromQuote || []).forEach(
+      (r) => (a[r.room] = { guests: r.guests, companions: [], rate: '', extra: '', paid: '', auto: true })
+    );
+    return a;
+  });
   const [titularRoom, setTitularRoom] = useState('');
   const [splitPay, setSplitPay] = useState(false);
   const multiOn = !initial?.id && isHostel && multi;

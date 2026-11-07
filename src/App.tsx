@@ -351,8 +351,8 @@ export default function AppMejorada() {
       : TABS_ALL;
 
   // Funciones operativas restauradas
-  const openAdd = (pid = '', date = '', initial = null) => {
-    setPrefill({ pid, date, initial });
+  const openAdd = (pid = '', date = '', initial = null, rooms = null) => {
+    setPrefill({ pid, date, initial, rooms });
     setModal('new');
   };
   // Cotizar: ventana sin crear reserva; "Reservar" abre el formulario ya cargado
@@ -1374,9 +1374,9 @@ const toggleBlacklist = async (id, currentStatus) => {
           <Quoter
             allRes={res}
             tarifas={tarifas}
-            onReserve={(init) => {
+            onReserve={({ initial, rooms }) => {
               setQuoterOpen(false);
-              openAdd('hostel', init.checkIn, init);
+              openAdd('hostel', initial.checkIn, initial, rooms);
             }}
           />
         </Modal>
@@ -1394,6 +1394,7 @@ const toggleBlacklist = async (id, currentStatus) => {
             prefillProp={prefill.pid}
             prefillDate={prefill.date}
             initial={prefill.initial || undefined}
+            initialRooms={prefill.rooms || null}
             allRes={res}
             guestDecisions={guestDecisions}
             tarifas={tarifas}
