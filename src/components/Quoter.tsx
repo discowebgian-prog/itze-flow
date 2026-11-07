@@ -221,7 +221,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
   // Al elegir fechas: que Personas (recién aparecida) se vea entera
   useEffect(() => {
     if (!glowKey) return;
-    const t = setTimeout(() => scrollToStep(personasRef, 'nearest'), 380);
+    const t = setTimeout(() => scrollToStep(personasRef, 'nearest'), 250);
     return () => clearTimeout(t);
   }, [glowKey]);
   // Al dejar de tocar + / − (0,4 s): el almanaque sube y quedan Personas arriba y las habitaciones a la vista
@@ -233,13 +233,13 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
   // Todos ubicados: las habitaciones suben y queda a la vista la cotización
   useEffect(() => {
     if (!allPlaced) return;
-    const t = setTimeout(() => scrollToStep(quoteRef), 650);
+    const t = setTimeout(() => scrollToStep(quoteRef), 350);
     return () => clearTimeout(t);
   }, [allPlaced]);
   // Con cambio de habitación: lo mismo, desde ese paso
   useEffect(() => {
     if (!planActive) return;
-    const t = setTimeout(() => scrollToStep(planRef), 450);
+    const t = setTimeout(() => scrollToStep(planRef), 300);
     return () => clearTimeout(t);
   }, [planActive]);
 
