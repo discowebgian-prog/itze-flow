@@ -7,6 +7,7 @@ import { findConflicts } from '../lib/reservations';
 import { TODAY, fmt, addDays, parseD, diffDays, currency, DAYS } from '../lib/dates';
 import { RangeCalendar } from './ui/RangeCalendar';
 import { money } from './reservations/QuoteInfo';
+import { nightAvailability, busyText, noRoomText, nightsText } from '../lib/availability';
 
 // ── COTIZAR (sin crear reserva) ───────────────────────────────────────────────
 // Se arma paso a paso: fechas → personas → en qué habitación va cada uno → cotización
@@ -22,8 +23,7 @@ const msgMoney = (n) => {
 };
 const noches = (n) => (n === 1 ? '1 noche' : `${n} noches`);
 const personas = (n) => (n === 1 ? '1 persona' : `${n} personas`);
-// "P1", "P1 y P4", "P1, P2 y P4"
-export const listY = (a) => (a.length <= 1 ? a.join('') : `${a.slice(0, -1).join(', ')} y ${a[a.length - 1]}`);
+export { listY } from '../lib/availability';
 export const HOSTEL_CAPACITY = ROOMS.reduce((s, r) => s + r.maxGuests, 0);
 
 // Texto para WhatsApp: termina en los precios (la charla sigue según venga)
@@ -49,31 +49,18 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
   const [copied, setCopied] = useState(false);
   const n = checkIn && checkOut ? diffDays(checkIn, checkOut) : 0;
 
-  // Habitaciones libres en esas fechas (una ocupada no suma lugar)
-  const rooms = useMemo(
-    () =>
-      ROOMS.map((r) => ({
-        ...r,
-        desc: ROOM_DESC[r.id] || r.name,
-        free: n > 0 && findConflicts(allRes, 'hostel', r.id, checkIn, checkOut).length === 0,
-      })),
-    [allRes, checkIn, checkOut, n]
-  );
+  // Disponibilidad noche por noche (una habitación ocupada alguna noche no suma lugar)
+  const av = useMemo(() => nightAvailability(allRes, checkIn, checkOut, n), [allRes, checkIn, checkOut, n]);
+  const rooms = ROOMS.map((r) => ({
+    ...r,
+    desc: ROOM_DESC[r.id] || r.name,
+    busyNights: av.busy[r.id] || [],
+    free: n > 0 && (av.busy[r.id] || []).length === 0,
+  }));
   const freeRooms = rooms.filter((r) => r.free);
   const busyRooms = rooms.filter((r) => !r.free);
   const freeCap = freeRooms.reduce((s, r) => s + r.maxGuests, 0);
   const full = n > 0 && freeCap === 0;
-  // ¿Está lleno todas las noches, solo alguna, o ninguna? (cambia el mensaje)
-  const fullNights = useMemo(() => {
-    if (!full) return 0;
-    let c = 0;
-    for (let i = 0; i < n; i++) {
-      const a = fmt(addDays(parseD(checkIn), i));
-      const b = fmt(addDays(parseD(checkIn), i + 1));
-      if (!ROOMS.some((r) => findConflicts(allRes, 'hostel', r.id, a, b).length === 0)) c++;
-    }
-    return c;
-  }, [full, n, checkIn, allRes]);
   const esosDias = n === 1 ? 'Ese día' : 'Esos días';
   const warnBox = {
     marginTop: 8,
@@ -181,16 +168,10 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
             </button>
           </div>
           {full ? (
-            <div style={warnBox}>
-              {fullNights === n
-                ? `${esosDias} el hostel está completo y no tenemos disponibilidad.`
-                : fullNights > 0
-                ? 'Alguna de esas noches el hostel está completo, así que no tenemos una habitación libre para toda la estadía. Probá con otras fechas.'
-                : 'No nos queda una misma habitación libre para todas esas noches. Probá con otras fechas.'}
-            </div>
+            <div style={warnBox}>{noRoomText(av, checkIn, checkOut, guests)}</div>
           ) : guests > freeCap ? (
             <div style={warnBox}>
-              {esosDias} solo nos queda lugar para {personas(freeCap)}.
+              {esosDias} solo nos queda lugar para {personas(freeCap)}. {busyText(av, busyRooms.map((r) => r.id))}
             </div>
           ) : (
             <div style={{ marginTop: 6, fontSize: 12, color: '#6B7280' }}>
@@ -319,6 +300,27 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
               );
             })}
           </div>
+
+          {busyRooms.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
+              {busyRooms.map((r) => (
+                <div
+                  key={r.id}
+                  style={{
+                    padding: '7px 12px',
+                    borderRadius: 10,
+                    background: '#F9FAFB',
+                    border: '1px dashed #E5E7EB',
+                    fontSize: 12,
+                    color: '#9CA3AF',
+                  }}
+                >
+                  <b style={{ color: '#6B7280' }}>{r.id}</b> ·{' '}
+                  {r.busyNights.length === n ? `ocupada ${n === 1 ? 'ese día' : 'esos días'}` : `ocupada ${nightsText(r.busyNights)}`}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* 4 · Cotización */}
           {items.length > 0 && (
