@@ -12,7 +12,7 @@ import { TODAY, fmt, diffDays } from './lib/dates';
 import { supabase } from './lib/supabase';
 import { findDuplicates } from './lib/duplicates';
 import { checkoutTimePassed, lateCostOf } from './lib/reservations';
-import { groupOf, groupBooker, bookerOf, newGroupId } from './lib/groups';
+import { groupOf, groupBooker, bookerOf, newGroupId, PERSON_FIELDS } from './lib/groups';
 import { Dashboard } from './pages/Dashboard';
 import { FinancePage } from './pages/FinancePage';
 import { GuestsPage } from './pages/GuestsPage';
@@ -351,8 +351,10 @@ export default function AppMejorada() {
       : TABS_ALL;
 
   // Funciones operativas restauradas
-  const openAdd = (pid = '', date = '', initial = null, rooms = null) => {
-    setPrefill({ pid, date, initial, rooms });
+  // queue: reservas que siguen después de guardar esta (cambio de habitación desde Cotizar)
+  // chain: { i, total } para el título "2 de 3"
+  const openAdd = (pid = '', date = '', initial = null, rooms = null, queue = [], chain = null) => {
+    setPrefill({ pid, date, initial, rooms, queue, chain, key: Date.now() });
     setModal('new');
   };
   // Cotizar: ventana sin crear reserva; "Reservar" abre el formulario ya cargado
@@ -518,10 +520,11 @@ export default function AppMejorada() {
           : 'Reserva guardada'
       );
       setTimeout(() => setToastMsg(null), 2000);
-
+      return true;
     } catch (err) {
       console.error('Error al conectar con la base de datos:', err);
       alert('Hubo un problema al guardar la reserva en la nube: ' + err.message);
+      return false;
     }
   };
   const updateRes = async (id, changes) => {
@@ -1374,22 +1377,37 @@ const toggleBlacklist = async (id, currentStatus) => {
           <Quoter
             allRes={res}
             tarifas={tarifas}
-            onReserve={({ initial, rooms }) => {
+            onReserve={({ queue }) => {
               setQuoterOpen(false);
-              openAdd('hostel', initial.checkIn, initial, rooms);
+              const [first, ...rest] = queue;
+              openAdd('hostel', first.initial.checkIn, first.initial, first.rooms, rest, queue.length > 1 ? { i: 1, total: queue.length } : null);
             }}
           />
         </Modal>
       )}
       {modal === 'new' && (
         <Modal
-          title="Nueva reserva"
+          title={prefill.chain ? `Nueva reserva · ${prefill.chain.i} de ${prefill.chain.total} (cambio de habitación)` : 'Nueva reserva'}
           onClose={() => setModal(null)}
           isMobile={isMobile}
         >
           <ResForm
+            key={prefill.key}
             visibleProps={visProps}
-            onSave={saveRes}
+            onSave={async (p, o) => {
+              const ok = await saveRes(p, o);
+              const q = prefill.queue || [];
+              if (!ok || !q.length) return;
+              // Cambio de habitación: abre la siguiente con los mismos datos del huésped
+              const g = Array.isArray(p) ? p[0] : p;
+              const carry = {};
+              [...PERSON_FIELDS, 'source', 'requiresInvoice', 'company', 'status'].forEach((k) => {
+                if (g && g[k] !== undefined) carry[k] = g[k];
+              });
+              const [next, ...rest] = q;
+              const ch = prefill.chain || { i: 1, total: q.length + 1 };
+              openAdd('hostel', next.initial.checkIn, { ...next.initial, ...carry }, next.rooms, rest, { i: ch.i + 1, total: ch.total });
+            }}
             onClose={() => setModal(null)}
             prefillProp={prefill.pid}
             prefillDate={prefill.date}

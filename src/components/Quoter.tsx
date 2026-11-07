@@ -1,22 +1,29 @@
 /* eslint-disable */
 // @ts-nocheck
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { ROOMS, ROOM_DESC } from '../lib/constants';
 import { roomTypeOf, quoteStay } from '../lib/rates';
 import { findConflicts } from '../lib/reservations';
 import { TODAY, fmt, addDays, parseD, diffDays, currency, DAYS } from '../lib/dates';
 import { RangeCalendar } from './ui/RangeCalendar';
 import { money } from './reservations/QuoteInfo';
-import { nightAvailability, busyText, noRoomText, nightsText } from '../lib/availability';
+import {
+  nightAvailability,
+  busyText,
+  noRoomText,
+  nightsText,
+  stayPlan,
+  planText,
+  nearestDates,
+  lateOutOn,
+  entradaSalida,
+  roomNum,
+} from '../lib/availability';
 
 // ── COTIZAR (sin crear reserva) ───────────────────────────────────────────────
 // Se arma paso a paso: fechas → personas → en qué habitación va cada uno → cotización
 // (subtotal por habitación, total, por persona y promedio por persona por noche) y texto para WhatsApp.
 
-const dayLabel = (s) => {
-  const d = parseD(s);
-  return `${DAYS[d.getDay()].toLowerCase()} ${d.getDate()}/${d.getMonth() + 1}`;
-};
 const msgMoney = (n) => {
   const v = Math.round((Number(n) || 0) * 100) / 100;
   return '$' + v.toLocaleString('es-MX', { minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 });
@@ -27,10 +34,15 @@ export { listY } from '../lib/availability';
 export const HOSTEL_CAPACITY = ROOMS.reduce((s, r) => s + r.maxGuests, 0);
 
 // Texto para WhatsApp: termina en los precios (la charla sigue según venga)
+// items con nightsLabel (cambio de habitación): "• Habitación con … (3 personas), las noches del vie 27 y sáb 28 de nov: $X"
 export function quoteMessage({ checkIn, checkOut, guests, items, total }) {
   const n = diffDays(checkIn, checkOut);
-  const lines = [`¡Hola! Para ${personas(guests)}, del ${dayLabel(checkIn)} al ${dayLabel(checkOut)} (${noches(n)}):`];
-  items.forEach((it) => lines.push(`• Habitación con ${it.desc} (${personas(it.guests)}): ${msgMoney(it.total)}`));
+  const lines = [`¡Hola! Para ${personas(guests)}, ${entradaSalida(checkIn, checkOut)} (${noches(n)}):`];
+  items.forEach((it) =>
+    lines.push(
+      `• Habitación con ${it.desc} (${personas(it.guests)})${it.nightsLabel ? `, ${it.nightsLabel}` : ''}: ${msgMoney(it.total)}`
+    )
+  );
   if (items.length > 1 || guests > 1) {
     lines.push(`Total: ${msgMoney(total)}${guests > 1 ? ` (${msgMoney(total / guests)} por persona)` : ''}`);
     lines.push(`Promedio por persona por noche: ${msgMoney(total / guests / n)}`);
@@ -47,7 +59,10 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
   const [dist, setDist] = useState({}); // habitación → personas
   const [openRoom, setOpenRoom] = useState(''); // habitación con el selector desplegado
   const [copied, setCopied] = useState(false);
+  const [planOn, setPlanOn] = useState(false); // cotizar con cambio de habitación
+  const [calKey, setCalKey] = useState(0); // para que el almanaque salte al mes de las fechas sugeridas
   const n = checkIn && checkOut ? diffDays(checkIn, checkOut) : 0;
+  useEffect(() => setPlanOn(false), [checkIn, checkOut, guests]);
 
   // Disponibilidad noche por noche (una habitación ocupada alguna noche no suma lugar)
   const av = useMemo(() => nightAvailability(allRes, checkIn, checkOut, n), [allRes, checkIn, checkOut, n]);
@@ -62,6 +77,20 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
   const freeCap = freeRooms.reduce((s, r) => s + r.maxGuests, 0);
   const full = n > 0 && freeCap === 0;
   const esosDias = n === 1 ? 'Ese día' : 'Esos días';
+  const short = n > 0 && guests > freeCap; // no entran todos sin mudarse
+  // ¿Se puede con cambio de habitación? (habitaciones fijas + las personas que se mudan)
+  const plan = useMemo(() => (short ? stayPlan(av, guests) : null), [short, av, guests]);
+  const planActive = planOn && !!plan;
+  // Fechas más cercanas (antes y después) con lugar para todos sin mudarse
+  const near = useMemo(
+    () => (short ? nearestDates(allRes, checkIn, n, guests, fmt(TODAY)) : null),
+    [short, allRes, checkIn, n, guests]
+  );
+  const goDates = (ci) => {
+    setCheckIn(ci);
+    setCheckOut(fmt(addDays(parseD(ci), n)));
+    setCalKey((k) => k + 1);
+  };
   const warnBox = {
     marginTop: 8,
     fontSize: 13,
@@ -82,15 +111,74 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
   const placed = Object.values(distFree).reduce((s, v) => s + v, 0);
   const left = guests - placed;
 
-  const items = ROOMS.filter((r) => distFree[r.id]).map((r) => {
-    const t = roomTypeOf(r.id);
-    const q = t ? quoteStay(checkIn, checkOut, t.id, distFree[r.id], tarifas) : null;
-    return { room: r.id, desc: ROOM_DESC[r.id] || r.name, guests: distFree[r.id], q, total: q && !q.missing ? q.total : null };
-  });
+  const mkItem = (room, g, ci, co, nightsLabel = '') => {
+    const t = roomTypeOf(room);
+    const q = t ? quoteStay(ci, co, t.id, g, tarifas) : null;
+    return { key: room + ci, room, desc: ROOM_DESC[room] || room, guests: g, q, total: q && !q.missing ? q.total : null, from: ci, to: co, nightsLabel };
+  };
+  const items = planActive
+    ? [
+        ...plan.fixed.map((f) => mkItem(f.room, f.guests, checkIn, checkOut)),
+        ...plan.segs.map((sg) => mkItem(sg.room, plan.moving, sg.from, sg.to, nightsText(sg.nights))),
+      ]
+    : ROOMS.filter((r) => distFree[r.id]).map((r) => mkItem(r.id, distFree[r.id], checkIn, checkOut));
   const missingPrice = items.some((it) => it.total === null);
   const total = items.reduce((s, it) => s + (it.total || 0), 0);
-  const done = n > 0 && left === 0 && items.length > 0 && !missingPrice;
+  const done = n > 0 && (planActive || left === 0) && items.length > 0 && !missingPrice;
+
+  // Para la reserva: una o varias (con cambio de habitación, una tras otra con los mismos datos del huésped)
+  const reserveQueue = () => {
+    if (!planActive) {
+      return [
+        {
+          initial: { propertyId: 'hostel', checkIn, checkOut, room: items[0].room, totalGuests: items[0].guests },
+          rooms: items.length > 1 ? items.map((it) => ({ room: it.room, guests: it.guests })) : null,
+        },
+      ];
+    }
+    const notes = `🔀 Cambio de habitación: ${planText(plan, guests)}.`;
+    const q = [];
+    if (plan.fixed.length)
+      q.push({
+        initial: { propertyId: 'hostel', checkIn, checkOut, room: plan.fixed[0].room, totalGuests: plan.fixed[0].guests, notes },
+        rooms: plan.fixed.length > 1 ? plan.fixed : null,
+      });
+    plan.segs.forEach((sg) =>
+      q.push({
+        initial: { propertyId: 'hostel', checkIn: sg.from, checkOut: sg.to, room: sg.room, totalGuests: plan.moving, notes },
+        rooms: null,
+      })
+    );
+    return q;
+  };
+
+  // Habitación recomendada para las personas que faltan ubicar: la que menos lugar desperdicia
+  // (así quedan libres las grandes para grupos); si ninguna alcanza, la más grande. Empate: la más barata.
+  const priceFor = (room, g) => {
+    const t = roomTypeOf(room);
+    const q = t ? quoteStay(checkIn, checkOut, t.id, g, tarifas) : null;
+    return q && !q.missing ? q.total : null;
+  };
+  const unassigned = freeRooms.filter((r) => !distFree[r.id]);
+  let rec = null;
+  let recText = '';
+  if (left > 0 && unassigned.length > 1) {
+    const fitting = unassigned.filter((r) => r.maxGuests >= left);
+    const byPrice = (a, b) => (priceFor(a.id, Math.min(left, a.maxGuests)) || 0) - (priceFor(b.id, Math.min(left, b.maxGuests)) || 0);
+    if (fitting.length) {
+      rec = [...fitting].sort((a, b) => a.maxGuests - b.maxGuests || byPrice(a, b))[0];
+      const biggest = Math.max(...unassigned.map((r) => r.maxGuests));
+      recText =
+        rec.maxGuests < biggest
+          ? `⭐ Para ${personas(left)} te conviene la habitación ${roomNum(rec.id)}: así quedan libres las más grandes para grupos.`
+          : `⭐ Para ${personas(left)} te conviene la habitación ${roomNum(rec.id)}.`;
+    } else {
+      rec = [...unassigned].sort((a, b) => b.maxGuests - a.maxGuests || byPrice(a, b))[0];
+      recText = `⭐ Te conviene empezar por la habitación ${roomNum(rec.id)}: entran ${rec.maxGuests}.`;
+    }
+  }
   const msg = done ? quoteMessage({ checkIn, checkOut, guests, items, total }) : '';
+  const cap1 = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 
   const setRoomGuests = (id, g) => {
     setDist((d) => {
@@ -138,6 +226,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
       {/* 1 · Fechas */}
       <div style={lbl}>1 · Fechas</div>
       <RangeCalendar
+        key={calKey}
         checkIn={checkIn}
         checkOut={checkOut}
         onChange={(ci, co) => {
@@ -146,7 +235,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
         }}
       />
       <div style={{ fontSize: 13, fontWeight: 700, color: '#1E40AF', margin: '8px 0 16px' }}>
-        {n > 0 ? `${dayLabel(checkIn)} → ${dayLabel(checkOut)} · ${noches(n)}` : 'Elegí la fecha de salida'}
+        {n > 0 ? `${cap1(entradaSalida(checkIn, checkOut))} · ${noches(n)}` : 'Elegí la fecha de salida'}
       </div>
 
       {n > 0 && (
@@ -172,6 +261,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
           ) : guests > freeCap ? (
             <div style={warnBox}>
               {esosDias} solo nos queda lugar para {personas(freeCap)}. {busyText(av, busyRooms.map((r) => r.id))}
+              {plan ? ` Pero ${planText(plan, guests)}.` : ''}
             </div>
           ) : (
             <div style={{ marginTop: 6, fontSize: 12, color: '#6B7280' }}>
@@ -181,7 +271,74 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
             </div>
           )}
 
-          {!full && (
+          {short && (plan || (near && (near.before || near.after)) || (near && !near.before && !near.after)) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+              {plan && (
+                <button
+                  type="button"
+                  onClick={() => setPlanOn(!planOn)}
+                  style={{
+                    minHeight: 42,
+                    borderRadius: 9,
+                    fontFamily: 'inherit',
+                    fontWeight: 800,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    background: planOn ? '#7C3AED' : '#fff',
+                    color: planOn ? '#fff' : '#7C3AED',
+                    border: '1.5px solid #7C3AED',
+                  }}
+                >
+                  {planOn ? '✓ Cotizando con el cambio de habitación' : '🔀 Cotizar con este cambio de habitación'}
+                </button>
+              )}
+              {near && (near.before || near.after) && (
+                <div style={{ fontSize: 12.5, color: '#374151', marginTop: 4 }}>
+                  📅 Fechas más cercanas con lugar para {guests === 1 ? 'esa persona' : `las ${guests} personas`}
+                  {plan ? ' sin cambiar de habitación' : ''}:
+                </div>
+              )}
+              {near &&
+                [near.after, near.before]
+                  .filter(Boolean)
+                  .sort((a, b) => Math.abs(diffDays(checkIn, a)) - Math.abs(diffDays(checkIn, b)))
+                  .map((ci) => (
+                    <button
+                      key={ci}
+                      type="button"
+                      onClick={() => goDates(ci)}
+                      style={{
+                        minHeight: 40,
+                        borderRadius: 9,
+                        fontFamily: 'inherit',
+                        fontWeight: 700,
+                        fontSize: 12.5,
+                        cursor: 'pointer',
+                        background: '#fff',
+                        color: '#2563EB',
+                        border: '1.5px solid #93C5FD',
+                        textAlign: 'left',
+                        padding: '8px 12px',
+                      }}
+                    >
+                      {cap1(entradaSalida(ci, fmt(addDays(parseD(ci), n))))} →
+                    </button>
+                  ))}
+              {near && !near.before && !near.after && !plan && (
+                <div style={{ fontSize: 12, color: '#6B7280' }}>
+                  No encontré fechas cercanas (3 meses antes o después) con lugar para {personas(guests)} juntas.
+                </div>
+              )}
+            </div>
+          )}
+
+          {planActive && (
+            <div style={{ marginTop: 14, fontSize: 12.5, color: '#5B21B6', background: '#F5F3FF', border: '1px solid #DDD6FE', borderRadius: 8, padding: '8px 10px' }}>
+              🔀 Cotizando con cambio de habitación. Al reservar se cargan una tras otra, con los mismos datos del huésped.
+            </div>
+          )}
+
+          {!full && !planActive && (
           <>
           {/* 3 · Distribución */}
           <div style={{ ...lbl, marginTop: 18 }}>3 · ¿En qué habitación van?</div>
@@ -199,6 +356,11 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
               ? `Falta ubicar a ${personas(left)}`
               : `Hay ${personas(-left)} de más: quitá en alguna habitación.`}
           </div>
+          {recText && (
+            <div style={{ fontSize: 12.5, color: '#92400E', background: '#FFFBEB', borderRadius: 8, padding: '7px 10px', marginBottom: 8 }}>
+              {recText}
+            </div>
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {freeRooms.map((r) => {
               const g = distFree[r.id] || 0;
@@ -237,6 +399,28 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
                     <span>
                       <span style={{ fontWeight: 800, fontSize: 14, color: '#111' }}>{r.id}</span>
                       <span style={{ fontSize: 12, color: '#6B7280' }}> · {r.desc} · hasta {r.maxGuests}</span>
+                      {(() => {
+                        const k = g || Math.min(Math.max(left, 1), r.maxGuests);
+                        const pr = priceFor(r.id, k);
+                        const late = lateOutOn(allRes, r.id, checkIn);
+                        return (
+                          <span style={{ display: 'block', fontSize: 11.5, marginTop: 2 }}>
+                            {pr !== null && (
+                              <span style={{ color: '#374151', fontWeight: 600 }}>
+                                {g ? currency(pr) : `${personas(k)}: ${currency(pr)}`}
+                              </span>
+                            )}
+                            {rec && rec.id === r.id && (
+                              <span style={{ marginLeft: 6, color: '#B45309', fontWeight: 800 }}>⭐ Recomendada</span>
+                            )}
+                            {late && (
+                              <span style={{ display: 'block', color: '#4F46E5', fontWeight: 700 }}>
+                                🕐 Libre desde las {late}: ese día sale alguien con late check-out
+                              </span>
+                            )}
+                          </span>
+                        );
+                      })()}
                     </span>
                     <span style={{ fontSize: 12.5, fontWeight: 800, color: g ? '#1D4ED8' : '#9CA3AF', whiteSpace: 'nowrap' }}>
                       {g ? `${personas(g)} ✏️` : isOpen ? '▲' : '▼'}
@@ -322,16 +506,20 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
             </div>
           )}
 
+          </>
+          )}
+
           {/* 4 · Cotización */}
           {items.length > 0 && (
             <div style={{ marginTop: 18 }}>
               <div style={lbl}>4 · Cotización</div>
               <div style={{ border: '1px solid #E5E7EB', borderRadius: 10, overflow: 'hidden' }}>
                 {items.map((it) => (
-                  <div key={it.room} style={{ padding: '10px 12px', borderBottom: '1px solid #F3F4F6' }}>
+                  <div key={it.key} style={{ padding: '10px 12px', borderBottom: '1px solid #F3F4F6' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
                       <div style={{ fontSize: 13, color: '#111' }}>
                         <b>{it.room}</b> · {personas(it.guests)}
+                        {it.nightsLabel && <span style={{ color: '#7C3AED', fontSize: 12 }}> · {it.nightsLabel}</span>}
                       </div>
                       <div style={{ fontWeight: 800, fontSize: 14, color: '#111' }}>
                         {it.total === null ? 'Sin precio' : currency(it.total)}
@@ -413,12 +601,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
                 {onReserve && (
                   <button
                     type="button"
-                    onClick={() =>
-                      onReserve({
-                        initial: { propertyId: 'hostel', checkIn, checkOut, room: items[0].room, totalGuests: items[0].guests },
-                        rooms: items.length > 1 ? items.map((it) => ({ room: it.room, guests: it.guests })) : null,
-                      })
-                    }
+                    onClick={() => onReserve({ queue: reserveQueue() })}
                     style={{
                       flex: 1,
                       minHeight: 44,
@@ -440,8 +623,6 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
                 Ojo: si entró una reserva de Booking que todavía no aparece en el calendario, esa habitación puede figurar libre.
               </div>
             </div>
-          )}
-          </>
           )}
         </>
       )}
