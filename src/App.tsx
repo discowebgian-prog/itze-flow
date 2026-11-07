@@ -1189,6 +1189,7 @@ const toggleBlacklist = async (id, currentStatus) => {
               user={user}
               restoreRes={restoreRes}
               onGoTo={goTo}
+              tarifas={tarifas}
             />
           )}
         </motion.div>
