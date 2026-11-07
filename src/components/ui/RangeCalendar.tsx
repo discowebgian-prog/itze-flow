@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { TODAY, fmt, fmtD, parseD, MONTHS, DAYS } from '../../lib/dates';
 
 // ── RANGE CALENDAR ────────────────────────────────────────────────────────────
-export function RangeCalendar({ checkIn, checkOut, onChange, minDate }) {
+// fixedRows: siempre 6 semanas, así el almanaque no cambia de alto al pasar de mes (lo usa Cotizar)
+export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows = false }) {
   const [base, setBase] = useState(checkIn ? parseD(checkIn) : TODAY);
   const [hover, setHover] = useState(null);
   const [step, setStep] = useState(checkIn && checkOut ? 2 : 0);
@@ -19,6 +20,7 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate }) {
   const grid = Array(firstDow)
     .fill(null)
     .concat(Array.from({ length: daysInMo }, (_, i) => new Date(y, m, i + 1)));
+  if (fixedRows) while (grid.length < 42) grid.push(null);
 
   const clickD = (d) => {
     if (!d || (minD && d < minD)) return;
@@ -145,6 +147,7 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate }) {
           const isCI = s === checkIn;
           const isCO = s === checkOut;
           const isEnd = isCI || isCO;
+          const isToday = s === fmt(TODAY);
           let inRange = false;
           if (checkIn && checkOut) inRange = s > checkIn && s < checkOut;
           else if (checkIn && hover && step === 1)
@@ -180,9 +183,15 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate }) {
                 color: col,
                 borderRadius: radius,
                 cursor: isDisabled ? 'not-allowed' : 'pointer',
+                position: 'relative',
+                ...(isToday && !isEnd ? { color: '#2563EB', fontWeight: 900 } : {}),
               }}
             >
               {d.getDate()}
+              {/* Hoy: puntito azul debajo del número */}
+              {isToday && !isEnd && (
+                <span style={{ position: 'absolute', bottom: 4, width: 4, height: 4, borderRadius: '50%', background: '#2563EB' }} />
+              )}
             </div>
           );
         })}

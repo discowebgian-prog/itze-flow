@@ -1373,7 +1373,7 @@ const toggleBlacklist = async (id, currentStatus) => {
         </div>
       )}
       {quoterOpen && (
-        <Modal title="🧮 Cotizar" onClose={() => setQuoterOpen(false)} isMobile={isMobile}>
+        <Modal title="🧮 Cotizar" onClose={() => setQuoterOpen(false)} isMobile={isMobile} tall>
           <Quoter
             allRes={res}
             tarifas={tarifas}

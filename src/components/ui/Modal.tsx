@@ -2,7 +2,8 @@
 // @ts-nocheck
 
 // ── MODAL ─────────────────────────────────────────────────────────────────────
-export function Modal({ title, onClose, children, isMobile }) {
+// tall: en el celular la hoja ocupa siempre el 92% del alto, así no crece ni se achica (y no mueve lo que estás tocando)
+export function Modal({ title, onClose, children, isMobile, tall = false }) {
   return (
     <div
       style={{
@@ -24,6 +25,7 @@ export function Modal({ title, onClose, children, isMobile }) {
           width: '100%',
           maxWidth: isMobile ? '100%' : 520,
           maxHeight: '92vh',
+          height: isMobile && tall ? '92vh' : undefined,
           overflow: 'auto',
           boxShadow: '0 -4px 40px rgba(0,0,0,.18)',
         }}
