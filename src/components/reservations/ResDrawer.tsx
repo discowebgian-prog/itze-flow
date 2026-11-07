@@ -12,6 +12,8 @@ import { LatePicker } from './LatePicker';
 import { lateHour, lateCostOf, findConflicts, calcStayTotal } from '../../lib/reservations';
 import { groupOf, groupTitular, groupName, hasOwnContact, balanceOf } from '../../lib/groups';
 import { GROUP_COLORS } from '../ui/GroupBadge';
+import { quoteRoom, pricingMatches } from '../../lib/rates';
+import { QuoteInfo } from './QuoteInfo';
 
 // ── DRAWER ────────────────────────────────────────────────────────────────────
 export function ResDrawer({
@@ -31,6 +33,7 @@ export function ResDrawer({
   onPay,
   onAddRoom,
   onUngroup,
+  tarifas = [],
 }) {
   // "No grato" es un caso raro: enlace chico al pie y pide confirmar antes de marcar
   const [askBlacklist, setAskBlacklist] = useState(false);
@@ -85,12 +88,23 @@ export function ResDrawer({
     additionals: Array.from({ length: Math.max(0, addGuests - 2) }, () => ({ ratePerNight: Number(addExtra) || 0, bonificada: false })),
   };
   const addTotal = calcStayTotal(addPricing, addNights, 0);
+  // Cotizador: tarifa y adicional del tarifario hasta que se escriben a mano
+  const [addAuto, setAddAuto] = useState(true);
+  const addQuote = addRoom ? quoteRoom(addRoom, res.checkIn, res.checkOut, addGuests, tarifas) : null;
+  const addQuoteOk = !!addQuote && !addQuote.missing;
+  const addMatches = addQuoteOk && pricingMatches(addPricing, addQuote);
+  useEffect(() => {
+    if (!addAuto || !addQuoteOk || addMatches) return;
+    setAddRate(addQuote.avg);
+    if (addQuote.extraGuests) setAddExtra(addQuote.extraAvg);
+  }, [addAuto, addQuoteOk, addMatches, addQuote?.avg, addQuote?.extraAvg, addQuote?.extraGuests]);
   const openAdd = () => {
     setAddOpen(true);
     setAddRoom('');
     setAddGuests(1);
     setAddRate('');
     setAddExtra('');
+    setAddAuto(true);
     // El panel aparece arriba (debajo del grupo): lo llevamos a la vista
     setTimeout(() => document.getElementById('add-room-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
   };
@@ -538,15 +552,23 @@ export function ResDrawer({
                         </button>
                       ))}
                     </div>
-                    <label style={lbl}>Tarifa/noche $</label>
+                    <label style={lbl}>{addMatches && addQuote.varied ? 'Tarifa/noche (promedio) $' : 'Tarifa/noche $'}</label>
                     <input
                       type="number"
                       inputMode="numeric"
                       value={addRate}
                       placeholder="Tarifa de esta habitación"
-                      onChange={(e) => setAddRate(e.target.value === '' ? '' : Number(e.target.value))}
+                      onChange={(e) => {
+                        setAddAuto(false);
+                        setAddRate(e.target.value === '' ? '' : Number(e.target.value));
+                      }}
                       style={{ ...inp, marginBottom: 8 }}
                     />
+                    {addQuote && (
+                      <div style={{ marginTop: -4, marginBottom: 8 }}>
+                        <QuoteInfo q={addQuote} matches={addMatches} onUse={() => setAddAuto(true)} />
+                      </div>
+                    )}
                     {addGuests > 2 && (
                       <>
                         <label style={lbl}>Costo x noche por persona extra $</label>
@@ -555,7 +577,10 @@ export function ResDrawer({
                           inputMode="numeric"
                           value={addExtra}
                           placeholder="0"
-                          onChange={(e) => setAddExtra(e.target.value === '' ? '' : Number(e.target.value))}
+                          onChange={(e) => {
+                            setAddAuto(false);
+                            setAddExtra(e.target.value === '' ? '' : Number(e.target.value));
+                          }}
                           style={inp}
                         />
                         <div style={{ fontSize: 11, color: '#6B7280', marginTop: 4, marginBottom: 8 }}>

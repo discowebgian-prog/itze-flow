@@ -17,7 +17,7 @@ export const PROPS = [
 export const ROOMS = [
   { id: 'P1', name: 'P1', maxGuests: 5 },
   { id: 'P2', name: 'P2', maxGuests: 5 },
-  { id: 'P3', name: 'P3', maxGuests: 6 },
+  { id: 'P3', name: 'P3', maxGuests: 5 }, // 2 matrimoniales + 1 individual (pasa a 6 con 3 matrimoniales)
   { id: 'P4', name: 'P4', maxGuests: 3 },
   { id: 'P5', name: 'P5', maxGuests: 5 },
   { id: 'P6', name: 'P6', maxGuests: 2 },

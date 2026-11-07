@@ -1235,6 +1235,7 @@ const toggleBlacklist = async (id, currentStatus) => {
           onPay={payRes}
           onAddRoom={addRoomToGroup}
           onUngroup={ungroupRes}
+          tarifas={tarifas}
           onToggleBlacklist={toggleBlacklist}
           properties={visProps}
           allRes={res}
@@ -1367,6 +1368,7 @@ const toggleBlacklist = async (id, currentStatus) => {
             prefillDate={prefill.date}
             allRes={res}
             guestDecisions={guestDecisions}
+            tarifas={tarifas}
           />
         </Modal>
       )}
@@ -1384,6 +1386,7 @@ const toggleBlacklist = async (id, currentStatus) => {
             onClose={() => setModal(null)}
             allRes={res}
             guestDecisions={guestDecisions}
+            tarifas={tarifas}
           />
         </Modal>
       )}
