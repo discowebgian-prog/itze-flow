@@ -5,7 +5,8 @@ import { TODAY, fmt, fmtD, addDays, diffDays, parseD, currency, MONTHS } from '.
 import { askClaude } from '../lib/claude';
 import { exportToExcel } from '../lib/excel';
 import { supabase } from '../lib/supabase';
-import { isFindeDow } from '../lib/rates';
+import { isFindeDow, roomTypeOf, nightPrice } from '../lib/rates';
+import { ROOMS } from '../lib/constants';
 import { AnimatePresence } from 'motion/react';
 import { Backdrop, PopCard, CountUp, Collapse } from '../components/ui/Motion';
 
@@ -36,7 +37,7 @@ function Delta({ cur, prev, style = {} }) {
 }
 
 // ── FINANCE PAGE ──────────────────────────────────────────────────────────────
-export function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoTo }) {
+export function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoTo, tarifas = [] }) {
   const [showTrash, setShowTrash] = useState(false);
   const [gastos, setGastos] = useState([]);
   const [formGasto, setFormGasto] = useState({ fecha: fmt(TODAY), monto: '', categoria: 'Insumos', notas: '' });
@@ -157,7 +158,8 @@ DATOS DEL HOTEL (${m.label}). Ingresos, ocupación, ADR, RevPAR y GOPPAR conside
 - Reservado del mes completo, incluyendo noches futuras: ${metrics.bookedPct}% de ocupación | $${metrics.bookedRevenue}${metrics.projectedPct !== null ? `
 - Proyectado del mes [HIPÓTESIS A PROBAR: estimación según el ritmo de Lun-Mié y Jue-Dom hasta hoy, no incluye eventos futuros]: ${metrics.projectedPct}% de ocupación | $${metrics.projectedRevenue}` : ''}
 - Ocupación Física: ${metrics.occPct}% | ADR: $${metrics.adr} | RevPAR Global: $${metrics.revpar} | GOPPAR: $${metrics.goppar}
-- RevPAR (Lun-Mié): $${metrics.revparEntre} vs RevPAR (Jue-Dom): $${metrics.revparFinde}${metrics.prevCmp ? `
+- RevPAR (Lun-Mié): $${metrics.revparEntre} vs RevPAR (Jue-Dom): $${metrics.revparFinde}${metrics.pot ? `
+- % del potencial (ingreso de las habitaciones ÷ todas vendidas cada noche al precio del tarifario vigente): ${metrics.pot.pct}% ($${metrics.pot.earned} de $${metrics.pot.possible}) | Ocupación: ${metrics.pot.occ}% | Cobrado vs tarifario: ${metrics.pot.rate}% | Lun-Mié: ${metrics.pot.entre}% | Jue-Dom: ${metrics.pot.finde}%` : ''}${metrics.prevCmp ? `
 - Mes anterior (${metrics.prevCmp.label}): RevPAR Global $${metrics.prevCmp.revpar} | Lun-Mié $${metrics.prevCmp.entre} | Jue-Dom $${metrics.prevCmp.finde}` : ''}
 - Ocup. Habitaciones 1, 2, 3 y 5 (privadas): ${metrics.oComp}% | Habitación 4 (king): ${metrics.oKing}% | Habitación 6 (matrimonial): ${metrics.oMat}%
 ${rmBloque("- Distribución de estadía", rmExtra.distribucionEstadia)}
@@ -279,7 +281,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
 
         // Índice por noche, para comparar un mes contra el anterior en el mismo tramo de días
         if (!nightsByMonth[nightMonthKey]) nightsByMonth[nightMonthKey] = [];
-        nightsByMonth[nightMonthKey].push({ day: currentNight.getDate(), finde: isWeekend, room: r.room, rev: avgDailyRate });
+        nightsByMonth[nightMonthKey].push({ day: currentNight.getDate(), date: fmt(currentNight), finde: isWeekend, room: r.room, rev: avgDailyRate });
 
         if (isWeekend) {
            acc[nightMonthKey].dow.finde.revenue += avgDailyRate;
@@ -351,6 +353,59 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
       comp: div(s.comp, 4 * upToDay),
     };
   };
+
+  // % del potencial (del 1 al `upToDay`): lo que ingresó en las habitaciones del hostel ÷ lo máximo posible,
+  // que es todas las habitaciones vendidas cada noche al precio del tarifario que regía esa noche
+  // (promo, fecha especial o Normal; precio para 2 personas). Se separa en dos causas:
+  //  · ocupación: noches vendidas ÷ noches disponibles
+  //  · cobrado vs lista: lo cobrado por las noches vendidas ÷ su precio de tarifario
+  //    (< 100% = descuentos o promos a mano; > 100% = personas extra o late check-out)
+  const potentialFor = (key, upToDay) => {
+    const [y, mo] = key.split('-').map(Number);
+    const priceOf = (dateStr, room) => {
+      const t = roomTypeOf(room);
+      return t ? nightPrice(dateStr, t.id, tarifas).price : 0;
+    };
+    const pos = { all: 0, entre: 0, finde: 0 };
+    let missing = false; // alguna noche sin precio en Tarifas
+    for (let i = 1; i <= upToDay; i++) {
+      const d = new Date(y, mo - 1, i);
+      const ds = fmt(d);
+      const fin = isFindeDow(d.getDay());
+      ROOMS.forEach((r) => {
+        const v = priceOf(ds, r.id);
+        if (!v) missing = true;
+        pos.all += v;
+        if (fin) pos.finde += v; else pos.entre += v;
+      });
+    }
+    const got = { all: 0, entre: 0, finde: 0, list: 0, nights: 0 };
+    (nightsByMonth[key] || []).forEach((n) => {
+      if (n.day > upToDay || !roomTypeOf(n.room)) return;
+      got.all += n.rev;
+      if (n.finde) got.finde += n.rev; else got.entre += n.rev;
+      got.list += priceOf(n.date, n.room);
+      got.nights += 1;
+    });
+    const pct = (a, b) => (b > 0 ? Math.round((a / b) * 100) : null);
+    return {
+      pct: missing ? null : pct(got.all, pos.all),
+      entre: missing ? null : pct(got.entre, pos.entre),
+      finde: missing ? null : pct(got.finde, pos.finde),
+      occ: pct(got.nights, ROOMS.length * upToDay),
+      rate: missing ? null : pct(got.all, got.list),
+      earned: Math.round(got.all),
+      possible: Math.round(pos.all),
+      missing,
+    };
+  };
+  // Semáforo del % del potencial (a ajustar con Gian)
+  const potColor = (p) =>
+    p >= 65
+      ? { c: '#15803D', bg: '#DCFCE7', bar: '#22C55E', txt: 'Bien encaminado' }
+      : p >= 40
+      ? { c: '#B45309', bg: '#FEF3C7', bar: '#F59E0B', txt: 'Se puede mejorar' }
+      : { c: '#B91C1C', bg: '#FEE2E2', bar: '#EF4444', txt: 'Muy por debajo' };
 
   useEffect(() => {
     setTimeout(() => {
@@ -478,6 +533,8 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
           const prevDays = new Date(py, pmo, 0).getDate();
           const prevUpTo = isCurrent ? Math.min(passedDays, prevDays) : prevDays;
           const prev = revparFor(prevKey, prevUpTo);
+          const pot = passedDays > 0 ? potentialFor(m.key, passedDays) : null;
+          const potPrev = passedDays > 0 ? potentialFor(prevKey, prevUpTo) : null;
           const showCmp = !isFuture && passedDays > 0 && prev.has;
           const cmpLabel = isCurrent ? `${MONTH_NAMES[pmo - 1]}, del 1 al ${prevUpTo}` : MONTH_NAMES[pmo - 1];
 
@@ -610,6 +667,58 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                 {showCmp && <CmpTitle label={cmpLabel} />}
               </div>
 
+              {/* ── % DEL POTENCIAL ── */}
+              {pot && (pot.pct !== null || pot.missing) && (() => {
+                if (pot.pct === null)
+                  return (
+                    <div style={{ background: '#F8FAFC', borderRadius: 10, padding: '10px 12px', border: '1px solid #E5E7EB', marginBottom: 14, fontSize: 11.5, color: '#6B7280' }}>
+                      🎯 Para ver el % del potencial falta el precio de alguna noche: revisá que esté cargada la tarifa Normal en Tarifas.
+                    </div>
+                  );
+                const k = potColor(pot.pct);
+                const dPts = showCmp && potPrev && potPrev.pct !== null && potPrev.earned > 0 ? pot.pct - potPrev.pct : null;
+                const chip = (label, v, title) => (
+                  <span title={title} style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 999, padding: '3px 8px', fontSize: 10.5, color: '#374151', fontWeight: 600, whiteSpace: 'nowrap', cursor: title ? 'help' : 'default' }}>
+                    {label} <b style={{ color: '#111' }}>{v === null ? '—' : <CountUp value={v + '%'} />}</b>
+                  </span>
+                );
+                return (
+                  <div style={{ background: '#F8FAFC', borderRadius: 10, padding: '10px 12px', border: '1px solid #E5E7EB', marginBottom: 14 }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: 8, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                      <span>🎯 % del potencial</span>
+                      <span style={{ fontSize: 9, color: '#9CA3AF' }}>{isCurrent ? `del 1 al ${passedDays}` : 'mes completo'}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ fontSize: 26, fontWeight: 900, color: k.c, minWidth: 64, lineHeight: 1 }}>
+                        <CountUp value={pot.pct + '%'} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ height: 8, background: '#E5E7EB', borderRadius: 99, overflow: 'hidden' }}>
+                          <div style={{ width: `${Math.min(100, pot.pct)}%`, height: '100%', background: k.bar, borderRadius: 99, transition: 'width .8s cubic-bezier(.32,.72,0,1)' }} />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, gap: 6 }}>
+                          <span style={{ fontSize: 10.5, fontWeight: 800, color: k.c, background: k.bg, borderRadius: 999, padding: '1px 7px' }}>{k.txt}</span>
+                          {dPts !== null && (
+                            <span title={`Mes anterior (${cmpLabel}): ${potPrev.pct}%`} style={{ fontSize: 9.5, fontWeight: 800, color: dPts > 0 ? '#16A34A' : dPts < 0 ? '#DC2626' : '#9CA3AF', cursor: 'help' }}>
+                              {dPts > 0 ? '▲' : dPts < 0 ? '▼' : '='} {Math.abs(dPts)} pts vs mes anterior
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 11.5, color: '#4B5563', marginTop: 8, lineHeight: 1.45 }}>
+                      Ingresaron <b>{currency(pot.earned)}</b> de <b>{currency(pot.possible)}</b> posibles si todas las habitaciones se vendían cada noche al precio del tarifario.
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                      {chip('Ocupación', pot.occ, 'Qué parte de las noches disponibles se vendieron')}
+                      {chip('Cobrado vs tarifario', pot.rate, 'Lo cobrado por las noches vendidas comparado con su precio de tarifario. Menos de 100%: descuentos o promos a mano. Más de 100%: personas extra o late check-out.')}
+                      {chip('Lun–Mié', pot.entre, '% del potencial de las noches de lunes a miércoles')}
+                      {chip('Jue–Dom', pot.finde, '% del potencial de las noches de jueves a domingo')}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* DESGLOSE DE INVENTARIO */}
               <div style={{ background: '#F8FAFC', borderRadius: 10, padding: '10px 12px', border: '1px solid #E5E7EB', marginBottom: 14 }}>
                 <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: 8 }}>Segmentación Física</div>
@@ -651,7 +760,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                   </div>
                   {!aiInsights[m.key] ? (
                     <button
-                      onClick={() => analizarRevenue(m, { trueRevenue: Math.round(m.trueRevenue), bookedRevenue: Math.round(m.bookedRevenue), bookedPct, projectedPct, projectedRevenue, gastos: m.gastos, occPct, adr, revpar, goppar, revparEntre, revparFinde, oMat, oKing, oComp, prevCmp: showCmp ? { label: cmpLabel, revpar: prev.revpar, entre: prev.entre, finde: prev.finde } : null })}
+                      onClick={() => analizarRevenue(m, { pot: pot && pot.pct !== null ? pot : null, trueRevenue: Math.round(m.trueRevenue), bookedRevenue: Math.round(m.bookedRevenue), bookedPct, projectedPct, projectedRevenue, gastos: m.gastos, occPct, adr, revpar, goppar, revparEntre, revparFinde, oMat, oKing, oComp, prevCmp: showCmp ? { label: cmpLabel, revpar: prev.revpar, entre: prev.entre, finde: prev.finde } : null })}
                       disabled={analyzingMonth === m.key}
                       style={{
                         background: '#EEF2FF', border: '1px solid #C7D2FE', color: '#4F46E5', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: analyzingMonth === m.key ? 'wait' : 'pointer', opacity: analyzingMonth === m.key ? 0.7 : 1
