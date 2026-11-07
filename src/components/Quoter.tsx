@@ -523,7 +523,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {isOpen ? 'Cerrar ▲' : 'Elegir ▾'}
+                        {isOpen ? 'Cerrar ▲' : '+ Ubicar personas'}
                       </button>
                     )}
                   </div>
