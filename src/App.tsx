@@ -271,6 +271,8 @@ export default function AppMejorada() {
   );
 
   // 1. Verificación de Login
+  // Cotizar (antes del "if (!user)": los useState no pueden ir después de un return)
+  const [quoterOpen, setQuoterOpen] = useState(false);
   if (!user) return <Login onLogin={setUser} />;
 
   const isAdmin = user.role === 'admin';
@@ -354,7 +356,6 @@ export default function AppMejorada() {
     setModal('new');
   };
   // Cotizar: ventana sin crear reserva; "Reservar" abre el formulario ya cargado
-  const [quoterOpen, setQuoterOpen] = useState(false);
   const openQuote = () => setQuoterOpen(true);
   const goTo = (newTab, data) => {
     if (newTab === 'abrir_reserva') {
