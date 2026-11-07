@@ -377,56 +377,114 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
                     overflow: 'hidden',
                   }}
                 >
-                  <button
-                    type="button"
-                    disabled={!canAdd}
-                    onClick={() => setOpenRoom(isOpen ? '' : r.id)}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 8,
-                      padding: '10px 12px',
-                      background: 'none',
-                      border: 'none',
-                      cursor: canAdd ? 'pointer' : 'default',
-                      fontFamily: 'inherit',
-                      textAlign: 'left',
-                      opacity: canAdd ? 1 : 0.5,
-                    }}
-                  >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '10px 12px' }}>
+                    {/* Datos de la habitación (sin personas: tocar abre el selector) */}
+                    <div
+                      onClick={() => !g && canAdd && setOpenRoom(isOpen ? '' : r.id)}
+                      style={{ flex: 1, minWidth: 0, cursor: !g && canAdd ? 'pointer' : 'default', opacity: canAdd ? 1 : 0.5 }}
+                    >
                     <span>
-                      <span style={{ fontWeight: 800, fontSize: 14, color: '#111' }}>{r.id}</span>
-                      <span style={{ fontSize: 12, color: '#6B7280' }}> · {r.desc} · hasta {r.maxGuests}</span>
-                      {(() => {
-                        const k = g || Math.min(Math.max(left, 1), r.maxGuests);
-                        const pr = priceFor(r.id, k);
-                        const late = lateOutOn(allRes, r.id, checkIn);
-                        return (
-                          <span style={{ display: 'block', fontSize: 11.5, marginTop: 2 }}>
-                            {pr !== null && (
-                              <span style={{ color: '#374151', fontWeight: 600 }}>
-                                {g ? currency(pr) : `${personas(k)}: ${currency(pr)}`}
-                              </span>
-                            )}
-                            {rec && rec.id === r.id && (
-                              <span style={{ marginLeft: 6, color: '#B45309', fontWeight: 800 }}>⭐ Recomendada</span>
-                            )}
-                            {late && (
-                              <span style={{ display: 'block', color: '#4F46E5', fontWeight: 700 }}>
-                                🕐 Libre desde las {late}: ese día sale alguien con late check-out
-                              </span>
-                            )}
-                          </span>
-                        );
-                      })()}
-                    </span>
-                    <span style={{ fontSize: 12.5, fontWeight: 800, color: g ? '#1D4ED8' : '#9CA3AF', whiteSpace: 'nowrap' }}>
-                      {g ? `${personas(g)} ✏️` : isOpen ? '▲' : '▼'}
-                    </span>
-                  </button>
-                  {isOpen && (
+                        <span style={{ fontWeight: 800, fontSize: 14, color: '#111' }}>{r.id}</span>
+                        <span style={{ fontSize: 12, color: '#6B7280' }}> · {r.desc} · hasta {r.maxGuests}</span>
+                        {(() => {
+                          const k = g || Math.min(Math.max(left, 1), r.maxGuests);
+                          const pr = priceFor(r.id, k);
+                          const late = lateOutOn(allRes, r.id, checkIn);
+                          return (
+                            <span style={{ display: 'block', fontSize: 11.5, marginTop: 2 }}>
+                              {pr !== null && (
+                                <span style={{ color: '#374151', fontWeight: 600 }}>
+                                  {g ? currency(pr) : `${personas(k)}: ${currency(pr)}`}
+                                </span>
+                              )}
+                              {rec && rec.id === r.id && (
+                                <span style={{ marginLeft: 6, color: '#B45309', fontWeight: 800 }}>⭐ Recomendada</span>
+                              )}
+                              {late && (
+                                <span style={{ display: 'block', color: '#4F46E5', fontWeight: 700 }}>
+                                  🕐 Libre desde las {late}: ese día sale alguien con late check-out
+                                </span>
+                              )}
+                            </span>
+                          );
+                        })()}
+                      </span>
+                    </div>
+                    {g ? (
+                      // Con personas: contador − N + (con 1, el − la quita)
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          title={g === 1 ? `Quitar ${r.id}` : 'Una persona menos'}
+                          onClick={() => setRoomGuests(r.id, g - 1)}
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 9,
+                            fontFamily: 'inherit',
+                            fontWeight: 800,
+                            fontSize: g === 1 ? 15 : 20,
+                            lineHeight: 1,
+                            cursor: 'pointer',
+                            background: '#fff',
+                            color: g === 1 ? '#B91C1C' : '#1D4ED8',
+                            border: `1.5px solid ${g === 1 ? '#FCA5A5' : '#93C5FD'}`,
+                          }}
+                        >
+                          {g === 1 ? '✕' : '−'}
+                        </button>
+                        <div style={{ textAlign: 'center', minWidth: 58 }}>
+                          <div style={{ fontSize: 17, fontWeight: 900, color: '#1D4ED8', lineHeight: 1.1 }}>{g}</div>
+                          <div style={{ fontSize: 10.5, fontWeight: 700, color: '#1D4ED8' }}>{g === 1 ? 'persona' : 'personas'}</div>
+                        </div>
+                        <button
+                          type="button"
+                          title="Una persona más"
+                          disabled={g >= maxHere}
+                          onClick={() => setRoomGuests(r.id, g + 1)}
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 9,
+                            fontFamily: 'inherit',
+                            fontWeight: 800,
+                            fontSize: 20,
+                            lineHeight: 1,
+                            cursor: g >= maxHere ? 'default' : 'pointer',
+                            background: g >= maxHere ? '#F9FAFB' : '#2563EB',
+                            color: g >= maxHere ? '#D1D5DB' : '#fff',
+                            border: `1.5px solid ${g >= maxHere ? '#E5E7EB' : '#2563EB'}`,
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                    ) : (
+                      // Sin personas: botón con borde que invita a elegir
+                      <button
+                        type="button"
+                        disabled={!canAdd}
+                        onClick={() => setOpenRoom(isOpen ? '' : r.id)}
+                        style={{
+                          flexShrink: 0,
+                          minHeight: 36,
+                          padding: '0 12px',
+                          borderRadius: 9,
+                          fontFamily: 'inherit',
+                          fontWeight: 800,
+                          fontSize: 12.5,
+                          cursor: canAdd ? 'pointer' : 'default',
+                          background: isOpen ? '#2563EB' : '#fff',
+                          color: !canAdd ? '#D1D5DB' : isOpen ? '#fff' : '#2563EB',
+                          border: `1.5px solid ${!canAdd ? '#E5E7EB' : '#2563EB'}`,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {isOpen ? 'Cerrar ▲' : 'Elegir ▾'}
+                      </button>
+                    )}
+                  </div>
+                  {isOpen && !g && (
                     <div style={{ padding: '0 12px 12px' }}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 6 }}>
                         ¿Cuántas personas van en {r.id}?
