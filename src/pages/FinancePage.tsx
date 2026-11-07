@@ -157,7 +157,7 @@ DATOS DEL HOTEL (${m.label}). Ingresos, ocupación, ADR, RevPAR y GOPPAR conside
 - Ocupación Física: ${metrics.occPct}% | ADR: $${metrics.adr} | RevPAR Global: $${metrics.revpar} | GOPPAR: $${metrics.goppar}
 - RevPAR (Lun-Mié): $${metrics.revparEntre} vs RevPAR (Jue-Dom): $${metrics.revparFinde}${metrics.prevCmp ? `
 - Mes anterior (${metrics.prevCmp.label}): RevPAR Global $${metrics.prevCmp.revpar} | Lun-Mié $${metrics.prevCmp.entre} | Jue-Dom $${metrics.prevCmp.finde}` : ''}
-- Ocup. Matrimonial (P6): ${metrics.oMat}% | King (P4): ${metrics.oKing}% | Privadas (P1-P3, P5): ${metrics.oComp}%
+- Ocup. Habitaciones 1, 2, 3 y 5 (privadas): ${metrics.oComp}% | Habitación 4 (king): ${metrics.oKing}% | Habitación 6 (matrimonial): ${metrics.oMat}%
 ${rmBloque("- Distribución de estadía", rmExtra.distribucionEstadia)}
 ${rmBloque("- Ocupación por día de la semana", rmExtra.ocupacionPorDiaSemana)}
 ${rmBloque("- ADR por día de la semana", rmExtra.adrPorDiaSemana)}
@@ -612,16 +612,16 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
               <div style={{ background: '#F8FAFC', borderRadius: 10, padding: '10px 12px', border: '1px solid #E5E7EB', marginBottom: 14 }}>
                 <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: 8 }}>Segmentación Física</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4, alignItems: 'center' }}>
-                  <span style={{ color: '#4B5563', fontWeight: 600 }}>Matrimonial <span style={{ opacity: 0.6 }}>(P6)</span></span>
-                  <div style={{ textAlign: 'right' }}><span style={{ color: oMat > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oMat}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rMat)}</span>{showCmp && <Delta cur={rMat} prev={prev.mat} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
+                  <span style={{ color: '#4B5563', fontWeight: 600 }}>Habitaciones 1, 2, 3 y 5</span>
+                  <div style={{ textAlign: 'right' }}><span style={{ color: oComp > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oComp}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rComp)}</span>{showCmp && <Delta cur={rComp} prev={prev.comp} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4, alignItems: 'center' }}>
-                  <span style={{ color: '#4B5563', fontWeight: 600 }}>King <span style={{ opacity: 0.6 }}>(P4)</span></span>
+                  <span style={{ color: '#4B5563', fontWeight: 600 }}>Habitación 4</span>
                   <div style={{ textAlign: 'right' }}><span style={{ color: oKing > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oKing}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rKing)}</span>{showCmp && <Delta cur={rKing} prev={prev.king} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, alignItems: 'center' }}>
-                  <span style={{ color: '#4B5563', fontWeight: 600 }}>Privadas <span style={{ opacity: 0.6 }}>(P1, P2, P3, P5)</span></span>
-                  <div style={{ textAlign: 'right' }}><span style={{ color: oComp > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oComp}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rComp)}</span>{showCmp && <Delta cur={rComp} prev={prev.comp} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
+                  <span style={{ color: '#4B5563', fontWeight: 600 }}>Habitación 6</span>
+                  <div style={{ textAlign: 'right' }}><span style={{ color: oMat > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}>{oMat}%</span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rMat)}</span>{showCmp && <Delta cur={rMat} prev={prev.mat} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
                 </div>
                 {showCmp && <CmpTitle label={cmpLabel} />}
               </div>
