@@ -52,6 +52,44 @@ export function quoteMessage({ checkIn, checkOut, guests, items, total }) {
   return lines.join('\n');
 }
 
+// Tarjeta de cada paso: número en un círculo (✓ verde cuando el paso está resuelto) y título
+function Step({ num, title, done = false, children }) {
+  return (
+    <section
+      style={{
+        background: '#fff',
+        border: '1px solid #E5E7EB',
+        borderRadius: 14,
+        padding: '14px 14px 16px',
+        marginBottom: 12,
+        boxShadow: '0 1px 3px rgba(0,0,0,.04)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
+        <span
+          style={{
+            width: 26,
+            height: 26,
+            borderRadius: '50%',
+            flexShrink: 0,
+            background: done ? '#16A34A' : '#2563EB',
+            color: '#fff',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 13,
+            fontWeight: 800,
+          }}
+        >
+          {done ? '✓' : num}
+        </span>
+        <span style={{ fontSize: 15, fontWeight: 800, color: '#111' }}>{title}</span>
+      </div>
+      {children}
+    </section>
+  );
+}
+
 export function Quoter({ allRes = [], tarifas = [], onReserve }) {
   const [checkIn, setCheckIn] = useState(fmt(TODAY));
   const [checkOut, setCheckOut] = useState(fmt(addDays(TODAY, 1)));
@@ -224,7 +262,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
   return (
     <div>
       {/* 1 · Fechas */}
-      <div style={lbl}>1 · Fechas</div>
+      <Step num={1} title="Fechas" done={n > 0}>
       <RangeCalendar
         key={calKey}
         checkIn={checkIn}
@@ -234,14 +272,15 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
           setCheckOut(co);
         }}
       />
-      <div style={{ fontSize: 13, fontWeight: 700, color: '#1E40AF', margin: '8px 0 16px' }}>
+      <div style={{ fontSize: 13.5, fontWeight: 700, color: '#1E40AF', marginTop: 10 }}>
         {n > 0 ? `${cap1(entradaSalida(checkIn, checkOut))} · ${noches(n)}` : 'Elegí la fecha de salida'}
       </div>
+      </Step>
 
       {n > 0 && (
         <>
           {/* 2 · Personas */}
-          <div style={lbl}>2 · Personas</div>
+          <Step num={2} title="Personas" done={!short || planActive}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button type="button" disabled={guests <= 1} onClick={() => setGuests((g) => Math.max(1, g - 1))} style={stepBtn(guests <= 1)}>
               −
@@ -332,16 +371,20 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
             </div>
           )}
 
+          </Step>
+
           {planActive && (
-            <div style={{ marginTop: 14, fontSize: 12.5, color: '#5B21B6', background: '#F5F3FF', border: '1px solid #DDD6FE', borderRadius: 8, padding: '8px 10px' }}>
+            <Step num={3} title="Con cambio de habitación" done>
+            <div style={{ fontSize: 12.5, color: '#5B21B6', background: '#F5F3FF', border: '1px solid #DDD6FE', borderRadius: 8, padding: '8px 10px' }}>
               🔀 Cotizando con cambio de habitación. Al reservar se cargan una tras otra, con los mismos datos del huésped.
             </div>
+            </Step>
           )}
 
           {!full && !planActive && (
           <>
           {/* 3 · Distribución */}
-          <div style={{ ...lbl, marginTop: 18 }}>3 · ¿En qué habitación van?</div>
+          <Step num={3} title="¿En qué habitación van?" done={left === 0}>
           <div
             style={{
               fontSize: 13,
@@ -564,13 +607,13 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
             </div>
           )}
 
+          </Step>
           </>
           )}
 
           {/* 4 · Cotización */}
           {items.length > 0 && (
-            <div style={{ marginTop: 18 }}>
-              <div style={lbl}>4 · Cotización</div>
+            <Step num={4} title="Cotización" done={done}>
               <div style={{ border: '1px solid #E5E7EB', borderRadius: 10, overflow: 'hidden' }}>
                 {items.map((it) => (
                   <div key={it.key} style={{ padding: '10px 12px', borderBottom: '1px solid #F3F4F6' }}>
@@ -617,12 +660,11 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
                   </div>
                 )}
               </div>
-            </div>
+            </Step>
           )}
 
           {done && (
-            <div style={{ marginTop: 14 }}>
-              <div style={lbl}>Mensaje para WhatsApp</div>
+            <Step num={5} title="Mensaje para WhatsApp" done={copied}>
               <div
                 style={{
                   whiteSpace: 'pre-wrap',
@@ -680,7 +722,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
               <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>
                 Ojo: si entró una reserva de Booking que todavía no aparece en el calendario, esa habitación puede figurar libre.
               </div>
-            </div>
+            </Step>
           )}
         </>
       )}
