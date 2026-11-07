@@ -523,15 +523,12 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {isOpen ? 'Cerrar ▲' : '+ Ubicar personas'}
+                        {isOpen ? 'Cerrar ▲' : '¿Cuántas van aquí?'}
                       </button>
                     )}
                   </div>
                   {isOpen && !g && (
                     <div style={{ padding: '0 12px 12px' }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 6 }}>
-                        ¿Cuántas personas van en {r.id}?
-                      </div>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {Array.from({ length: r.maxGuests }, (_, i) => i + 1).map((k) => {
                           const dis = k > maxHere;
