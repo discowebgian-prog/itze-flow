@@ -8,6 +8,8 @@ import { groupOf } from '../lib/groups';
 import { TimelineMobile } from './TimelineMobile';
 import timelineCss from '../styles/timeline.css?raw';
 import { QuoteButton } from '../components/Quoter';
+import { AnimatePresence } from 'motion/react';
+import { Backdrop, PopCard } from '../components/ui/Motion';
 
 // ── TIMELINE DESKTOP ──────────────────────────────────────────────────────────
 export function Timeline({
@@ -1092,8 +1094,8 @@ export function Timeline({
           ))}
         </div>
       )}
-      {dConf && (
-        <div
+      <AnimatePresence>{dConf && (
+        <Backdrop key="dConf"
           style={{
             position: 'fixed',
             inset: 0,
@@ -1105,7 +1107,7 @@ export function Timeline({
             padding: 16,
           }}
         >
-          <div
+          <PopCard
             style={{
               background: '#fff',
               borderRadius: 16,
@@ -1255,9 +1257,9 @@ export function Timeline({
                 )}
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </PopCard>
+        </Backdrop>
+      )}</AnimatePresence>
     </div>
   );
 }

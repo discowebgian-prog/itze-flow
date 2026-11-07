@@ -6,6 +6,11 @@
         ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
         input[type=date]::-webkit-calendar-picker-indicator { opacity: .4; }
         button, input, select, textarea { font-family: inherit; }
+
+        /* Toque tipo iOS: el botón (o una tarjeta con .tap) se achica apenas al apretarlo y vuelve con suavidad */
+        button, .tap { -webkit-tap-highlight-color: transparent; transition: transform .18s cubic-bezier(.32,.72,0,1), filter .18s ease, background-color .2s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease, opacity .2s ease; }
+        button:not(:disabled):active, .tap:active { transform: scale(.96); filter: brightness(.95); transition-duration: .06s; }
+        @media (prefers-reduced-motion: reduce) { button:not(:disabled):active, .tap:active { transform: none; } }
         
         /* Sistema de Layout Responsivo (CSS Puro) */
         .app-layout { display: flex; width: 100%; height: calc(100vh - 54px); }

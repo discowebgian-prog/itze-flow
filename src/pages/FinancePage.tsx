@@ -6,6 +6,8 @@ import { askClaude } from '../lib/claude';
 import { exportToExcel } from '../lib/excel';
 import { supabase } from '../lib/supabase';
 import { isFindeDow } from '../lib/rates';
+import { AnimatePresence } from 'motion/react';
+import { Backdrop, PopCard } from '../components/ui/Motion';
 
 const PROJECTION_START_DAY = 8; // Antes hay muy pocos días para estimar
 
@@ -722,9 +724,9 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
       </div>
 
       {/* ── POP-UP DEL DIAGNÓSTICO IA ── */}
-      {insightModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 500, display: 'flex', flexDirection: 'column', maxHeight: '85vh', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.3)' }}>
+      <AnimatePresence>{insightModal && (
+        <Backdrop key="insight" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <PopCard style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 500, display: 'flex', flexDirection: 'column', maxHeight: '85vh', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.3)' }}>
             
             {/* ENCABEZADO FIJO */}
             <div style={{ background: '#EEF2FF', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #C7D2FE', flexShrink: 0 }}>
@@ -780,9 +782,9 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
               </div>
             </div>
 
-          </div>
-        </div>
-      )}
+          </PopCard>
+        </Backdrop>
+      )}</AnimatePresence>
     </div>
   );
 }

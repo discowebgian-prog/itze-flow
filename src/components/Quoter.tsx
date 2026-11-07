@@ -655,6 +655,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                   }}
                 >
                   <div
+                    className={!g && canAdd ? "tap" : undefined}
                     onClick={() => !g && canAdd && setOpenRoom(isOpen ? '' : r.id)}
                     style={{
                       display: 'flex',

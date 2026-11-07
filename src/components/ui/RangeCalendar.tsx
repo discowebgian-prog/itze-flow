@@ -170,6 +170,7 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows 
           return (
             <div
               key={i}
+              className="tap"
               onClick={() => clickD(d)}
               onMouseEnter={() => step === 1 && setHover(s)}
               style={{
