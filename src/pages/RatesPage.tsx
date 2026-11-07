@@ -378,7 +378,7 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
             <button
               onClick={() => setCalOpen((v) => !v)}
-              style={{ ...smallBtn, minHeight: 36, background: calOpen ? '#EFF6FF' : '#fff', borderColor: calOpen ? '#93C5FD' : '#E5E7EB', color: calOpen ? '#1D4ED8' : '#374151' }}
+              style={{ ...smallBtn, minHeight: 36, border: '1.5px solid #2563EB', background: calOpen ? '#EFF6FF' : '#fff', color: calOpen ? '#1D4ED8' : '#374151' }}
             >
               {calOpen ? '✕ Cerrar' : '📅 Otro día'}
             </button>
