@@ -9,6 +9,7 @@ import { isFindeDow, roomTypeOf, nightPrice } from '../lib/rates';
 import { ROOMS } from '../lib/constants';
 import { AnimatePresence } from 'motion/react';
 import { Backdrop, PopCard, CountUp, Collapse } from '../components/ui/Motion';
+import { InfoTip } from '../components/ui/InfoTip';
 
 const PROJECTION_START_DAY = 8; // Antes hay muy pocos días para estimar
 
@@ -593,12 +594,12 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
               {/* ── KPI HOTELEROS: OCUPACIÓN Y ADR ── */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
                 <div style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '10px 6px', borderRadius: 8 }}>
-                  <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#64748B', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>{isCurrent ? 'Ocupación a hoy' : 'Ocupación'}</div>
+                  <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#64748B', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{isCurrent ? 'Ocupación a hoy' : 'Ocupación'}<InfoTip k="ocupacion" /></div>
                   <div style={{ fontWeight: 800, fontSize: 14, color: isFuture ? '#9CA3AF' : occPct >= 70 ? '#10B981' : occPct >= 40 ? '#F59E0B' : '#EF4444' }}>{isFuture ? '—' : `${occPct}%`}</div>
                   <div style={{ fontSize: 9, color: '#9CA3AF', marginTop: 2, fontWeight: 600 }}>Física</div>
                 </div>
                 <div title="Tarifa Promedio Diaria" style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '10px 6px', borderRadius: 8, cursor: 'help' }}>
-                  <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#64748B', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>ADR</div>
+                  <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#64748B', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>ADR<InfoTip k="adr" /></div>
                   <div style={{ fontWeight: 800, fontSize: 14, color: '#374151' }}><CountUp value={currency(adr)} /></div>
                   <div style={{ fontSize: 9, color: '#9CA3AF', marginTop: 2, fontWeight: 600 }}>Tarifa Promedio</div>
                 </div>
@@ -607,7 +608,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
               {(isCurrent || isFuture) && (
                 <div style={{ fontSize: 12, background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 12px', borderRadius: 8, marginBottom: 14 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: isCurrent ? '#1E40AF' : '#4B5563', fontWeight: 700 }}>Reservado del mes:</span>
+                    <span style={{ color: isCurrent ? '#1E40AF' : '#4B5563', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>Reservado del mes<InfoTip k="proyectado" />:</span>
                     <span style={{ fontWeight: 800, color: '#111' }}>{bookedPct}% · {currency(m.bookedRevenue)}</span>
                   </div>
                   {isCurrent && (
@@ -636,7 +637,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                   <span style={{ fontWeight: 900, fontSize: 15, color: '#065F46' }}><CountUp value={currency(netProfit)} /></span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Ind. GOPPAR</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center' }}>Ind. GOPPAR<InfoTip k="goppar" /></span>
                   <span style={{ fontWeight: 800, fontSize: 12, color: '#3B82F6' }}><CountUp value={currency(goppar)} /></span>
                 </div>
               </div>
@@ -644,7 +645,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
               {/* ── RENDIMIENTO: REVPAR SEGMENTADO Y GLOBAL ── */}
               <div style={{ background: '#F8FAFC', borderRadius: 10, padding: '10px 12px', border: '1px solid #E5E7EB', marginBottom: 14 }}>
                 <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
-                  <span>RevPAR Segmentado</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center' }}>RevPAR Segmentado<InfoTip k="revpar" /></span>
                   <span style={{ fontSize: 9, color: '#9CA3AF' }}>Ingreso x Hab.</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
@@ -685,7 +686,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                 return (
                   <div style={{ background: '#F8FAFC', borderRadius: 10, padding: '10px 12px', border: '1px solid #E5E7EB', marginBottom: 14 }}>
                     <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: 8, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                      <span>🎯 % del potencial</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center' }}>🎯 % del potencial<InfoTip k="potencial" /></span>
                       <span style={{ fontSize: 9, color: '#9CA3AF' }}>{isCurrent ? `del 1 al ${passedDays}` : 'mes completo'}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -721,7 +722,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
 
               {/* DESGLOSE DE INVENTARIO */}
               <div style={{ background: '#F8FAFC', borderRadius: 10, padding: '10px 12px', border: '1px solid #E5E7EB', marginBottom: 14 }}>
-                <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: 8 }}>Segmentación Física</div>
+                <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center' }}>Segmentación Física<InfoTip k="segmentacion" /></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4, alignItems: 'center' }}>
                   <span style={{ color: '#4B5563', fontWeight: 600 }}>Habitaciones 1, 2, 3 y 5</span>
                   <div style={{ textAlign: 'right' }}><span style={{ color: oComp > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}><CountUp value={oComp + '%'} /></span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rComp)}</span>{showCmp && <Delta cur={rComp} prev={prev.comp} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
