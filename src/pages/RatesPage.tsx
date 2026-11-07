@@ -15,7 +15,8 @@ import {
 } from '../lib/rates';
 
 const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-const DIA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const MES_LARGO = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const DIA_LARGO = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 // "1 nov 2026"
 const fmtDay = (s) => {
@@ -65,6 +66,8 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
   const [err, setErr] = useState('');
   const [confirmDelId, setConfirmDelId] = useState(null);
   const [showPast, setShowPast] = useState(false);
+  const [calBase, setCalBase] = useState(new Date(TODAY.getFullYear(), TODAY.getMonth(), 1));
+  const [selDay, setSelDay] = useState(fmt(TODAY));
 
   const normal = periods.find(isNormal);
   const dated = periods.filter((p) => !isNormal(p)).sort((a, b) => a.desde.localeCompare(b.desde));
@@ -137,6 +140,7 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
     onReload && onReload();
   };
 
+  const sectionTitle = { fontSize: 12, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', margin: '18px 0 8px' };
   const card = { background: '#fff', borderRadius: 12, border: '1px solid #F0F0F0', padding: 16, marginBottom: 14 };
   const smallBtn = {
     padding: '6px 12px', borderRadius: 8, border: '1.5px solid #E5E7EB', background: '#fff',
@@ -323,58 +327,115 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
     );
   };
 
-  // ── Cómo queda: próximos 14 días ──
-  const days = Array.from({ length: 14 }, (_, i) => fmt(addDays(parseD(t), i)));
-  const preview = () => (
-    <div style={{ ...card, padding: '14px 12px' }}>
-      <div style={{ fontSize: 12, fontWeight: 800, color: '#374151', marginBottom: 2 }}>Cómo queda: próximos 14 días</div>
-      <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 10 }}>Precio por noche para {BASE_GUESTS} personas, según el día de entrada.</div>
-      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        <table style={{ borderCollapse: 'separate', borderSpacing: 3, fontSize: 11, minWidth: 14 * 58 + 90 }}>
-          <thead>
-            <tr>
-              <th style={{ position: 'sticky', left: 0, background: '#fff', zIndex: 1 }} />
-              {days.map((d) => {
-                const dd = parseD(d);
-                const finde = isFindeDow(dd.getDay());
+  // ── Calendario de tarifas: tocar un día muestra sus precios ──
+  const calY = calBase.getFullYear(), calM = calBase.getMonth();
+  const daysInMo = new Date(calY, calM + 1, 0).getDate();
+  const firstDow = new Date(calY, calM, 1).getDay();
+  const cells = Array(firstDow).fill(null).concat(Array.from({ length: daysInMo }, (_, i) => fmt(new Date(calY, calM, i + 1))));
+  const monthPeriods = dated.filter((p) => cells.some((d) => d && periodFor(d, periods)?.id === p.id));
+  const moveMonth = (n) => setCalBase(new Date(calY, calM + n, 1));
+
+  const calendar = () => {
+    const sel = selDay ? parseD(selDay) : null;
+    const selPeriod = selDay ? periodFor(selDay, periods) : null;
+    const selFinde = sel ? isFindeDow(sel.getDay()) : false;
+    const navBtn = { width: 36, height: 36, borderRadius: 8, border: '1.5px solid #E5E7EB', background: '#fff', fontSize: 16, fontWeight: 700, color: '#374151', cursor: 'pointer', fontFamily: 'inherit' };
+    return (
+      <div style={{ ...card, padding: '14px 14px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <button onClick={() => moveMonth(-1)} style={navBtn} aria-label="Mes anterior">‹</button>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontWeight: 800, fontSize: 14, color: '#111', textTransform: 'capitalize' }}>{MES_LARGO[calM]} {calY}</div>
+            <div style={{ fontSize: 11, color: '#9CA3AF' }}>Tocá un día para ver sus tarifas</div>
+          </div>
+          <button onClick={() => moveMonth(1)} style={navBtn} aria-label="Mes siguiente">›</button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, textAlign: 'center' }}>
+          {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((d, i) => (
+            <div key={i} style={{ fontSize: 10, fontWeight: 800, color: '#9CA3AF', padding: '2px 0' }}>{d}</div>
+          ))}
+          {cells.map((d, i) => {
+            if (!d) return <div key={'e' + i} />;
+            const pr = periodFor(d, periods);
+            const special = pr && !isNormal(pr);
+            const c = colorOf(pr);
+            const isSel = d === selDay;
+            const isToday = d === t;
+            return (
+              <button
+                key={d}
+                onClick={() => setSelDay(d)}
+                style={{
+                  height: 38,
+                  borderRadius: 8,
+                  border: isSel ? '2px solid #2563EB' : isToday ? '1.5px solid #94A3B8' : '1.5px solid transparent',
+                  background: isSel ? '#2563EB' : special ? c.bg : 'transparent',
+                  color: isSel ? '#fff' : special ? c.txt : '#374151',
+                  fontFamily: 'inherit',
+                  fontSize: 13,
+                  fontWeight: isToday || isSel ? 800 : 600,
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+              >
+                {parseD(d).getDate()}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10, alignItems: 'center' }}>
+          {monthPeriods.map((p) => {
+            const c = colorOf(p);
+            return (
+              <span key={p.id} style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: c.bg, color: c.txt }}>
+                {p.nombre}
+              </span>
+            );
+          })}
+          <span style={{ fontSize: 10, color: '#9CA3AF' }}>{monthPeriods.length ? 'Sin color: Normal' : 'Todo el mes rige la Normal'}</span>
+        </div>
+
+        {selDay && (
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #F1F5F9' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+              <span style={{ fontWeight: 800, fontSize: 14, color: '#111' }}>
+                {DIA_LARGO[sel.getDay()]} {sel.getDate()} de {MES_LARGO[sel.getMonth()]}
+              </span>
+              <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10, background: selFinde ? '#F5F3FF' : '#FFFBEB', color: selFinde ? '#7C3AED' : '#D97706' }}>
+                {selFinde ? 'Jue–Dom' : 'Lun–Mié'}
+              </span>
+              {selPeriod && (
+                <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10, background: colorOf(selPeriod).bg, color: colorOf(selPeriod).txt }}>
+                  {selPeriod.nombre}
+                </span>
+              )}
+            </div>
+            {selPeriod ? (
+              ROOM_TYPES.map((ty) => {
+                const n = nightPrice(selDay, ty.id, periods);
                 return (
-                  <th key={d} style={{ fontWeight: 800, color: finde ? '#7C3AED' : '#D97706', padding: '2px 4px', whiteSpace: 'nowrap', fontSize: 10 }}>
-                    {DIA[dd.getDay()]} {dd.getDate()}
-                  </th>
+                  <div key={ty.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '6px 0', borderBottom: '1px dashed #F1F5F9', fontSize: 13 }}>
+                    <span style={{ fontWeight: 700, color: '#111' }}>
+                      {ty.label} <span style={{ fontWeight: 500, color: '#9CA3AF', fontSize: 11 }}>{ty.rooms.join(', ')}</span>
+                    </span>
+                    <span style={{ textAlign: 'right' }}>
+                      <b style={{ fontSize: 15, color: '#111' }}>{n.price ? currency(n.price) : '—'}</b>
+                      {ty.extra && n.extra > 0 && <span style={{ fontSize: 11, color: '#6B7280' }}> · +{currency(n.extra)} por persona</span>}
+                    </span>
+                  </div>
                 );
-              })}
-            </tr>
-          </thead>
-          <tbody>
-            {ROOM_TYPES.map((ty) => (
-              <tr key={ty.id}>
-                <td style={{ position: 'sticky', left: 0, background: '#fff', zIndex: 1, fontWeight: 700, color: '#111', paddingRight: 6, whiteSpace: 'nowrap' }}>{ty.label}</td>
-                {days.map((d) => {
-                  const n = nightPrice(d, ty.id, periods);
-                  const c = colorOf(n.period);
-                  return (
-                    <td key={d} title={n.period ? n.period.nombre : 'Sin tarifa'} style={{ background: c.bg, color: c.txt, borderRadius: 6, padding: '6px 4px', textAlign: 'center', fontWeight: 800, whiteSpace: 'nowrap', minWidth: 52 }}>
-                      {n.price ? `$${n.price.toLocaleString('es-MX')}` : '—'}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+              })
+            ) : (
+              <div style={{ fontSize: 12, color: '#9CA3AF' }}>Sin tarifa cargada para este día.</div>
+            )}
+            <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>Precio por noche para {BASE_GUESTS} personas.</div>
+          </div>
+        )}
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-        {[normal, ...current].filter(Boolean).filter((p) => days.some((d) => periodFor(d, periods)?.id === p.id)).map((p) => {
-          const c = colorOf(p);
-          return (
-            <span key={p.id} style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: c.bg, color: c.txt, border: `1px solid ${c.border}` }}>
-              {p.nombre}
-            </span>
-          );
-        })}
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', paddingBottom: 40 }}>
@@ -402,23 +463,25 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
         </div>
       )}
 
-      {preview()}
-
-      {normal && renderPeriod(normal)}
-
       {current.length > 0 && (
-        <div style={{ fontSize: 12, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', margin: '18px 0 8px' }}>Promos y fechas especiales</div>
+        <div style={sectionTitle}>Promos y fechas especiales</div>
       )}
       {current.map((p) => renderPeriod(p))}
 
+      {normal && current.length > 0 && <div style={sectionTitle}>Tarifa normal</div>}
+      {normal && renderPeriod(normal)}
+
       {past.length > 0 && (
-        <div style={{ marginTop: 10 }}>
+        <div style={{ marginTop: 4, marginBottom: 6 }}>
           <button onClick={() => setShowPast((v) => !v)} style={{ ...smallBtn, border: 'none', background: 'transparent', color: '#6B7280', padding: '6px 0' }}>
             {showPast ? '▾' : '▸'} Terminados ({past.length})
           </button>
           {showPast && past.map((p) => renderPeriod(p))}
         </div>
       )}
+
+      <div style={sectionTitle}>Calendario de tarifas</div>
+      {calendar()}
 
       <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 16, lineHeight: 1.5 }}>
         Si dos períodos se pisan, en esos días manda el más corto (una fecha especial le gana a una promo, y una promo a la Normal).
