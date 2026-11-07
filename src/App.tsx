@@ -1377,6 +1377,7 @@ const toggleBlacklist = async (id, currentStatus) => {
           <Quoter
             allRes={res}
             tarifas={tarifas}
+            onClose={() => setQuoterOpen(false)}
             onReserve={({ queue }) => {
               setQuoterOpen(false);
               const [first, ...rest] = queue;

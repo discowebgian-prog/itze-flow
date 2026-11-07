@@ -80,8 +80,8 @@ function Step({ num, title, done = false, children }) {
         background: '#fff',
         border: '1px solid #E5E7EB',
         borderRadius: 14,
-        padding: '14px 14px 16px',
-        marginBottom: 12,
+        padding: '14px 14px 15px',
+        marginBottom: 8,
         boxShadow: '0 1px 3px rgba(0,0,0,.04)',
       }}
     >
@@ -110,7 +110,7 @@ function Step({ num, title, done = false, children }) {
   );
 }
 
-export function Quoter({ allRes = [], tarifas = [], onReserve }) {
+export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
   const [checkIn, setCheckIn] = useState(fmt(TODAY));
   const [checkOut, setCheckOut] = useState(fmt(addDays(TODAY, 1)));
   const [guests, setGuests] = useState(0); // 0 = todavía no eligieron (las habitaciones aparecen al elegir)
@@ -907,11 +907,12 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
                   ? `Abre el formulario como reserva de grupo, con las ${items.length} habitaciones, sus personas y tarifas cargadas.`
                   : 'Abre el formulario con fechas, habitación, personas y tarifa cargadas.'}
               </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
               <button
                 type="button"
                 onClick={() => onReserve({ queue: reserveQueue() })}
                 style={{
-                  width: '100%',
+                  flex: 2,
                   minHeight: 46,
                   borderRadius: 10,
                   fontFamily: 'inherit',
@@ -926,6 +927,28 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
               >
                 + Reservar
               </button>
+              {onClose && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  style={{
+                    flex: 1,
+                    minHeight: 46,
+                    borderRadius: 10,
+                    fontFamily: 'inherit',
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    background: '#fff',
+                    color: '#4B5563',
+                    border: '1.5px solid #D1D5DB',
+                    lineHeight: 1.2,
+                  }}
+                >
+                  Cerrar sin reservar
+                </button>
+              )}
+              </div>
             </Step>
           )}
         </>
