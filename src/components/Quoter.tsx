@@ -224,10 +224,10 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
     const t = setTimeout(() => scrollToStep(personasRef, 'nearest'), 380);
     return () => clearTimeout(t);
   }, [glowKey]);
-  // Al dejar de tocar + / −: el almanaque sube y quedan Personas arriba y las habitaciones a la vista
+  // Al dejar de tocar + / − (0,4 s): el almanaque sube y quedan Personas arriba y las habitaciones a la vista
   useEffect(() => {
     if (!guests) return;
-    const t = setTimeout(() => !allPlacedRef.current && scrollToStep(personasRef), 850);
+    const t = setTimeout(() => !allPlacedRef.current && scrollToStep(personasRef), 400);
     return () => clearTimeout(t);
   }, [guests]);
   // Todos ubicados: las habitaciones suben y queda a la vista la cotización
