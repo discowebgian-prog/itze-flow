@@ -19,6 +19,7 @@ import {
   lateOutOn,
   entradaSalida,
   roomNum,
+  oneDay,
 } from '../lib/availability';
 
 // ── COTIZAR (sin crear reserva) ───────────────────────────────────────────────
@@ -121,6 +122,9 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
   const [copied, setCopied] = useState(false);
   const [planOn, setPlanOn] = useState(false); // cotizar con cambio de habitación
   const [calKey, setCalKey] = useState(0); // para que el almanaque salte al mes de las fechas sugeridas
+  // Entrada tocada, esperando la salida: lo de abajo sigue con las fechas anteriores (atenuado) para que nada salte
+  const [draftIn, setDraftIn] = useState(null);
+  const picking = draftIn !== null;
   const n = checkIn && checkOut ? diffDays(checkIn, checkOut) : 0;
   useEffect(() => setPlanOn(false), [checkIn, checkOut, guests]);
 
@@ -147,6 +151,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
     [short, allRes, checkIn, n, guests]
   );
   const goDates = (ci) => {
+    setDraftIn(null);
     setCheckIn(ci);
     setCheckOut(fmt(addDays(parseD(ci), n)));
     setCalKey((k) => k + 1);
@@ -354,23 +359,35 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
     <div>
       <style>{QT_CSS}</style>
       {/* 1 · Fechas */}
-      <Step num={1} title="Fechas" done={n > 0}>
+      <Step num={1} title="Fechas" done={n > 0 && !picking}>
       <RangeCalendar
         key={calKey}
-        checkIn={checkIn}
-        checkOut={checkOut}
+        fixedRows
+        checkIn={picking ? draftIn : checkIn}
+        checkOut={picking ? '' : checkOut}
         onChange={(ci, co) => {
-          setCheckIn(ci);
-          setCheckOut(co);
+          if (co) {
+            setCheckIn(ci);
+            setCheckOut(co);
+            setDraftIn(null);
+          } else setDraftIn(ci);
         }}
       />
-      <div style={{ fontSize: 13.5, fontWeight: 700, color: '#1E40AF', marginTop: 10 }}>
-        {n > 0 ? `${cap1(entradaSalida(checkIn, checkOut))} · ${noches(n)}` : 'Elegí la fecha de salida'}
+      {/* Alto fijo de dos renglones: el texto cambia sin mover lo de abajo */}
+      <div style={{ fontSize: 13.5, fontWeight: 700, color: '#1E40AF', marginTop: 10, lineHeight: 1.35, minHeight: 37 }}>
+        {picking
+          ? `Entrada el ${oneDay(draftIn)}. Ahora tocá la fecha de salida.`
+          : n > 0
+          ? `${cap1(entradaSalida(checkIn, checkOut))} · ${noches(n)}`
+          : 'Elegí la fecha de salida'}
       </div>
       </Step>
 
       {n > 0 && (
-        <>
+        <div
+          aria-hidden={picking}
+          style={{ opacity: picking ? 0.4 : 1, pointerEvents: picking ? 'none' : 'auto', transition: 'opacity .2s' }}
+        >
           {/* 2 · Personas */}
           <Step num={2} title="Personas" done={guests > 0 && (!short || planActive)}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -951,7 +968,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
               </div>
             </Step>
           )}
-        </>
+        </div>
       )}
     </div>
   );
