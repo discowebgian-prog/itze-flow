@@ -34,9 +34,18 @@ export const ROOM_DESC = {
   P6: 'cama matrimonial',
 };
 
-// Camas por habitación = cuántos duermen sin compartir cama (el sofá cama cuenta como una).
-// Lo usa la sugerencia de Cotizar cuando "cada uno quiere su cama". P3 con 3 matrimoniales: sigue en 3.
-export const ROOM_BEDS = { P1: 3, P2: 3, P3: 3, P4: 2, P5: 3, P6: 1 };
+// Camas de cada habitación, para la sugerencia de Cotizar (¿comparten cama? ¿usan el sofá cama?):
+//   camas: camas de verdad, sin el sofá cama (cuántos duermen sin compartir)
+//   plazas: cuántos entran en esas camas compartiendo · sofa: sofá camas (1 persona cada uno)
+// plazas + sofa = capacidad (maxGuests). P3 con 3 matrimoniales: { camas: 3, plazas: 6, sofa: 0 }.
+export const ROOM_BEDS = {
+  P1: { camas: 2, plazas: 4, sofa: 1 },
+  P2: { camas: 2, plazas: 4, sofa: 1 },
+  P3: { camas: 3, plazas: 5, sofa: 0 },
+  P4: { camas: 1, plazas: 2, sofa: 1 },
+  P5: { camas: 2, plazas: 4, sofa: 1 },
+  P6: { camas: 1, plazas: 2, sofa: 0 },
+};
 
 export const SOURCES = [
   { value: 'Booking', label: 'Booking', short: 'Booking', color: '#003580' },
