@@ -13,7 +13,7 @@
         @media (prefers-reduced-motion: reduce) { button:not(:disabled):active, .tap:active { transform: none; } }
         
         /* Sistema de Layout Responsivo (CSS Puro) */
-        .app-layout { display: flex; width: 100%; height: calc(100vh - 54px); }
+        .app-layout { display: flex; width: 100%; height: calc(100vh - 54px); overflow-x: clip; }
         .sidebar { display: flex; flex-direction: column; flex-shrink: 0; background: #fff; border-right: 1px solid #F0F0F0; height: 100%; overflow-y: auto; transition: width 0.2s ease; }
         
         /* Contenido principal ocupando 100% con scroll independiente */

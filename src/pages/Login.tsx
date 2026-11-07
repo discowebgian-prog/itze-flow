@@ -1,7 +1,16 @@
 /* eslint-disable */
 // @ts-nocheck
 import { useState } from 'react';
+import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { supabase } from '../lib/supabase';
+import { SPRING_POP, SPRING_SHEET } from '../components/ui/Motion';
+
+// Entrada por partes: logo, título y tarjeta, uno detrás del otro
+const enter = (delay) => ({
+  initial: { opacity: 0, y: 18 },
+  animate: { opacity: 1, y: 0 },
+  transition: { ...SPRING_SHEET, delay },
+});
 
 // ── LOGIN ─────────────────────────────────────────────────────────────────────
 export function Login({ onLogin }) {
@@ -9,28 +18,40 @@ export function Login({ onLogin }) {
   const [pw, setPw] = useState('');
   const [err, setErr] = useState('');
   const [recoverySent, setRecoverySent] = useState(false);
+  const [busy, setBusy] = useState(false); // esperando la respuesta
+  const [ok, setOk] = useState(false); // ingresó: botón verde con ✓ antes de pasar a la app
+  const card = useAnimationControls();
+  // Sacudida tipo iPhone cuando algo está mal
+  const shake = () => card.start({ x: [0, -12, 11, -8, 7, -4, 3, 0], transition: { duration: 0.45 } });
 
   const go = async () => {
+    if (busy || ok) return;
     setErr(''); // Limpia errores previos
-    
+    setBusy(true);
+
     // Se conecta a la base de datos real de Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
       email: uid,
       password: pw,
     });
+    setBusy(false);
 
     if (error) {
       setErr('Usuario o contraseña incorrectos');
+      shake();
     } else if (data.user) {
       // Usa la primera parte del correo como nombre temporal
       const nombreUsuario = data.user.email.split('@')[0];
-      onLogin({ id: data.user.id, name: nombreUsuario, role: 'admin' });
+      setOk(true);
+      // Un instante para ver el ✓ y pasar a la app (que entra con un fundido)
+      setTimeout(() => onLogin({ id: data.user.id, name: nombreUsuario, role: 'admin' }), 380);
     }
   };
 
   const handleRecovery = async () => {
     if (!uid) {
       setErr('Por favor, escribe tu correo en el campo superior.');
+      shake();
       return;
     }
     setErr('');
@@ -40,6 +61,7 @@ export function Login({ onLogin }) {
 
     if (error) {
       setErr('Error al enviar el enlace. Revisa tu correo.');
+      shake();
     } else {
       setRecoverySent(true);
       setTimeout(() => setRecoverySent(false), 5000);
@@ -74,7 +96,10 @@ export function Login({ onLogin }) {
     >
       <div style={{ width: '100%', maxWidth: 380 }}>
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <div
+          <motion.div
+            initial={{ opacity: 0, scale: 0.6, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ ...SPRING_POP, delay: 0.05 }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -83,8 +108,9 @@ export function Login({ onLogin }) {
             }}
           >
             <img src="https://i.postimg.cc/3NDCCVdT/gecko2.png" alt="Itzé" style={{ width: 80, height: 80, objectFit: 'contain' }} />
-          </div>
-          <h1
+          </motion.div>
+          <motion.h1
+            {...enter(0.12)}
             style={{
               color: '#fff',
               fontSize: 26,
@@ -94,14 +120,17 @@ export function Login({ onLogin }) {
             }}
           >
             Itzé Flow
-          </h1>
-          <p
+          </motion.h1>
+          <motion.p
+            {...enter(0.18)}
             style={{ color: 'rgba(255,255,255,.45)', margin: 0, fontSize: 13 }}
           >
             Sistema de gestión de reservas
-          </p>
+          </motion.p>
         </div>
-        <div
+        <motion.div {...enter(0.26)}>
+        <motion.div
+          animate={card}
           style={{
             background: 'rgba(255,255,255,.06)',
             border: '1px solid rgba(255,255,255,.1)',
@@ -149,41 +178,76 @@ export function Login({ onLogin }) {
             placeholder="••••••••"
             style={si}
           />
-          {err && (
-            <p
-              style={{
-                color: '#FCA5A5',
-                fontSize: 12,
-                margin: '0 0 10px',
-                textAlign: 'center',
-              }}
-            >
-              {err}
-            </p>
-          )}
+          <AnimatePresence initial={false}>
+            {err && (
+              <motion.p
+                key="err"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                style={{
+                  color: '#FCA5A5',
+                  fontSize: 12,
+                  margin: '0 0 10px',
+                  textAlign: 'center',
+                  overflow: 'hidden',
+                }}
+              >
+                {err}
+              </motion.p>
+            )}
+          </AnimatePresence>
           <button
             onClick={go}
+            disabled={busy}
             style={{
               width: '100%',
               padding: '12px',
-              background: '#3B82F6',
+              background: ok ? '#10B981' : '#3B82F6',
               border: 'none',
               borderRadius: 10,
               color: '#fff',
               fontSize: 15,
               fontWeight: 700,
-              cursor: 'pointer',
+              cursor: busy ? 'default' : 'pointer',
               fontFamily: 'inherit',
               marginTop: 4,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              minHeight: 44,
             }}
           >
-            Ingresar
+            {ok ? (
+              <motion.span initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={SPRING_POP}>
+                ✓ ¡Hola!
+              </motion.span>
+            ) : busy ? (
+              <>
+                <motion.span
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
+                  style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid rgba(255,255,255,.35)', borderTopColor: '#fff', display: 'inline-block' }}
+                />
+                Ingresando…
+              </>
+            ) : (
+              'Ingresar'
+            )}
           </button>
           
           {/* SECCIÓN: RECUPERACIÓN DE DATOS */}
           <div style={{ marginTop: 24, textAlign: 'center', height: 40 }}>
+            <AnimatePresence mode="wait" initial={false}>
             {recoverySent ? (
-              <div
+              <motion.div
+                key="sent"
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
                 style={{
                   background: 'rgba(16, 185, 129, 0.1)',
                   border: '1px solid rgba(16, 185, 129, 0.2)',
@@ -195,9 +259,14 @@ export function Login({ onLogin }) {
                 }}
               >
                 ✓ Los datos fueron enviados a itzehostel@gmail.com
-              </div>
+              </motion.div>
             ) : (
-              <button
+              <motion.button
+                key="ask"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
                 onClick={handleRecovery}
                 style={{
                   background: 'transparent',
@@ -211,11 +280,13 @@ export function Login({ onLogin }) {
                 }}
               >
                 Olvidé mis datos de ingreso
-              </button>
+              </motion.button>
             )}
+            </AnimatePresence>
           </div>
 
-        </div>
+        </motion.div>
+        </motion.div>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { ResDrawer } from './components/reservations/ResDrawer';
 import { ResForm } from './components/reservations/ResForm';
 import { Quoter, QuoteButton } from './components/Quoter';
@@ -23,7 +23,7 @@ import { ResList } from './pages/ResList';
 import { Timeline } from './pages/Timeline';
 import appLayoutCss from './styles/app-layout.css?raw';
 import { AnimatePresence, motion } from 'motion/react';
-import { Backdrop, PopCard, SPRING_POP } from './components/ui/Motion';
+import { Backdrop, PopCard, SPRING_POP, SPRING_SHEET } from './components/ui/Motion';
 
 
 // ── APP ───────────────────────────────────────────────────────────────────────
@@ -41,7 +41,8 @@ export default function AppMejorada() {
   const [highlightStatus, setHighlightStatus] = useState(null);
   const winW = useW();
   const isMobile = winW < 769;
-  const isTablet = winW >= 769 && winW < 1280;
+  // Igual que el CSS (app-layout.css): tablet/compu angosta de 769 a 1280 px inclusive (menú lateral angosto)
+  const isTablet = winW >= 769 && winW <= 1280;
 
   // Tarifas: si la tabla todavía no existe, la pestaña Tarifas avisa que falta el SQL
   const fetchTarifas = async () => {
@@ -275,6 +276,9 @@ export default function AppMejorada() {
   // 1. Verificación de Login
   // Cotizar (antes del "if (!user)": los useState no pueden ir después de un return)
   const [quoterOpen, setQuoterOpen] = useState(false);
+  // Animación al cambiar de pantalla: de qué lado entra la nueva (según el orden del menú)
+  const prevTabRef = useRef(tab);
+  const tabDirRef = useRef(0);
   if (!user) return <Login onLogin={setUser} />;
 
   const isAdmin = user.role === 'admin';
@@ -347,6 +351,11 @@ export default function AppMejorada() {
     { id: 'finanzas', label: 'Finanzas', icon: 'finance' },
     { id: 'tarifas', label: 'Tarifas', icon: 'tag' },
   ];
+  if (prevTabRef.current !== tab) {
+    const ix = (id) => TABS_ALL.findIndex((t) => t.id === id);
+    tabDirRef.current = ix(tab) > ix(prevTabRef.current) ? 1 : -1;
+    prevTabRef.current = tab;
+  }
   const TABS =
     user.role === 'staff'
       ? TABS_ALL.filter((t) => t.id !== 'finanzas')
@@ -825,7 +834,11 @@ const toggleBlacklist = async (id, currentStatus) => {
 
   // 4. EL DISEÑO VISUAL (Ahora sí, adentro de la función principal)
   return (
-    <div
+    <motion.div
+      // Al entrar (después del login o al abrir la app) aparece con un fundido
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
       style={{
         minHeight: '100vh',
         background: '#F8FAFC',
@@ -982,12 +995,22 @@ const toggleBlacklist = async (id, currentStatus) => {
                   fontWeight: 600,
                   fontSize: 13,
                   cursor: 'pointer',
-                  background: tab === t.id ? '#EFF6FF' : 'transparent',
+                  background: 'transparent',
                   color: tab === t.id ? '#2563EB' : '#6B7280',
                   textAlign: 'left',
                   justifyContent: isTablet ? 'center' : 'flex-start',
+                  position: 'relative',
+                  isolation: 'isolate',
                 }}
               >
+                {/* Resaltado de la pestaña elegida: se desliza de una a otra */}
+                {tab === t.id && (
+                  <motion.span
+                    layoutId="sb-ind"
+                    transition={SPRING_SHEET}
+                    style={{ position: 'absolute', inset: 0, background: '#EFF6FF', borderRadius: 9, zIndex: -1 }}
+                  />
+                )}
                 <span style={{ display: 'flex', flexShrink: 0, position: 'relative' }}>
                   <Icon name={t.icon} size={20} />
                   {t.id === 'huespedes' && dupCount > 0 && isTablet && (
@@ -1078,7 +1101,14 @@ const toggleBlacklist = async (id, currentStatus) => {
         </div>
 
         {/* Contenido Principal Dinámico */}
-        <div className="main-content" key={tab}>
+        {/* Cambio de pantalla: la nueva entra deslizándose desde el lado hacia donde vas en el menú */}
+        <motion.div
+          className="main-content"
+          key={tab}
+          initial={{ opacity: 0, x: tabDirRef.current * 26 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ x: SPRING_SHEET, opacity: { duration: 0.22 } }}
+        >
           {tab === 'dashboard' && (
             <Dashboard
               user={user}
@@ -1161,7 +1191,7 @@ const toggleBlacklist = async (id, currentStatus) => {
               onGoTo={goTo}
             />
           )}
-        </div>
+        </motion.div>
       </div>
 
       {/* Menú inferior Mobile DESLIZABLE con filtro de seguridad */}
@@ -1176,7 +1206,7 @@ const toggleBlacklist = async (id, currentStatus) => {
           borderTop: '1px solid #F0F0F0',
           zIndex: 99,
           paddingBottom: 'calc(env(safe-area-inset-bottom, 8px) + 20px)',
-          display: 'flex',
+          // Sin display acá: lo maneja el CSS (.bn), así en compu/tablet no aparece (está el menú lateral)
           overflowX: 'auto',
           WebkitOverflowScrolling: 'touch',
         }}
@@ -1199,18 +1229,22 @@ const toggleBlacklist = async (id, currentStatus) => {
               minHeight: 52,
             }}
           >
-            <span
+            <motion.span
+              // Rebote chiquito del ícono al elegir la pestaña
+              animate={{ scale: tab === t.id ? [1, 1.18, 1] : 1 }}
+              transition={{ duration: 0.32, ease: 'easeOut' }}
               style={{
                 display: 'flex',
                 color: tab === t.id ? '#2563EB' : '#9CA3AF',
                 position: 'relative',
+                transition: 'color .2s ease',
               }}
             >
               <Icon name={t.icon} size={22} />
               {t.id === 'huespedes' && dupCount > 0 && (
                 <span style={dupDotStyle}>{dupCount}</span>
               )}
-            </span>
+            </motion.span>
             <span
               style={{
                 fontSize: 10,
@@ -1221,18 +1255,17 @@ const toggleBlacklist = async (id, currentStatus) => {
             >
               {t.label}
             </span>
-            {tab === t.id && (
-              <div
-                className="nav-indicator"
-                style={{
-                  width: 20,
-                  height: 2.5,
-                  background: '#2563EB',
-                  borderRadius: 4,
-                  marginTop: 2,
-                }}
-              />
-            )}
+            {/* Rayita azul: se desliza hasta la pestaña elegida (lugar fijo para que nada salte) */}
+            <span style={{ height: 2.5, marginTop: 2, display: 'flex', justifyContent: 'center', width: 20 }}>
+              {tab === t.id && (
+                <motion.span
+                  layoutId="bn-ind"
+                  className="nav-indicator"
+                  transition={SPRING_SHEET}
+                  style={{ width: 20, height: 2.5, background: '#2563EB', borderRadius: 4 }}
+                />
+              )}
+            </span>
           </button>
         ))}
       </div>
@@ -1643,6 +1676,6 @@ const toggleBlacklist = async (id, currentStatus) => {
         </div>
       )}</AnimatePresence>
 
-    </div>
+    </motion.div>
   );
 }
