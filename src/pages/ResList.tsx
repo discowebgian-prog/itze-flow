@@ -7,9 +7,10 @@ import { TODAY, fmt, fmtD, addDays, parseD, currency, MONTHS, DAYS } from '../li
 import { waLink } from '../lib/guests';
 import { LateBadge } from '../components/ui/LateBadge';
 import { GroupBadge } from '../components/ui/GroupBadge';
+import { QuoteButton } from '../components/Quoter';
 
 // ── RESERVATIONS LIST (AGENDA DIARIA ESTILO PULSE) ────────────────────────────
-export function ResList({ reservations, properties, onView, onAdd }) {
+export function ResList({ reservations, properties, onView, onAdd, onQuote }) {
   const [selectedDate, setSelectedDate] = useState(fmt(TODAY));
   const [q, setQ] = useState('');
 
@@ -180,6 +181,8 @@ export function ResList({ reservations, properties, onView, onAdd }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#111' }}>Agenda Diaria</h2>
+        <div style={{ display: 'flex', gap: 6 }}>
+        {onQuote && <QuoteButton onClick={onQuote} />}
         <button
           onClick={() => onAdd()}
           style={{
@@ -189,6 +192,7 @@ export function ResList({ reservations, properties, onView, onAdd }) {
         >
           + Nueva
         </button>
+        </div>
       </div>
 
       <input

@@ -22,20 +22,21 @@ export function findConflicts(all, propId, room, ci, co, excludeId) {
 }
 
 // ── TOTAL DE UNA ESTANCIA ─────────────────────────────────────────────────────
-// Tarifa × noches − descuento + personas adicionales + late check-out.
+// Tarifa × noches (al peso) − descuento + personas adicionales + late check-out.
 // Lo usan el formulario y el grupo (al cambiar fechas de todas las habitaciones).
 export function calcStayTotal(pricing, nights, lateCost = 0) {
   if (!nights || !pricing) return 0;
   const rate = Number(pricing.ratePerNight) || 0;
-  let b = rate * nights;
+  // Redondeado al peso: con una tarifa promedio del cotizador ($1.026,67 × 3) el total da exacto ($3.080)
+  let b = Math.round(rate * nights);
   if (pricing.discountType === 'porcentaje') b -= b * ((Number(pricing.discountValue) || 0) / 100);
   else if (pricing.discountType === 'monto_fijo') b -= Number(pricing.discountValue) || 0;
   else if (pricing.discountType === 'noche_gratis') b -= rate * (Number(pricing.discountValue) || 0);
   const addT = (pricing.additionals || []).reduce(
-    (s, a) => s + (a.bonificada ? 0 : (Number(a.ratePerNight) || 0) * nights),
+    (s, a) => s + (a.bonificada ? 0 : Math.round((Number(a.ratePerNight) || 0) * nights)),
     0
   );
-  return Math.max(0, b + addT + (Number(lateCost) || 0));
+  return Math.max(0, Math.round((b + addT + (Number(lateCost) || 0)) * 100) / 100);
 }
 
 // ── LATE CHECK-OUT ────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { diffDays, parseD } from './dates';
+import { diffDays, parseD, addDays, fmt } from './dates';
 
 // ── TARIFARIO ─────────────────────────────────────────────────────────────────
 // Tipos de tarifa del hostel (todas las habitaciones son privadas) y qué habitaciones van en cada uno.
@@ -60,4 +60,95 @@ export function overlapsOf(period, periods = []) {
   return periods.filter(
     (p) => p.id !== period.id && !isNormal(p) && p.desde <= period.hasta && period.desde <= p.hasta
   );
+}
+
+// ── COTIZADOR ─────────────────────────────────────────────────────────────────
+// Calcula una estadía noche por noche con el tarifario.
+// Devuelve null si falta algo para cotizar (fechas, tipo o tarifario sin cargar),
+// { missing: true } si alguna noche no tiene precio para ese tipo, o:
+//   lines: noches agrupadas por precio y período ({ count, price, periodName, dayLabel })
+//   base: suma de las noches · avg: promedio por noche (con centavos si no da redondo)
+//   extraAvg: adicional por persona por noche (promedio) · extraGuests: personas extra
+//   extraTotal · total · varied: true si las noches tienen precios distintos
+export function quoteStay(checkIn, checkOut, typeId, guests = 1, periods = []) {
+  const n = checkIn && checkOut ? diffDays(checkIn, checkOut) : 0;
+  const type = ROOM_TYPES.find((t) => t.id === typeId);
+  if (!type || n <= 0 || !periods.length) return null;
+  const nightsArr = [];
+  let d = parseD(checkIn);
+  for (let i = 0; i < n; i++) {
+    const ds = fmt(d);
+    nightsArr.push(nightPrice(ds, typeId, periods));
+    d = addDays(d, 1);
+  }
+  if (nightsArr.some((x) => !x.price)) return { missing: true, nights: n };
+  const lines = [];
+  nightsArr.forEach((x) => {
+    const key = `${x.price}|${x.period?.id ?? ''}`;
+    const l = lines.find((y) => y.key === key);
+    if (l) {
+      l.count++;
+      return;
+    }
+    // Lun–Mié / Jue–Dom solo si en ese período el precio cambia según el día
+    const pp = (x.period?.precios || {})[typeId] || {};
+    const splitDays = Number(pp.entre) !== Number(pp.finde);
+    lines.push({
+      key,
+      count: 1,
+      price: x.price,
+      periodName: x.period ? (isNormal(x.period) ? 'Normal' : x.period.nombre || 'Período') : '',
+      dayLabel: splitDays ? (x.finde ? 'Jue–Dom' : 'Lun–Mié') : '',
+    });
+  });
+  const base = nightsArr.reduce((s, x) => s + x.price, 0);
+  const extraSum = type.extra ? nightsArr.reduce((s, x) => s + x.extra, 0) : 0;
+  const extraGuests = type.extra ? Math.max(0, (Number(guests) || 1) - BASE_GUESTS) : 0;
+  const round2 = (v) => Math.round(v * 100) / 100;
+  return {
+    missing: false,
+    nights: n,
+    lines,
+    base,
+    avg: round2(base / n),
+    extraAvg: round2(extraSum / n),
+    extraGuests,
+    extraTotal: extraSum * extraGuests,
+    total: base + extraSum * extraGuests,
+    varied: new Set(nightsArr.map((x) => x.price)).size > 1,
+  };
+}
+
+// Cotiza una habitación (P1…P6) por su tipo
+export const quoteRoom = (roomId, checkIn, checkOut, guests, periods) => {
+  const t = roomTypeOf(roomId);
+  return t ? quoteStay(checkIn, checkOut, t.id, guests, periods) : null;
+};
+
+const near = (a, b) => Math.abs((Number(a) || 0) - (Number(b) || 0)) < 0.01;
+
+// ¿La tarifa y los adicionales cargados son los del tarifario?
+// (los adicionales bonificados no cuentan; con 2 o menos huéspedes no hay adicional)
+export function pricingMatches(pricing, q) {
+  if (!q || q.missing || !pricing) return false;
+  if (pricing.ratePerNight === '' || pricing.ratePerNight === null || pricing.ratePerNight === undefined) return false;
+  if (!near(pricing.ratePerNight, q.avg)) return false;
+  const ads = (pricing.additionals || []).slice(0, q.extraGuests).filter((a) => !a.bonificada);
+  return ads.every((a) => near(a.ratePerNight, q.extraAvg));
+}
+
+// Aplica la cotización a un pricing: tarifa = promedio y cada adicional = adicional del tarifario
+// (las bonificadas siguen bonificadas)
+export function applyQuote(pricing, q, guests) {
+  const count = Math.max(0, (Number(guests) || 1) - BASE_GUESTS);
+  const cur = pricing.additionals || [];
+  return {
+    ...pricing,
+    ratePerNight: q.avg,
+    additionals: Array.from({ length: count }, (_, i) => ({
+      bonificada: false,
+      ...(cur[i] || {}),
+      ratePerNight: q.extraGuests ? q.extraAvg : 0,
+    })),
+  };
 }

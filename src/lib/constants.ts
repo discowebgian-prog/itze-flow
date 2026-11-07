@@ -17,11 +17,22 @@ export const PROPS = [
 export const ROOMS = [
   { id: 'P1', name: 'P1', maxGuests: 5 },
   { id: 'P2', name: 'P2', maxGuests: 5 },
-  { id: 'P3', name: 'P3', maxGuests: 6 },
+  { id: 'P3', name: 'P3', maxGuests: 5 }, // 2 matrimoniales + 1 individual (pasa a 6 con 3 matrimoniales)
   { id: 'P4', name: 'P4', maxGuests: 3 },
   { id: 'P5', name: 'P5', maxGuests: 5 },
   { id: 'P6', name: 'P6', maxGuests: 2 },
 ];
+
+// Cómo se describe cada habitación al huésped (mensaje de "Cotizar" por WhatsApp).
+// Las que tienen la misma descripción se juntan en una línea ("2 habitaciones con…").
+export const ROOM_DESC = {
+  P1: 'dos camas queen + sofá cama',
+  P2: 'dos camas queen + sofá cama',
+  P3: 'dos camas matrimoniales + cama individual',
+  P4: 'cama king + sofá cama',
+  P5: 'dos camas queen + sofá cama',
+  P6: 'cama matrimonial',
+};
 
 export const SOURCES = [
   { value: 'Booking', label: 'Booking', short: 'Booking', color: '#003580' },

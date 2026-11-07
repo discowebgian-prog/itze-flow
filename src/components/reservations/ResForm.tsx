@@ -11,6 +11,8 @@ import { Sel } from '../ui/Sel';
 import { ROOMS, SOURCES, RS, COUNTRIES, findCountry } from '../../lib/constants';
 import { TODAY, fmt, fmtD, addDays, diffDays, currency } from '../../lib/dates';
 import { findConflicts, calcStayTotal, lateCostOf } from '../../lib/reservations';
+import { quoteRoom, pricingMatches, applyQuote } from '../../lib/rates';
+import { QuoteInfo, money } from './QuoteInfo';
 import { stayInfo, stayBadge, suggestGuests } from '../../lib/guests';
 import {
   groupOf,
@@ -41,6 +43,8 @@ export function ResForm({
   allRes = [],
   guestDecisions = [],
   focusDoc = false,
+  tarifas = [],
+  initialRooms = null, // desde Cotizar: [{ room, guests }] → con 2 o más arranca como grupo
 }) {
   const blank = {
     propertyId: prefillProp || visibleProps[0]?.id || '',
@@ -107,6 +111,8 @@ export function ResForm({
     };
   });
   const sv = (k, v) => setF((x) => ({ ...x, [k]: v }));
+  // Cotizador: en una reserva nueva la tarifa sigue al tarifario hasta que se escribe a mano
+  const [rateAuto, setRateAuto] = useState(() => !initial?.id);
 
   // ── GRUPO AL EDITAR: esta habitación es parte de un grupo ──
   const members = useMemo(() => (initial?.grupoId ? groupOf(allRes, initial) : []), [allRes, initial?.grupoId]);
@@ -157,14 +163,23 @@ export function ResForm({
   // ── VARIAS HABITACIONES (solo al crear una reserva del hostel) ──
   // Titular, fechas, estado, canal y pago se cargan una vez; cada habitación tiene su tarjeta
   // con huéspedes, acompañantes y tarifa. Al guardar se crea una reserva por habitación.
-  const [multi, setMulti] = useState(false);
-  const [selRooms, setSelRooms] = useState([]);
-  const [alloc, setAlloc] = useState({}); // habitación → { guests, companions, rate, extra, paid }
+  const fromQuote = Array.isArray(initialRooms) && initialRooms.length > 1 ? initialRooms : null;
+  const [multi, setMulti] = useState(!!fromQuote);
+  const [selRooms, setSelRooms] = useState(() => (fromQuote ? fromQuote.map((r) => r.room) : []));
+  const [alloc, setAlloc] = useState(() => {
+    // habitación → { guests, companions, rate, extra, paid }
+    const a = {};
+    (fromQuote || []).forEach(
+      (r) => (a[r.room] = { guests: r.guests, companions: [], rate: '', extra: '', paid: '', auto: true })
+    );
+    return a;
+  });
   const [titularRoom, setTitularRoom] = useState('');
   const [splitPay, setSplitPay] = useState(false);
   const multiOn = !initial?.id && isHostel && multi;
   const isGroupNew = multiOn && selRooms.length > 1;
-  const blankAlloc = () => ({ guests: 1, companions: [], rate: '', extra: '', paid: '' });
+  // auto: la tarifa de la tarjeta sigue al tarifario (se apaga al escribirla a mano)
+  const blankAlloc = () => ({ guests: 1, companions: [], rate: '', extra: '', paid: '', auto: true });
   const setA = (id, changes) => setAlloc((a) => ({ ...a, [id]: { ...(a[id] || blankAlloc()), ...changes } }));
   const toggleMulti = () => {
     if (!multi) {
@@ -177,6 +192,7 @@ export function ResForm({
             guests: f.totalGuests || 1,
             companions: f.companions || [],
             rate: f.pricing.ratePerNight ?? '',
+            auto: rateAuto,
           },
         });
         setTitularRoom(''); // se elige con la pregunta "¿En qué habitación duerme el titular?"
@@ -197,6 +213,7 @@ export function ResForm({
           additionals: Array.from({ length: Math.max(0, (first ? a.guests : 1) - 2) }, () => ({ ratePerNight: 0, bonificada: false })),
         },
       }));
+      if (first) setRateAuto(a.auto !== false);
       setSelRooms([]);
       setSplitPay(false);
       setMulti(false);
@@ -226,6 +243,98 @@ export function ResForm({
   const groupTotal = multiOn ? selRooms.reduce((s, id) => s + roomTotal(id), 0) : 0;
   const groupGuests = multiOn ? selRooms.reduce((s, id) => s + ((alloc[id] || {}).guests || 1), 0) : 0;
   const groupPaidSplit = multiOn && splitPay ? selRooms.reduce((s, id) => s + (Number((alloc[id] || {}).paid) || 0), 0) : 0;
+
+  // ── COTIZADOR (tarifario noche por noche) ──
+  // Una habitación: en reservas nuevas la tarifa sigue al tarifario hasta que se escribe a mano.
+  // Al editar una reserva que ya existe no cambia sola: si el tarifario da distinto, se ofrece usarlo.
+  const quote = useMemo(
+    () => (isHostel && f.room && !multiOn ? quoteRoom(f.room, f.checkIn, f.checkOut, f.totalGuests, tarifas) : null),
+    [isHostel, f.room, f.checkIn, f.checkOut, f.totalGuests, tarifas, multiOn]
+  );
+  const quoteOk = !!quote && !quote.missing;
+  const quoteMatches = quoteOk && pricingMatches(f.pricing, quote);
+  useEffect(() => {
+    if (!rateAuto || !quoteOk || quoteMatches) return;
+    setF((x) => ({ ...x, pricing: applyQuote(x.pricing, quote, x.totalGuests) }));
+  }, [rateAuto, quote, quoteOk, quoteMatches]);
+
+  // Varias habitaciones: cada tarjeta con su tipo de habitación
+  const roomQuote = (id) => quoteRoom(id, f.checkIn, f.checkOut, (alloc[id] || blankAlloc()).guests, tarifas);
+  const cardMatches = (a, q) =>
+    !!q && !q.missing && pricingMatches({ ratePerNight: a.rate, additionals: Array.from({ length: q.extraGuests }, () => ({ ratePerNight: a.extra })) }, q);
+  useEffect(() => {
+    if (!multiOn) return;
+    const changes = {};
+    selRooms.forEach((id) => {
+      const a = alloc[id] || blankAlloc();
+      if (a.auto === false) return;
+      const q = roomQuote(id);
+      if (!q || q.missing || cardMatches(a, q)) return;
+      changes[id] = { rate: q.avg, extra: q.extraGuests ? q.extraAvg : a.extra };
+    });
+    if (Object.keys(changes).length) {
+      setAlloc((al) => {
+        const n = { ...al };
+        Object.keys(changes).forEach((id) => (n[id] = { ...(n[id] || blankAlloc()), ...changes[id] }));
+        return n;
+      });
+    }
+  }, [multiOn, selRooms, alloc, f.checkIn, f.checkOut, tarifas]);
+
+  // Grupo al editar con fechas nuevas: ¿el tarifario da distinto en alguna habitación?
+  const groupDatesChanged = inGroup && (f.checkIn !== initial.checkIn || f.checkOut !== initial.checkOut);
+  const [requoted, setRequoted] = useState(null); // { [id de otra habitación]: pricing del tarifario }
+  const [requotePrev, setRequotePrev] = useState(null); // pricing de esta habitación antes de aplicar
+  const [requoteOpen, setRequoteOpen] = useState(false);
+  useEffect(() => {
+    setRequoted(null);
+    setRequotePrev(null);
+  }, [f.checkIn, f.checkOut]);
+  const groupQuotes = useMemo(() => {
+    if (!groupDatesChanged) return [];
+    const n = diffDays(f.checkIn, f.checkOut);
+    return members
+      .map((m) => {
+        const isMe = m.id === initial.id;
+        const pricing = isMe ? f.pricing : m.pricing;
+        const guests = isMe ? f.totalGuests : m.totalGuests;
+        const q = quoteRoom(m.room, f.checkIn, f.checkOut, guests, tarifas);
+        if (!q || q.missing) return null;
+        const late = isMe ? (f.lateCheckout ? Number(f.lateCost) || 0 : 0) : lateCostOf(m);
+        const newPricing = applyQuote(pricing, q, guests);
+        return {
+          m,
+          isMe,
+          q,
+          same: pricingMatches(pricing, q),
+          nowRate: Number(pricing.ratePerNight) || 0,
+          nowTotal: calcStayTotal(pricing, n, late),
+          newPricing,
+          newTotal: calcStayTotal(newPricing, n, late),
+        };
+      })
+      .filter(Boolean);
+  }, [groupDatesChanged, members, f.checkIn, f.checkOut, f.pricing, f.totalGuests, f.lateCheckout, f.lateCost, tarifas]);
+  const requoteDiff = groupQuotes.filter((x) => !x.same && !(requoted && requoted[x.m.id]));
+  const applyRequote = () => {
+    const me = requoteDiff.find((x) => x.isMe);
+    if (me) {
+      setRequotePrev(f.pricing);
+      sv('pricing', me.newPricing);
+    }
+    const others = {};
+    requoteDiff.filter((x) => !x.isMe).forEach((x) => (others[x.m.id] = x.newPricing));
+    setRequoted({ ...(requoted || {}), ...others });
+    setRequoteOpen(false);
+  };
+  const undoRequote = () => {
+    if (requotePrev) sv('pricing', requotePrev);
+    setRequoted(null);
+    setRequotePrev(null);
+  };
+  const requotedRooms = members
+    .filter((m) => (requoted && requoted[m.id]) || (m.id === initial?.id && requotePrev))
+    .map((m) => m.room);
 
   // En el hostel, sin habitación elegida no hay con qué comparar: no se avisa conflicto
   const conflicts = multiOn
@@ -475,12 +584,18 @@ export function ResForm({
         if (followers.some((x) => x.id === m.id)) person.forEach((k) => (n[k] = f[k]));
         if (newBooker) n.grupoReservante = newBooker;
         // Nuevas fechas: se recalcula el total de cada habitación con su propia tarifa
-        if (datesChanged) n.totalAmount = calcStayTotal(m.pricing, diffDays(n.checkIn, n.checkOut), lateCostOf(m));
+        // (o con la del tarifario, si se tocó "Aplicar tarifario")
+        if (datesChanged && requoted && requoted[m.id]) n.pricing = requoted[m.id];
+        if (datesChanged) n.totalAmount = calcStayTotal(n.pricing, diffDays(n.checkIn, n.checkOut), lateCostOf(m));
         return n;
       })
       .filter((n) => {
         const m = members.find((x) => x.id === n.id);
-        return changedFields(n, m, [...SHARED_FIELDS, ...PERSON_FIELDS, 'totalAmount']).length > 0 || !!newBooker;
+        return (
+          changedFields(n, m, [...SHARED_FIELDS, ...PERSON_FIELDS, 'totalAmount']).length > 0 ||
+          !!newBooker ||
+          n.pricing !== m.pricing
+        );
       });
     setScopeAsk(null);
     proceed(newBooker ? { ...f, grupoReservante: newBooker } : f, also.length ? { also } : undefined);
@@ -542,6 +657,72 @@ export function ResForm({
           sv('checkOut', co);
         }}
       />
+
+      {/* Grupo con fechas nuevas: aviso si el tarifario da distinto (Ver abre la explicación) */}
+      {groupDatesChanged && requoteDiff.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            margin: '-4px 0 12px',
+            padding: '8px 10px',
+            background: '#FFFBEB',
+            border: '1px solid #FCD34D',
+            borderRadius: 8,
+            fontSize: 12,
+            color: '#92400E',
+            fontWeight: 600,
+          }}
+        >
+          <span>🧮 Con estas fechas el tarifario da distinto</span>
+          <button
+            type="button"
+            onClick={() => setRequoteOpen(true)}
+            style={{
+              padding: '4px 12px',
+              background: '#fff',
+              border: '1.5px solid #D97706',
+              color: '#B45309',
+              borderRadius: 7,
+              fontWeight: 800,
+              fontSize: 12,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            Ver
+          </button>
+        </div>
+      )}
+      {groupDatesChanged && requoteDiff.length === 0 && requotedRooms.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            margin: '-4px 0 12px',
+            padding: '8px 10px',
+            background: '#EFF6FF',
+            border: '1px solid #BFDBFE',
+            borderRadius: 8,
+            fontSize: 12,
+            color: '#1D4ED8',
+            fontWeight: 600,
+          }}
+        >
+          <span>✓ Tarifario aplicado a {requotedRooms.join(', ')} · se guarda al tocar Guardar</span>
+          <button
+            type="button"
+            onClick={undoRequote}
+            style={{ background: 'none', border: 'none', color: '#6B7280', fontSize: 12, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', fontFamily: 'inherit' }}
+          >
+            Deshacer
+          </button>
+        </div>
+      )}
 
       {isHostel && (
         <div style={{ marginBottom: 12 }}>
@@ -1018,6 +1199,8 @@ export function ResForm({
           roomTotal={roomTotal}
           splitPay={splitPay}
           isGroup={isGroupNew}
+          roomQuote={roomQuote}
+          cardMatches={cardMatches}
         />
       )}
 
@@ -1234,15 +1417,16 @@ export function ResForm({
         {/* Con varias habitaciones la tarifa va en cada tarjeta (pueden ser de distinto tipo) */}
         <div style={{ display: 'grid', gridTemplateColumns: multiOn ? '1fr' : '1fr 1fr', gap: 10 }}>
           {!multiOn && <Inp
-            label="Tarifa base/noche $"
+            label={quoteMatches && quote.varied ? 'Tarifa/noche (promedio) $' : 'Tarifa base/noche $'}
             type="number"
             value={f.pricing.ratePerNight}
-            onChange={(e) =>
+            onChange={(e) => {
+              setRateAuto(false);
               sv('pricing', {
                 ...f.pricing,
                 ratePerNight: e.target.value === '' ? '' : Number(e.target.value),
-              })
-            }
+              });
+            }}
           />}
           <Inp
             label={multiOn ? 'Etiqueta de tarifa' : 'Etiqueta'}
@@ -1253,6 +1437,11 @@ export function ResForm({
             placeholder="Tarifa rack"
           />
         </div>
+        {!multiOn && quote && (
+          <div style={{ marginBottom: 10, marginTop: -4 }}>
+            <QuoteInfo q={quote} matches={quoteMatches} onUse={() => setRateAuto(true)} />
+          </div>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <Sel
@@ -1332,6 +1521,7 @@ export function ResForm({
                   value={a.ratePerNight === 0 ? '' : a.ratePerNight}
                   disabled={a.bonificada}
                   onChange={(e) => {
+                    setRateAuto(false);
                     const ads = [...(f.pricing.additionals || [])];
                     ads[i] = { ...ads[i], ratePerNight: +e.target.value };
                     sv('pricing', { ...f.pricing, additionals: ads });
@@ -1804,6 +1994,76 @@ export function ResForm({
         </button>
       </div>
 
+      {requoteOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,.5)',
+            zIndex: 400,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <div style={{ background: '#fff', borderRadius: 16, maxWidth: 400, width: '100%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.25)' }}>
+            <div style={{ background: '#2563EB', padding: '16px 22px' }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>🧮 El tarifario da distinto para estas fechas</div>
+              <div style={{ fontSize: 12, color: '#DBEAFE', marginTop: 4 }}>
+                {fmtD(f.checkIn)} → {fmtD(f.checkOut)} · {nights === 1 ? '1 noche' : `${nights} noches`}
+              </div>
+            </div>
+            <div style={{ padding: '16px 22px' }}>
+              {groupQuotes.map((x) => {
+                const pending = requoteDiff.some((d) => d.m.id === x.m.id);
+                return (
+                  <div
+                    key={x.m.id}
+                    style={{ padding: '8px 0', borderBottom: '1px solid #F3F4F6', fontSize: 12.5, color: '#374151' }}
+                  >
+                    <div style={{ fontWeight: 800, color: '#111' }}>
+                      {x.m.room}
+                      {x.isMe ? ' (esta)' : ''}
+                    </div>
+                    {pending ? (
+                      <div style={{ lineHeight: 1.5 }}>
+                        ahora {money(x.nowRate)}/noche ({currency(x.nowTotal)}) →{' '}
+                        <b style={{ color: '#1D4ED8' }}>
+                          tarifario {money(x.q.avg)}/noche ({currency(x.newTotal)})
+                        </b>
+                      </div>
+                    ) : (
+                      <div style={{ color: '#6B7280' }}>igual, no cambia</div>
+                    )}
+                  </div>
+                );
+              })}
+              <p style={{ fontSize: 11.5, color: '#6B7280', margin: '12px 0 14px', lineHeight: 1.45 }}>
+                Se guarda al tocar Guardar. Si elegís "Solo esta habitación", se aplica solo a {initial?.room}. Lo
+                cobrado no cambia: si sube el total, sube el saldo.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={applyRequote}
+                  style={{ padding: '11px', borderRadius: 8, fontFamily: 'inherit', fontWeight: 700, fontSize: 13, cursor: 'pointer', background: '#2563EB', color: '#fff', border: 'none' }}
+                >
+                  Aplicar tarifario
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRequoteOpen(false)}
+                  style={{ padding: '11px', borderRadius: 8, fontFamily: 'inherit', fontWeight: 700, fontSize: 13, cursor: 'pointer', background: '#fff', color: '#374151', border: '1.5px solid #E5E7EB' }}
+                >
+                  Cerrar sin cambios
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {scopeAsk && (() => {
         const others = members.filter((m) => m.id !== initial.id);
         const labels = [...new Set(scopeAsk.shared.map((k) => SHARED_LABELS[k]))];
@@ -1857,7 +2117,9 @@ export function ResForm({
                 </p>
                 {datesChanged && (
                   <p style={{ fontSize: 11.5, color: '#6B7280', margin: '0 0 12px' }}>
-                    Con nuevas fechas, el total de cada habitación se recalcula con su propia tarifa.
+                    Con nuevas fechas, el total de cada habitación se recalcula con su propia tarifa
+                    {requotedRooms.length ? ` (con la del tarifario en ${requotedRooms.join(', ')})` : ''}
+                    .
                   </p>
                 )}
                 {otherConf.length > 0 && (
@@ -2080,7 +2342,7 @@ function ReadBox({ label, value }) {
 // ── REPARTO POR HABITACIÓN (reserva de varias habitaciones) ──────────────────
 // Una tarjeta por habitación: dónde duerme el titular, huéspedes, acompañantes,
 // tarifa (si no se carga, usa la tarifa base) y, si se cobra por separado, su Pagado.
-function RoomCards({ rooms, alloc, setA, titularRoom, titularName, roomTotal, splitPay, isGroup }) {
+function RoomCards({ rooms, alloc, setA, titularRoom, titularName, roomTotal, splitPay, isGroup, roomQuote, cardMatches }) {
   const inputSt = {
     width: '100%',
     minWidth: 0,
@@ -2102,8 +2364,10 @@ function RoomCards({ rooms, alloc, setA, titularRoom, titularName, roomTotal, sp
       {rooms.map((id) => {
         const room = ROOMS.find((r) => r.id === id);
         const max = room ? room.maxGuests : 6;
-        const a = alloc[id] || { guests: 1, companions: [], rate: '', extra: '', paid: '' };
+        const a = alloc[id] || { guests: 1, companions: [], rate: '', extra: '', paid: '', auto: true };
         const isTit = id === titularRoom;
+        const q = roomQuote ? roomQuote(id) : null;
+        const qMatch = q ? cardMatches(a, q) : false;
         const total = roomTotal(id);
         const setGuests = (n) => {
           const need = n - 1;
@@ -2208,15 +2472,16 @@ function RoomCards({ rooms, alloc, setA, titularRoom, titularName, roomTotal, sp
             ))}
 
             <div style={{ marginTop: 4 }}>
-              <label style={lbl}>Tarifa/noche $</label>
+              <label style={lbl}>{qMatch && q.varied ? 'Tarifa/noche (promedio) $' : 'Tarifa/noche $'}</label>
               <input
                 type="number"
                 inputMode="numeric"
                 value={a.rate}
                 placeholder="Tarifa de esta habitación"
-                onChange={(e) => setA(id, { rate: e.target.value === '' ? '' : Number(e.target.value) })}
+                onChange={(e) => setA(id, { rate: e.target.value === '' ? '' : Number(e.target.value), auto: false })}
                 style={inputSt}
               />
+              {q && <QuoteInfo q={q} matches={qMatch} onUse={() => setA(id, { auto: true })} />}
             </div>
             {a.guests > 2 && (
               <div style={{ marginTop: 8 }}>
@@ -2226,7 +2491,7 @@ function RoomCards({ rooms, alloc, setA, titularRoom, titularName, roomTotal, sp
                   inputMode="numeric"
                   value={a.extra}
                   placeholder="0"
-                  onChange={(e) => setA(id, { extra: e.target.value === '' ? '' : Number(e.target.value) })}
+                  onChange={(e) => setA(id, { extra: e.target.value === '' ? '' : Number(e.target.value), auto: false })}
                   style={inputSt}
                 />
                 <div style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>
