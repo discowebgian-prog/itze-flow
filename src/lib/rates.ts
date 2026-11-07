@@ -3,12 +3,13 @@
 import { diffDays, parseD } from './dates';
 
 // ── TARIFARIO ─────────────────────────────────────────────────────────────────
-// Tipos de habitación del hostel y qué habitaciones son de cada tipo.
+// Tipos de tarifa del hostel (todas las habitaciones son privadas) y qué habitaciones van en cada uno.
+// El id queda como estaba en la base (privada, king, matrimonial); lo que se ve es `label`.
 // `extra`: si admite personas adicionales (se cobra el adicional desde la 3.ª).
 export const ROOM_TYPES = [
-  { id: 'privada', label: 'Privada', rooms: ['P1', 'P2', 'P3', 'P5'], extra: true },
-  { id: 'king', label: 'King', rooms: ['P4'], extra: true },
-  { id: 'matrimonial', label: 'Matrimonial', rooms: ['P6'], extra: false },
+  { id: 'privada', label: 'Habitaciones 1, 2, 3 y 5', rooms: ['P1', 'P2', 'P3', 'P5'], extra: true },
+  { id: 'king', label: 'Habitación 4', rooms: ['P4'], extra: true },
+  { id: 'matrimonial', label: 'Habitación 6', rooms: ['P6'], extra: false },
 ];
 
 // La tarifa por noche es para 2 personas

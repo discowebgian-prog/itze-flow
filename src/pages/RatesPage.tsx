@@ -172,7 +172,7 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
         const x = (p.precios || {})[ty.id] || {};
         return [
           <div key={ty.id + 'l'} style={{ fontWeight: 700, color: '#111' }}>
-            {ty.label} <span style={{ fontWeight: 500, color: '#9CA3AF', fontSize: 11 }}>{ty.rooms.join(', ')}</span>
+            {ty.label}
           </div>,
           <div key={ty.id + 'e'} style={{ textAlign: 'right', fontWeight: 800, color: '#111' }}>{x.entre ? currency(x.entre) : '—'}</div>,
           <div key={ty.id + 'f'} style={{ textAlign: 'right', fontWeight: 800, color: '#111' }}>{x.finde ? currency(x.finde) : '—'}</div>,
@@ -253,7 +253,6 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
           {ROOM_TYPES.map((ty) => [
             <div key={ty.id + 'l'} style={{ fontSize: 12, fontWeight: 700, color: '#111', lineHeight: 1.2 }}>
               {ty.label}
-              <div style={{ fontWeight: 500, color: '#9CA3AF', fontSize: 10 }}>{ty.rooms.join(', ')}</div>
             </div>,
             <div key={ty.id + 'e'}>{numInp(ty.id, 'entre')}</div>,
             <div key={ty.id + 'f'}>{numInp(ty.id, 'finde')}</div>,
@@ -447,7 +446,7 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
               return (
                 <div key={ty.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, padding: '8px 0', borderBottom: '1px dashed #F1F5F9', fontSize: 13 }}>
                   <span style={{ fontWeight: 700, color: '#111' }}>
-                    {ty.label} <span style={{ fontWeight: 500, color: '#9CA3AF', fontSize: 11 }}>{ty.rooms.join(', ')}</span>
+                    {ty.label}
                   </span>
                   <span style={{ textAlign: 'right' }}>
                     <b style={{ fontSize: 16, color: '#111' }}>{n.price ? currency(n.price) : '—'}</b>
