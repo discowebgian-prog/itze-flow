@@ -355,11 +355,23 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
             <div style={{ fontSize: 10, fontWeight: 800, color: isToday ? '#2563EB' : '#64748B', textTransform: 'uppercase', letterSpacing: 0.4 }}>
               {isToday ? 'Tarifas de hoy' : 'Tarifas del día'}
             </div>
-            <div style={{ fontWeight: 800, fontSize: 16, color: '#111', marginTop: 2 }}>
+            <div
+              style={{
+                display: 'inline-block',
+                marginTop: 6,
+                padding: '6px 14px',
+                borderRadius: 999,
+                background: isToday ? '#2563EB' : '#1E293B',
+                color: '#fff',
+                fontWeight: 800,
+                fontSize: 15,
+                boxShadow: isToday ? '0 2px 8px rgba(37,99,235,0.25)' : 'none',
+              }}
+            >
               {DIA_LARGO[sel.getDay()]} {sel.getDate()} de {MES_LARGO[sel.getMonth()]}
               {sel.getFullYear() !== TODAY.getFullYear() ? ` ${sel.getFullYear()}` : ''}
             </div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
               <span style={selFinde ? chip('#F5F3FF', '#7C3AED') : chip('#FFFBEB', '#D97706')}>{selFinde ? 'Jue–Dom' : 'Lun–Mié'}</span>
               {selPeriod && <span style={chip(colorOf(selPeriod).bg, colorOf(selPeriod).txt)}>{selPeriod.nombre}</span>}
             </div>
@@ -453,23 +465,35 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
     );
   };
 
-  return (
-    <div style={{ maxWidth: 760, margin: '0 auto', paddingBottom: 40 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#111' }}>Tarifas</h2>
+  // Sección "Promos y fechas especiales": el botón para agregar va en su título y el formulario nuevo justo debajo
+  const promosSection = () => (
+    <>
+      <div style={{ ...sectionTitle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <span>Promos y fechas especiales</span>
         {canEdit && !editing && (
           <button
             onClick={startNew}
-            style={{ padding: '9px 14px', minHeight: 40, borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#3B82F6,#6366F1)', color: '#fff', fontFamily: 'inherit', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
+            style={{ padding: '6px 12px', minHeight: 34, borderRadius: 999, border: '1.5px solid #BFDBFE', background: '#EFF6FF', color: '#1D4ED8', fontFamily: 'inherit', fontWeight: 800, fontSize: 12, cursor: 'pointer', textTransform: 'none' }}
           >
             + Nuevo período
           </button>
         )}
       </div>
+      {editing && !editing.id && renderEditor()}
+      {current.length === 0 && !(editing && !editing.id) && (
+        <div style={{ ...card, borderStyle: 'dashed', textAlign: 'center', color: '#9CA3AF', fontSize: 12, padding: '14px 12px' }}>
+          No hay promos ni fechas especiales cargadas. Mientras tanto rige la Normal.
+        </div>
+      )}
+      {current.map((p) => renderPeriod(p))}
+    </>
+  );
+
+  return (
+    <div style={{ maxWidth: 760, margin: '0 auto', paddingBottom: 40 }}>
+      <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 800, color: '#111' }}>Tarifas</h2>
       {!canEdit && <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 10 }}>Solo admin puede cambiar las tarifas.</div>}
       <div style={{ height: 8 }} />
-
-      {editing && !editing.id && renderEditor()}
 
       {dayCard()}
 
@@ -479,13 +503,20 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
         </div>
       )}
 
-      {current.length > 0 && (
-        <div style={sectionTitle}>Promos y fechas especiales</div>
+      {/* Con promos o fechas especiales van primero; si no hay, la Normal queda arriba */}
+      {current.length > 0 ? (
+        <>
+          {promosSection()}
+          {normal && <div style={sectionTitle}>Tarifa normal</div>}
+          {normal && renderPeriod(normal)}
+        </>
+      ) : (
+        <>
+          {normal && <div style={sectionTitle}>Tarifa normal</div>}
+          {normal && renderPeriod(normal)}
+          {(canEdit || (editing && !editing.id)) && promosSection()}
+        </>
       )}
-      {current.map((p) => renderPeriod(p))}
-
-      {normal && current.length > 0 && <div style={sectionTitle}>Tarifa normal</div>}
-      {normal && renderPeriod(normal)}
 
       {past.length > 0 && (
         <div style={{ marginTop: 4, marginBottom: 6 }}>
