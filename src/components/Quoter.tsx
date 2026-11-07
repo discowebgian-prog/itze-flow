@@ -203,16 +203,18 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
   if (left > 0 && unassigned.length > 1) {
     const fitting = unassigned.filter((r) => r.maxGuests >= left);
     const byPrice = (a, b) => (priceFor(a.id, Math.min(left, a.maxGuests)) || 0) - (priceFor(b.id, Math.min(left, b.maxGuests)) || 0);
+    // Antes de elegir: "Para 2 personas…"; con alguna habitación elegida: "Para las 2 que faltan…"
+    const para = placed === 0 ? `Para ${personas(left)}` : left === 1 ? 'Para la persona que falta' : `Para las ${left} que faltan`;
     if (fitting.length) {
       rec = [...fitting].sort((a, b) => a.maxGuests - b.maxGuests || byPrice(a, b))[0];
       const biggest = Math.max(...unassigned.map((r) => r.maxGuests));
       recText =
         rec.maxGuests < biggest
-          ? `⭐ Para ${personas(left)} te conviene la habitación ${roomNum(rec.id)}: así quedan libres las más grandes para grupos.`
-          : `⭐ Para ${personas(left)} te conviene la habitación ${roomNum(rec.id)}.`;
+          ? `⭐ ${para} te conviene la habitación ${roomNum(rec.id)}: así quedan libres las más grandes para grupos.`
+          : `⭐ ${para} te conviene la habitación ${roomNum(rec.id)}.`;
     } else {
       rec = [...unassigned].sort((a, b) => b.maxGuests - a.maxGuests || byPrice(a, b))[0];
-      recText = `⭐ Te conviene empezar por la habitación ${roomNum(rec.id)}: entran ${rec.maxGuests}.`;
+      recText = `⭐ ${placed === 0 ? 'Te conviene empezar' : 'Seguí'} por la habitación ${roomNum(rec.id)}: entran ${rec.maxGuests}.`;
     }
   }
   const msg = done ? quoteMessage({ checkIn, checkOut, guests, items, total }) : '';
@@ -385,25 +387,29 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
           <>
           {/* 3 · Distribución */}
           <Step num={3} title="¿Qué habitación/es prefieren?" done={left === 0}>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 800,
-              marginBottom: 8,
-              color: left === 0 ? '#047857' : left > 0 ? '#B45309' : '#B91C1C',
-            }}
-          >
-            {left === 0
-              ? '✓ ¡Listo! Todos tienen lugar.'
-              : left > 0
-              ? `Falta ubicar a ${personas(left)}`
-              : `Hay ${personas(-left)} de más: quitá en alguna habitación.`}
-          </div>
+          {/* Va apareciendo según el proceso: sugerencia → (al elegir) cuántos faltan → listo */}
+          {placed > 0 && (
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 800,
+                marginBottom: 8,
+                color: left === 0 ? '#047857' : left > 0 ? '#B45309' : '#B91C1C',
+              }}
+            >
+              {left === 0
+                ? '✓ ¡Listo! Todos tienen lugar.'
+                : left > 0
+                ? `Falta ubicar a ${personas(left)}`
+                : `Hay ${personas(-left)} de más: quitá en alguna habitación.`}
+            </div>
+          )}
           {recText && (
             <div style={{ fontSize: 12.5, color: '#92400E', background: '#FFFBEB', borderRadius: 8, padding: '7px 10px', marginBottom: 8 }}>
               {recText}
             </div>
           )}
+          {placed === 0 && <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 8 }}>Tocá la habitación que prefieran.</div>}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {freeRooms.map((r) => {
               const g = distFree[r.id] || 0;
@@ -420,12 +426,19 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
                     overflow: 'hidden',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '10px 12px' }}>
-                    {/* Datos de la habitación (sin personas: tocar abre el selector) */}
-                    <div
-                      onClick={() => !g && canAdd && setOpenRoom(isOpen ? '' : r.id)}
-                      style={{ flex: 1, minWidth: 0, cursor: !g && canAdd ? 'pointer' : 'default', opacity: canAdd ? 1 : 0.5 }}
-                    >
+                  <div
+                    onClick={() => !g && canAdd && setOpenRoom(isOpen ? '' : r.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 8,
+                      padding: '10px 12px',
+                      cursor: !g && canAdd ? 'pointer' : 'default',
+                    }}
+                  >
+                    {/* Datos de la habitación (sin personas: tocar la tarjeta abre "¿Cuántas van aquí?") */}
+                    <div style={{ flex: 1, minWidth: 0, opacity: canAdd ? 1 : 0.5 }}>
                     <span>
                         <span style={{ fontWeight: 800, fontSize: 14, color: '#111' }}>{r.id}</span>
                         <span style={{ fontSize: 12, color: '#6B7280' }}> · {r.desc} · hasta {r.maxGuests}</span>
@@ -503,32 +516,25 @@ export function Quoter({ allRes = [], tarifas = [], onReserve }) {
                         </button>
                       </div>
                     ) : (
-                      // Sin personas: botón con borde que invita a elegir
-                      <button
-                        type="button"
-                        disabled={!canAdd}
-                        onClick={() => setOpenRoom(isOpen ? '' : r.id)}
+                      // Sin personas: flechita gris (se toca la tarjeta entera)
+                      <span
+                        aria-hidden
                         style={{
                           flexShrink: 0,
-                          minHeight: 36,
-                          padding: '0 12px',
-                          borderRadius: 9,
-                          fontFamily: 'inherit',
-                          fontWeight: 800,
-                          fontSize: 12.5,
-                          cursor: canAdd ? 'pointer' : 'default',
-                          background: isOpen ? '#2563EB' : '#fff',
-                          color: !canAdd ? '#D1D5DB' : isOpen ? '#fff' : '#2563EB',
-                          border: `1.5px solid ${!canAdd ? '#E5E7EB' : '#2563EB'}`,
-                          whiteSpace: 'nowrap',
+                          fontSize: 22,
+                          lineHeight: 1,
+                          color: !canAdd ? '#E5E7EB' : isOpen ? '#2563EB' : '#9CA3AF',
+                          transform: isOpen ? 'rotate(90deg)' : 'none',
+                          transition: 'transform .15s',
                         }}
                       >
-                        {isOpen ? 'Cerrar ▲' : '¿Cuántas van aquí?'}
-                      </button>
+                        ›
+                      </span>
                     )}
                   </div>
                   {isOpen && !g && (
                     <div style={{ padding: '0 12px 12px' }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 800, color: '#1D4ED8', marginBottom: 6 }}>¿Cuántas van aquí?</div>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {Array.from({ length: r.maxGuests }, (_, i) => i + 1).map((k) => {
                           const dis = k > maxHere;
