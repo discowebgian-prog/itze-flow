@@ -54,15 +54,17 @@ export function GuestsPage({
   const nEmpresas = Object.values(gdb).filter((g) => g.isCompany).length;
   const nParticulares = Object.values(gdb).length - nEmpresas;
 
-  // Cumpleaños (fecha de la CURP), del más cercano al más lejano
+  // Cumpleaños (CURP o fecha de nacimiento cargada), del más cercano al más lejano
   const bdays = birthdayList(Object.values(gdb));
   const bdayOf = Object.fromEntries(bdays.map((x) => [x.g.key, x]));
+  // 🎂 Cumpleaños: solo los de esta semana (hoy y los próximos 7 días; pedido de Gian).
+  // La fecha de todos se ve en su tarjeta en Todos / Empresas / Particulares.
+  const weekBdays = bdays.filter((x) => x.next.days <= 7);
 
   if (tipo === 'cumple') {
-    // Solo los que tienen fecha, en orden de cumpleaños
     const keep = new Set(allGuests.map((g) => g.key));
     allGuests.length = 0;
-    bdays.forEach((x) => keep.has(x.g.key) && allGuests.push(x.g));
+    weekBdays.forEach((x) => keep.has(x.g.key) && allGuests.push(x.g));
   } else {
     // Ordenamos por los que más dinero han dejado (los mejores clientes primero)
     allGuests.sort((a, b) => b.totalSpent - a.totalSpent);
@@ -142,7 +144,7 @@ export function GuestsPage({
           { v: 'todos', label: 'Todos', bg: '#EFF6FF', txt: '#1E40AF' },
           { v: 'empresa', label: `🏢 Empresas (${nEmpresas})`, bg: '#EDE9FE', txt: '#5B21B6' },
           { v: 'particular', label: `👤 Particulares (${nParticulares})`, bg: '#F3F4F6', txt: '#374151' },
-          { v: 'cumple', label: `🎂 Cumpleaños (${bdays.length})`, bg: '#FDF2F8', txt: '#9D174D' },
+          { v: 'cumple', label: `🎂 Cumpleaños esta semana (${weekBdays.length})`, bg: '#FDF2F8', txt: '#9D174D' },
         ].map((o) => {
           const on = tipo === o.v;
           return (
@@ -171,9 +173,9 @@ export function GuestsPage({
 
       {tipo === 'cumple' && (
         <div style={{ fontSize: 12, color: '#6B7280', margin: '-6px 0 14px', lineHeight: 1.45 }}>
-          {bdays.length
-            ? 'Del más cercano al más lejano. La fecha sale de la CURP de la INE o de la fecha de nacimiento cargada (pasaportes). El día del cumple aparece "Saludar", que abre WhatsApp con el mensaje listo.'
-            : 'Todavía no hay cumpleaños: la fecha sale de la CURP de la INE o de la fecha de nacimiento cargada en la reserva (pasaportes).'}
+          {weekBdays.length
+            ? 'Los que cumplen hoy y en los próximos 7 días. El día del cumple aparece "Saludar", que abre WhatsApp con el mensaje listo.'
+            : 'Nadie cumple años esta semana. La fecha de cada huésped se ve en su tarjeta (sale de la CURP de la INE o de la fecha de nacimiento cargada, en pasaportes).'}
         </div>
       )}
 
@@ -181,9 +183,10 @@ export function GuestsPage({
         {allGuests.map((g, idx) => {
           const freq = freqBadge(g.visits);
           const lastRes = reservations.find(r => r.id === g.stays[g.stays.length - 1]);
-          // 🎂 En Cumpleaños, todos con su fecha; en las otras vistas, solo el que cumple hoy
+          // 🎂 Fecha de cumpleaños en todas las tarjetas que la tienen (cuenta regresiva solo la última semana)
           const bd = bdayOf[g.key];
-          const showBd = bd && (tipo === 'cumple' || bd.next.days === 0);
+          const showBd = !!bd;
+          const soon = bd && bd.next.days <= 7;
           const greeted = bd && bd.next.days === 0 && wasGreeted(g.key);
 
           return (
@@ -226,19 +229,28 @@ export function GuestsPage({
                 <div
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-                    background: bd.next.days === 0 ? '#FDF2F8' : '#FAFAFA',
-                    border: `1px solid ${bd.next.days === 0 ? '#FBCFE8' : '#F0F0F0'}`,
-                    borderRadius: 8, padding: '7px 10px',
+                    background: bd.next.days === 0 ? '#FDF2F8' : soon ? '#FFF7FB' : '#FAFAFA',
+                    border: `1px solid ${bd.next.days === 0 ? '#FBCFE8' : soon ? '#FCE7F3' : '#F0F0F0'}`,
+                    borderRadius: 8, padding: soon ? '7px 10px' : '5px 10px',
                   }}
                 >
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 12.5, fontWeight: 800, color: bd.next.days === 0 ? '#9D174D' : '#374151' }}>
-                      🎂 {whenText(bd.next)}
-                    </div>
-                    <div style={{ fontSize: 11, color: '#6B7280' }}>
-                      Cumple {bd.next.age}
-                      {bd.staying ? ' · lo pasa en el hostel' : ''}
-                    </div>
+                    {soon ? (
+                      <>
+                        <div style={{ fontSize: 12.5, fontWeight: 800, color: bd.next.days === 0 ? '#9D174D' : '#374151' }}>
+                          🎂 {whenText(bd.next)}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#6B7280' }}>
+                          Cumple {bd.next.age}
+                          {bd.staying ? ' · lo pasa en el hostel' : ''}
+                        </div>
+                      </>
+                    ) : (
+                      // Lejos: una sola línea discreta con la fecha
+                      <div style={{ fontSize: 11.5, color: '#6B7280', fontWeight: 600 }}>
+                        🎂 {whenText(bd.next)} · cumple {bd.next.age}
+                      </div>
+                    )}
                   </div>
                   {/* Saludar solo el día del cumpleaños (antes sería un "feliz cumple" adelantado) */}
                   {g.phone && lastRes && bd.next.days === 0 && (

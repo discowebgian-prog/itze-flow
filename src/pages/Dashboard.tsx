@@ -32,7 +32,9 @@ export function Dashboard({
   const hello = greeting(deviceName, now);
   const summary = daySummary(reservations, now);
   // 🎂 Cumpleaños de hoy de todos los huéspedes (también los que ya se fueron), sin los ya saludados
-  const bdToday = birthdayList(Object.values(buildGuestDB(reservations, decisions)), now).filter((x) => x.next.days === 0);
+  const bdAll = birthdayList(Object.values(buildGuestDB(reservations, decisions)), now);
+  const bdToday = bdAll.filter((x) => x.next.days === 0);
+  const bdWeek = bdAll.filter((x) => x.next.days <= 7).length;
   const bdPending = bdToday.filter((x) => !wasGreeted(x.g.key, now));
 
   // --- NUEVO: Controladores de Animación ---
@@ -148,6 +150,8 @@ export function Dashboard({
               ? `Hoy cumplen ${bdPending.length} huéspedes · Saludar`
               : bdToday.length
               ? 'Cumpleaños · ya saludados ✓'
+              : bdWeek
+              ? `Cumpleaños · ${bdWeek} esta semana`
               : 'Cumpleaños'}
             {bdPending.length > 0 && (
               <span
