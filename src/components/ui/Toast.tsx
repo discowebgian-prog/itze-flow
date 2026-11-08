@@ -1,6 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { SPRING_POP } from './Motion';
 import { onNotify, toastMs, OFFLINE_BANNER, BACK_ONLINE, notify } from '../../lib/voice';
@@ -36,7 +37,9 @@ export function Toast({ isMobile }) {
     clearTimeout(timer.current);
     setT(null);
   };
-  return (
+  // En document.body: así "fixed" siempre se mide contra la pantalla (al medio de verdad),
+  // aunque algún contenedor tenga transform o scroll propio.
+  return createPortal(
     <AnimatePresence>
       {t && t.center && (
         // Al centro (check-in, check-out, cobro): tarjeta más grande, sin fondo oscuro y sin
@@ -167,7 +170,8 @@ export function Toast({ isMobile }) {
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
 

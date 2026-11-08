@@ -544,6 +544,26 @@ export default function AppMejorada() {
       setCalOffset(diasDistancia - 2); // Lo centramos dejando 2 días de margen a la izquierda
       setTab('calendario'); // Forzamos ir a la pestaña del calendario para ver la reserva
       
+      // Editar que hizo check-in, check-out o saldó la cuenta: mismo cartelito al centro que desde el panel
+      if (!Array.isArray(input) && input.id) {
+        const prev = res.find((r) => r.id === input.id);
+        const touched = [input, ...(opts.also || [])];
+        const after = res.map((r) => touched.find((t) => t.id === r.id) || r);
+        const ids = touched.map((t) => t.id);
+        const debt = (r) => (Number(r?.totalAmount) || 0) - (Number(r?.paid) || 0);
+        if (prev && prev.status !== 'hospedado' && input.status === 'hospedado') {
+          notify(afterCheckIn(touched, after), 'ok', { center: true });
+          return true;
+        }
+        if (prev && prev.status !== 'finalizada' && input.status === 'finalizada') {
+          notify(afterCheckOut(touched, after), 'ok', { center: true });
+          return true;
+        }
+        if (prev && Number(input.paid) > Number(prev.paid) && debt(prev) > 0) {
+          notify(afterPay(ids, after), 'ok', { center: true });
+          return true;
+        }
+      }
       // Cartelito que se va solo
       notify(
         Array.isArray(input) && input.length > 1
