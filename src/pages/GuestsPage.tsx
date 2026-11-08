@@ -240,7 +240,8 @@ export function GuestsPage({
                       {bd.staying ? ' · lo pasa en el hostel' : ''}
                     </div>
                   </div>
-                  {g.phone && lastRes && (
+                  {/* Saludar solo el día del cumpleaños (antes sería un "feliz cumple" adelantado) */}
+                  {g.phone && lastRes && bd.next.days === 0 && (
                     <a
                       href={`${waLink(g.phone, lastRes.guestPhonePrefix, lastRes.guestNationality)}?text=${encodeURIComponent(birthdayMessage(g.name, bd.lang, bd.staying))}`}
                       target="_blank"

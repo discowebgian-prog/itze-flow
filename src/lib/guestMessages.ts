@@ -119,13 +119,16 @@ export function birthdayList(guests, now = new Date()) {
     .sort((a, b) => a.next.days - b.next.days);
 }
 
-// "Hoy" · "Mañana" · "En 5 días · sáb 14 de nov"
+// "Hoy" · "Mañana" · "En 5 días · sáb 14 de nov" (cuenta regresiva solo la última semana,
+// pedido de Gian) · más lejos, solo la fecha: "lun 5 de abr"
 export function whenText(next) {
   if (!next) return '';
   if (next.days === 0) return 'Hoy';
   if (next.days === 1) return 'Mañana';
-  return `En ${next.days} días · ${dayNum(next.date)} de ${mes(next.date)}`;
+  const fecha = `${dayNum(next.date)} de ${mes(next.date)}`;
+  return next.days <= 7 ? `En ${next.days} días · ${fecha}` : cap(fecha);
 }
+const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 
 // Saludados (por aparato): así el aviso de Inicio se apaga después de saludar
 const GREET_KEY = 'itze-flow-saludados';

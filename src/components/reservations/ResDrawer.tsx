@@ -447,7 +447,7 @@ export function ResDrawer({
                   }}
                 >
                   <span style={{ fontSize: 13, fontWeight: 700, color: '#9D174D' }}>{birthdayText(bday)}</span>
-                  {res.guestPhone && (
+                  {res.guestPhone && bday.today && (
                     <a
                       href={`${waLink(res.guestPhone, res.guestPhonePrefix, res.guestNationality)}?text=${encodeURIComponent(birthdayMessage(res.guestName, lang))}`}
                       target="_blank"
