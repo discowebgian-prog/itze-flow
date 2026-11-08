@@ -10,6 +10,7 @@ import { RangeCalendar } from '../ui/RangeCalendar';
 import { Sel } from '../ui/Sel';
 import { ROOMS, SOURCES, RS, COUNTRIES, findCountry } from '../../lib/constants';
 import { TODAY, fmt, fmtD, addDays, diffDays, currency } from '../../lib/dates';
+import { lastVisitText } from '../../lib/guestMessages';
 import { findConflicts, calcStayTotal, lateCostOf } from '../../lib/reservations';
 import { quoteRoom, pricingMatches, applyQuote } from '../../lib/rates';
 import { QuoteInfo, money } from './QuoteInfo';
@@ -1069,11 +1070,8 @@ export function ResForm({
           >
             {stayTag.label}
           </span>
-          {stay.last && (
-            <span style={{ fontSize: 11, color: '#9CA3AF' }}>
-              Anterior: {fmtD(stay.last.checkIn)}
-              {stay.last.room ? ` · ${stay.last.room}` : ''}
-            </span>
+          {stay.last && lastVisitText(stay) && (
+            <span style={{ fontSize: 11.5, color: '#6B7280' }}>{lastVisitText(stay)}</span>
           )}
         </div>
       )}

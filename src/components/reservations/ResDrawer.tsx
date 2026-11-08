@@ -8,6 +8,7 @@ import { Icon } from '../ui/Icon';
 import { srcLabel, srcColor, BLOCK_COLORS, ROOMS } from '../../lib/constants';
 import { fmtD, fmtDT, diffDays, currency } from '../../lib/dates';
 import { waLink, stayInfo, stayBadge } from '../../lib/guests';
+import { lastVisitText, birthdayInStay, birthdayText, birthdayMessage, companionWelcome, langFor } from '../../lib/guestMessages';
 import { DocLink } from '../ui/DocLink';
 import { LATE_COLORS } from '../ui/LateBadge';
 import { LatePicker } from './LatePicker';
@@ -151,7 +152,12 @@ export function ResDrawer({
   const saldo = res.totalAmount - res.paid;
   const nights = diffDays(res.checkIn, res.checkOut);
   // Qué número de estancia es esta reserva para el huésped
-  const freq = stayBadge(stayInfo(allRes, res, guestDecisions));
+  const stay = stayInfo(allRes, res, guestDecisions);
+  const freq = stayBadge(stay);
+  // "Vuelve por 3.ª vez · la última fue en agosto, en P2" y cumpleaños durante la estadía (desde la CURP)
+  const stayLine = res.lista_negra ? '' : lastVisitText(stay);
+  const bday = res.status === 'cancelada' ? null : birthdayInStay(res);
+  const lang = langFor(res.guestNationality);
   const pmLabel = {
     efectivo: 'Efectivo',
     transferencia: 'Transferencia',
@@ -420,6 +426,53 @@ export function ResDrawer({
               </div>
             </div>
           </div>
+          {(stayLine || bday) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: -4, marginBottom: 12 }}>
+              {stayLine && (
+                <div style={{ fontSize: 12.5, color: '#475569', fontWeight: 600 }}>↩︎ {stayLine}</div>
+              )}
+              {bday && (
+                <div
+                  className="pop-in"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    flexWrap: 'wrap',
+                    background: '#FDF2F8',
+                    border: '1.5px solid #FBCFE8',
+                    borderRadius: 10,
+                    padding: '8px 12px',
+                  }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#9D174D' }}>{birthdayText(bday)}</span>
+                  {res.guestPhone && (
+                    <a
+                      href={`${waLink(res.guestPhone, res.guestPhonePrefix, res.guestNationality)}?text=${encodeURIComponent(birthdayMessage(res.guestName, lang))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '5px 10px',
+                        borderRadius: 8,
+                        background: '#DB2777',
+                        color: '#fff',
+                        textDecoration: 'none',
+                        fontWeight: 700,
+                        fontSize: 12,
+                      }}
+                    >
+                      <Icon name="whatsapp" size={14} /> Saludar
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           {inGroup && (
             <div
               data-group-band
@@ -1202,7 +1255,8 @@ export function ResDrawer({
               </div>
               {res.companions.map((c, i) => {
                 // Preparamos el mensaje de WhatsApp para el acompañante
-                const mensajeAcomp = encodeURIComponent(`¡Hola ${c.name ? c.name.split(' ')[0] : ''}! Bienvenido a Itzé Hostel. 🌴 Tu grupo está en la habitación ${res.room || 'asignada'}. El código de acceso a la puerta principal es *${res.pin_acceso || '---'}*. ¡Te esperamos!`);
+                // Bienvenida (en inglés si el titular no es de un país de habla hispana)
+                const mensajeAcomp = encodeURIComponent(companionWelcome(c.name, res.room, res.pin_acceso, lang));
                 return (
                   <div
                     key={i}

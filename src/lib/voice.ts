@@ -3,6 +3,7 @@
 import { COUNTRIES, findCountry } from './constants';
 import { currency, fmt, addDays, parseD } from './dates';
 import { groupName } from './groups';
+import { birthdayInStay } from './guestMessages';
 import { dayNum, mes, dayRange, listY } from './availability';
 
 // ── LA VOZ DE FLOW ────────────────────────────────────────────────────────────
@@ -284,6 +285,15 @@ export function daySummary(reservations, now = nowMerida()) {
     lines.push('Los movimientos de hoy ya están hechos ✓');
   } else if (!night) {
     lines.push('Día tranquilo: nadie entra ni sale hoy.');
+  }
+
+  // 🎂 Cumpleaños de hoy entre los que están o llegan (fecha sacada de la CURP)
+  const cumple = all.filter(
+    (r) => r.checkIn <= today && today <= r.checkOut && r.status !== 'finalizada' && birthdayInStay(r, now)?.today
+  );
+  if (cumple.length) {
+    const quien = listY(cumple.slice(0, 3).map((r) => `${whoOf(r) || 'alguien'}${r.room ? ` (${r.room})` : ''}`));
+    lines.unshift(`🎂 Hoy ${cumple.length > 1 ? 'cumplen' : 'cumple'} años ${quien}.`);
   }
 
   if (night) {
