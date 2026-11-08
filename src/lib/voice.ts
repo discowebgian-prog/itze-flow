@@ -1,7 +1,8 @@
 /* eslint-disable */
 // @ts-nocheck
 import { COUNTRIES, findCountry } from './constants';
-import { currency } from './dates';
+import { currency, fmt, addDays, parseD } from './dates';
+import { groupName } from './groups';
 import { dayNum, mes, dayRange, listY } from './availability';
 
 // ── LA VOZ DE FLOW ────────────────────────────────────────────────────────────
@@ -189,3 +190,171 @@ export const SCAN = {
   },
   uploading: 'Subiendo…',
 };
+
+// ── ETAPA 2: INICIO QUE HABLA ─────────────────────────────────────────────────
+// Hora de Progreso (Mérida), sin depender de la zona del aparato
+export const nowMerida = () => new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Merida' }));
+
+// "Buen día, Gian ☀️" · "Buenas tardes, Marce 🌤️" · "Buenas noches 🌙"
+export function greeting(name, now = nowMerida()) {
+  const h = now.getHours();
+  const [txt, emoji] = h >= 5 && h < 12 ? ['Buen día', '☀️'] : h >= 12 && h < 19 ? ['Buenas tardes', '🌤️'] : ['Buenas noches', '🌙'];
+  return { text: name ? `${txt}, ${name}` : txt, emoji };
+}
+
+const live = (r) => r && !r.deleted && r.status !== 'cancelada' && r.status !== 'eliminada';
+
+// Junta las habitaciones de un mismo grupo en una sola "llegada" o "salida"
+function units(list) {
+  const out = [];
+  const byGroup = {};
+  list.forEach((r) => {
+    if (r.grupoId) {
+      if (!byGroup[r.grupoId]) {
+        byGroup[r.grupoId] = { group: true, res: [] };
+        out.push(byGroup[r.grupoId]);
+      }
+      byGroup[r.grupoId].res.push(r);
+    } else out.push({ group: false, res: [r] });
+  });
+  return out.map((u) => {
+    const rooms = u.res.map((r) => r.room).filter(Boolean);
+    const tit = u.res.find((r) => r.grupoTitular) || u.res[0];
+    const name = u.group ? groupName(u.res) || whoOf(tit) : whoOf(tit);
+    return {
+      ...u,
+      name,
+      rooms,
+      people: u.res.reduce((s, r) => s + (Number(r.totalGuests) || 1), 0),
+      debt: debe(u.res),
+      label: u.group && u.res.length > 1
+        ? `el grupo de ${name || 'sin nombre'} (${roomsText(rooms)})`
+        : `${name || 'alguien'}${rooms.length ? ` (${roomsText(rooms)})` : ''}`,
+    };
+  });
+}
+
+// "llega Ana López (P2)" · "llegan Ana López (P2) y Juan Pérez (P4)" · "llegan 3 reservas"
+function moves(list, one, many) {
+  const u = units(list);
+  if (!u.length) return '';
+  if (u.length === 1) return `${one} ${u[0].label}`;
+  if (u.length === 2) return `${many} ${u[0].label} y ${u[1].label}`;
+  return `${many} ${u.length} reservas`;
+}
+const cap1 = (t) => (t ? t.charAt(0).toUpperCase() + t.slice(1) : t);
+
+// Resumen del día para Inicio: 1 a 3 renglones cortos, en palabras.
+// De día cuenta lo que falta de hoy; desde las 19:00, lo que falta y lo de mañana.
+export function daySummary(reservations, now = nowMerida()) {
+  const today = fmt(now);
+  const tomorrow = fmt(addDays(parseD(today), 1));
+  const all = reservations.filter(live);
+  const arrivals = all.filter((r) => r.checkIn === today && r.status === 'por_llegar');
+  const departures = all.filter((r) => r.checkOut === today && r.status === 'hospedado');
+  const doneIn = all.filter((r) => r.checkIn === today && r.status === 'hospedado').length;
+  const doneOut = all.filter((r) => r.checkOut === today && r.status === 'finalizada').length;
+  const night = now.getHours() >= 19;
+  const lines = [];
+
+  const hoy = night
+    ? [moves(arrivals, 'que llegue', 'que lleguen'), moves(departures, 'que se vaya', 'que se vayan')].filter(Boolean)
+    : [moves(arrivals, 'llega', 'llegan'), moves(departures, 'se va', 'se van')].filter(Boolean);
+  if (hoy.length) {
+    lines.push(night ? `Todavía falta ${hoy.join(' y ')}.` : `Hoy ${hoy.join(' y ')}.`);
+    // Late check-out de los que se van hoy (de noche ya no hace falta)
+    units(night ? [] : departures)
+      .filter((u) => u.res.some((r) => r.lateCheckout))
+      .slice(0, 2)
+      .forEach((u) => {
+        const h = u.res.find((r) => r.lateCheckout).lateCheckout;
+        lines.push(`${cap1(u.label)} sale a las ${h} con late check-out.`);
+      });
+    // Saldos de los que llegan
+    const conSaldo = units(arrivals).filter((u) => u.debt > 0);
+    if (conSaldo.length === 1) lines.push(`${cap1(conSaldo[0].name || 'Alguien')} llega con saldo de ${currency(conSaldo[0].debt)}.`);
+    else if (conSaldo.length > 1) lines.push(`${conSaldo.length} de las que llegan tienen saldo por cobrar.`);
+  } else if (doneIn || doneOut) {
+    lines.push('Los movimientos de hoy ya están hechos ✓');
+  } else if (!night) {
+    lines.push('Día tranquilo: nadie entra ni sale hoy.');
+  }
+
+  if (night) {
+    const mIn = all.filter((r) => r.checkIn === tomorrow && r.status === 'por_llegar');
+    const mOut = all.filter((r) => r.checkOut === tomorrow && r.status !== 'finalizada');
+    const man = [moves(mIn, 'llega', 'llegan'), moves(mOut, 'se va', 'se van')].filter(Boolean);
+    lines.push(man.length ? `Mañana ${man.join(' y ')}.` : 'Mañana no hay entradas ni salidas.');
+  }
+  return lines;
+}
+
+// ── CARTELITOS ÚTILES DEL EQUIPO ──────────────────────────────────────────────
+// after: todas las reservas ya con el cambio aplicado
+
+// Check-in: "Listo, Ana López ya está en P2 · se va el mié 11 · le queda saldo de $1,100"
+// Grupo completo: "Listo, los 8 del grupo de Ana López ya están en casa · P1, P2 y P3"
+export function afterCheckIn(list, after) {
+  const l = asList(list);
+  const g = l[0] || {};
+  if (g.grupoId) {
+    const members = after.filter((r) => live(r) && r.grupoId === g.grupoId);
+    if (members.length > 1 && members.every((r) => r.status === 'hospedado')) {
+      const u = units(members)[0];
+      return `Listo, los ${u.people} del grupo de ${u.name || 'sin nombre'} ya están en casa · ${roomsText(u.rooms)}`;
+    }
+  }
+  if (l.length > 1) return `Listo, ${roomsText(l.map((r) => r.room))} ya están en casa`;
+  const saldo = debe(l);
+  return [
+    `Listo, ${whoOf(g) || 'el huésped'} ya está${g.room ? ` en ${g.room}` : ' en casa'}`,
+    g.checkOut ? `se va el ${dayNum(g.checkOut)}` : '',
+    saldo > 0 ? `le queda saldo de ${currency(saldo)}` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+// Check-out: "P2 quedó libre · mañana entra Lucía Gómez" (o "hoy entra…", "libre hasta el jue 12")
+export function afterCheckOut(list, after, now = nowMerida()) {
+  const l = asList(list);
+  const today = fmt(now);
+  const tomorrow = fmt(addDays(parseD(today), 1));
+  const rooms = l.map((r) => r.room).filter(Boolean);
+  const saldo = debe(l);
+  const owe = saldo > 0 ? `quedó debiendo ${currency(saldo)}` : '';
+  if (!rooms.length) return [`${whoOf(l[0]) || 'El huésped'} ya hizo check-out`, owe].filter(Boolean).join(' · ');
+  if (rooms.length > 1) return [`${roomsText(rooms)} quedaron libres`, owe].filter(Boolean).join(' · ');
+  const r = l[0];
+  const next = after
+    .filter((x) => live(x) && x.id !== r.id && x.room === r.room && x.propertyId === r.propertyId && x.status === 'por_llegar' && x.checkIn >= today)
+    .sort((a, b) => a.checkIn.localeCompare(b.checkIn))[0];
+  const nextTxt = !next
+    ? 'sin reservas próximas'
+    : next.checkIn === today
+    ? `hoy entra ${whoOf(next) || 'otra reserva'}`
+    : next.checkIn === tomorrow
+    ? `mañana entra ${whoOf(next) || 'otra reserva'}`
+    : `libre hasta el ${dayNum(next.checkIn)} de ${mes(next.checkIn)}`;
+  return [`${r.room} quedó libre`, nextTxt, owe].filter(Boolean).join(' · ');
+}
+
+// Cobro: "Ana López pagó todo · cuenta saldada" · "Cobro guardado · le queda $500"
+// Grupo: "Grupo de Ana López pagado completo" · "Cobro guardado · al grupo le queda $X"
+export function afterPay(ids, after) {
+  const paid = after.filter((r) => ids.includes(r.id));
+  const g = paid[0] || {};
+  if (g.grupoId) {
+    const members = after.filter((r) => live(r) && r.grupoId === g.grupoId);
+    if (members.length > 1) {
+      const total = debe(members);
+      const name = groupName(members);
+      if (total <= 0) return `Grupo de ${name || 'sin nombre'} pagado completo`;
+      if (paid.length === 1 && debe(paid) <= 0) return `${g.room} pagó todo · al grupo le queda ${currency(total)}`;
+      return `Cobro guardado · al grupo le queda ${currency(total)}`;
+    }
+  }
+  const saldo = debe(paid);
+  if (saldo <= 0) return whoOf(g) ? `${whoOf(g)} pagó todo · cuenta saldada` : 'Pagó todo · cuenta saldada';
+  return `Cobro guardado · le queda ${currency(saldo)}`;
+}

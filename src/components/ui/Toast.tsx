@@ -74,8 +74,9 @@ export function Toast({ isMobile }) {
               alignItems: 'flex-start',
               gap: 9,
               maxWidth: 460,
-              pointerEvents: 'auto',
-              cursor: 'pointer',
+              // Solo el rojo se cierra tocándolo; los demás dejan pasar el toque (no tapan botones)
+              pointerEvents: t.kind === 'error' ? 'auto' : 'none',
+              cursor: t.kind === 'error' ? 'pointer' : 'default',
             }}
           >
             <span

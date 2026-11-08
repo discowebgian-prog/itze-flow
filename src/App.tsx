@@ -25,7 +25,9 @@ import appLayoutCss from './styles/app-layout.css?raw';
 import { AnimatePresence, motion } from 'motion/react';
 import { Backdrop, PopCard, SPRING_POP, SPRING_SHEET } from './components/ui/Motion';
 import { Toast, OfflineBanner, useOnline } from './components/ui/Toast';
-import { notify, notifyError, humanError, SAVED, checkInText, checkOutText, deleteText } from './lib/voice';
+import { notify, notifyError, humanError, SAVED, checkInText, checkOutText, deleteText, afterCheckIn, afterCheckOut, afterPay } from './lib/voice';
+import { WhoAmI } from './components/ui/WhoAmI';
+import { getDeviceName, setDeviceName } from './lib/device';
 
 
 // ── APP ───────────────────────────────────────────────────────────────────────
@@ -287,12 +289,23 @@ export default function AppMejorada() {
   const [quoterOpen, setQuoterOpen] = useState(false);
   // Sin conexión: franja ámbar arriba (y cartelito al volver)
   const online = useOnline();
+  // Quién usa este aparato (Gian / Marce): se pregunta la primera vez y se recuerda acá
+  const [deviceName, setDeviceNameState] = useState(getDeviceName);
+  const [whoOpen, setWhoOpen] = useState(false);
+  const pickWho = (name) => {
+    setDeviceName(name);
+    setDeviceNameState(name);
+    setWhoOpen(false);
+    notify(`Listo, ${name} · este aparato queda a tu nombre`);
+  };
   // Animación al cambiar de pantalla: de qué lado entra la nueva (según el orden del menú)
   const prevTabRef = useRef(tab);
   const tabDirRef = useRef(0);
   if (!user) return <Login onLogin={setUser} />;
 
   const isAdmin = user.role === 'admin';
+  // Nombre para anotar quién cargó/eliminó/decidió algo
+  const who = deviceName || user.name || 'Usuario desconocido';
   // Numerito rojo de "posibles duplicados" en el menú
   const dupDotStyle = {
     position: 'absolute',
@@ -317,7 +330,7 @@ export default function AppMejorada() {
     const [clave_a, clave_b] = [pair.a.key, pair.b.key].sort();
     const { error } = await supabase
       .from('huespedes_decisiones')
-      .upsert([{ clave_a, clave_b, decision, decidido_por: user.name || '' }], {
+      .upsert([{ clave_a, clave_b, decision, decidido_por: who }], {
         onConflict: 'clave_a,clave_b',
       });
     if (error) {
@@ -494,7 +507,7 @@ export default function AppMejorada() {
           year: 'numeric', month: '2-digit', day: '2-digit',
           hour: '2-digit', minute: '2-digit'
         });
-        const responsable = user?.name || 'Usuario desconocido';
+        const responsable = who;
 
         const preparadas = lista.map((r) => {
           const p = prepRes(r);
@@ -578,7 +591,7 @@ export default function AppMejorada() {
       hour: '2-digit', minute: '2-digit'
     });
 
-    const responsable = user?.name || 'Usuario desconocido';
+    const responsable = who;
 
     // 1. Borrado Lógico en Supabase
     const { error } = await supabase
@@ -648,7 +661,7 @@ export default function AppMejorada() {
     try {
       const pn = prepRes(nueva);
       pn.datosLimpios.fecha_carga = momento;
-      pn.datosLimpios.usuario_carga = user?.name || 'Usuario desconocido';
+      pn.datosLimpios.usuario_carga = who;
       // Reserva común → pasa a ser la habitación del titular del nuevo grupo
       let baseAct = null;
       if (!isGroup) {
@@ -713,7 +726,7 @@ export default function AppMejorada() {
     };
     setRes((prev) => prev.map(apply));
     setDrawer((prev) => (prev ? apply(prev) : prev));
-    notify(SAVED.cobro(pagos.length));
+    notify(afterPay(pagos.map((p) => p.id), res.map(apply)));
     return true;
   };
   const restoreRes = async (id) => {
@@ -803,11 +816,10 @@ const toggleBlacklist = async (id, currentStatus) => {
 
     const before = res.filter((x) => ids.includes(x.id));
     // 1. Actualizamos la vista local de inmediato para una experiencia fluida
-    setRes(
-      res.map((x) =>
-        ids.includes(x.id) ? { ...x, status: 'hospedado', checkInAt: time } : x
-      )
+    const after = res.map((x) =>
+      ids.includes(x.id) ? { ...x, status: 'hospedado', checkInAt: time } : x
     );
+    setRes(after);
     setCiModal(null);
 
     // 2. Impactamos en la base de datos de Supabase (si falla, vuelve a como estaba)
@@ -815,7 +827,9 @@ const toggleBlacklist = async (id, currentStatus) => {
     if (error) {
       setRes((prev) => prev.map((x) => before.find((b) => b.id === x.id) || x));
       notifyError(error, 'hacer el check-in');
+      return;
     }
+    notify(afterCheckIn(after.filter((x) => ids.includes(x.id)), after));
   };
 
   const confCO = async (time) => {
@@ -842,7 +856,9 @@ const toggleBlacklist = async (id, currentStatus) => {
     if (error) {
       setRes((prev) => prev.map((x) => before.find((b) => b.id === x.id) || x));
       notifyError(error, 'hacer el check-out');
+      return;
     }
+    notify(afterCheckOut(before, res));
   };
 
   // 4. EL DISEÑO VISUAL (Ahora sí, adentro de la función principal)
@@ -964,9 +980,13 @@ const toggleBlacklist = async (id, currentStatus) => {
             </>
           ) : (
             <>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>
-                {user.name}
-              </span>
+              <button
+                onClick={() => setWhoOpen(true)}
+                title="Cambiar quién usa este aparato"
+                style={{ background: 'none', border: 'none', fontSize: 13, fontWeight: 600, color: '#374151', cursor: 'pointer', fontFamily: 'inherit', padding: '4px 6px', borderRadius: 6 }}
+              >
+                👤 {deviceName || user.name}
+              </button>
               <button
                 onClick={handleLogout}
                 style={{
@@ -1131,6 +1151,8 @@ const toggleBlacklist = async (id, currentStatus) => {
               propStatus={propStatus}
               setPropStatus={setPropStatus}
               onGoTo={goTo}
+              deviceName={deviceName}
+              onWho={() => setWhoOpen(true)}
             />
           )}
           {tab === 'calendario' && (
@@ -1676,6 +1698,10 @@ const toggleBlacklist = async (id, currentStatus) => {
             </div>
           </PopCard>
         </Backdrop>
+      )}</AnimatePresence>
+      {/* ¿Quién usa este dispositivo? (la primera vez, o al tocar el nombre) */}
+      <AnimatePresence>{(whoOpen || !deviceName) && (
+        <WhoAmI key="who" current={deviceName} onPick={pickWho} onClose={deviceName ? () => setWhoOpen(false) : null} />
       )}</AnimatePresence>
       {/* CARTELITO: aparece abajo y se va solo (src/components/ui/Toast.tsx) */}
       <Toast isMobile={isMobile} />
