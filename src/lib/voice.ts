@@ -364,3 +364,86 @@ export function afterPay(ids, after) {
   if (saldo <= 0) return whoOf(g) ? `${whoOf(g)} pagó todo · cuenta saldada` : 'Pagó todo · cuenta saldada';
   return `Cobro guardado · le queda ${currency(saldo)}`;
 }
+
+// ── ETAPA 4: FINANZAS EN PALABRAS ─────────────────────────────────────────────
+// Dos o tres frases arriba de cada mes, sin reemplazar los números:
+// "Noviembre va en 58% del potencial, 6 puntos más que octubre. Los Lun–Mié son los que
+//  más cuestan (31% contra 64% de Jue–Dom). Ganancia hasta hoy: $12,300; si sigue así, cerraría cerca de $48,000."
+// m: { name, prevName, isCurrent, pot, potPrev, occPct, profit, projected }
+export function financeReading({ name, prevName, isCurrent, pot, potPrev, occPct, profit, projected }) {
+  const N = name ? name.charAt(0).toUpperCase() + name.slice(1) : 'El mes';
+  const out = [];
+  const verbo = isCurrent ? 'va en' : 'cerró en';
+  if (pot && pot.pct != null) {
+    let t = `${N} ${verbo} ${pot.pct}% del potencial`;
+    if (potPrev && potPrev.pct != null && potPrev.earned > 0) {
+      const d = pot.pct - potPrev.pct;
+      t += d > 0 ? `, ${d} ${d === 1 ? 'punto' : 'puntos'} más que ${prevName}` : d < 0 ? `, ${-d} ${d === -1 ? 'punto' : 'puntos'} menos que ${prevName}` : `, igual que ${prevName}`;
+    }
+    out.push(t + '.');
+    if (pot.entre != null && pot.finde != null) {
+      const gap = pot.finde - pot.entre;
+      if (gap >= 10) out.push(`Los Lun–Mié son los que más cuestan (${pot.entre}% contra ${pot.finde}% de Jue–Dom).`);
+      else if (gap <= -10) out.push(`Los Jue–Dom vienen más flojos que los Lun–Mié (${pot.finde}% contra ${pot.entre}%).`);
+      else out.push('Lun–Mié y Jue–Dom van parejos.');
+    }
+  } else {
+    out.push(`${N} ${isCurrent ? 'va con' : 'cerró con'} ${occPct}% de ocupación.`);
+  }
+  const p = Math.round(Number(profit) || 0);
+  let money = p >= 0
+    ? `${isCurrent ? 'Ganancia hasta hoy' : 'Ganancia del mes'}: ${currency(p)}`
+    : `${isCurrent ? 'Por ahora los gastos superan a lo que entró' : 'Los gastos superaron a lo que entró'} por ${currency(-p)}`;
+  if (isCurrent && projected) money += `; si sigue así, el mes cerraría con unos ${currency(Math.round(projected / 1000) * 1000)} de ingresos`;
+  out.push(money + '.');
+  return out.join(' ');
+}
+
+// ── AVISOS ENTRE GIAN Y MARCE ─────────────────────────────────────────────────
+// Llega un cambio de la base (realtime) hecho desde OTRO aparato: se cuenta en palabras.
+// row: fila de la base (huesped, habitacion, fecha_ingreso…); old: la reserva como estaba en pantalla.
+// Devuelve { by, text, group, type } o null si no hay nada para contar.
+export function describeChange(by, type, row, old) {
+  if (!row || !row.id) return null;
+  const h = String(row.huesped || '').trim() || 'una reserva';
+  const hab = row.habitacion ? ` (${row.habitacion})` : '';
+  const base = { by, group: row.grupo_id || null, type, name: h, room: row.habitacion || '' };
+  const fechas = row.fecha_ingreso && row.fecha_salida ? dayRange(row.fecha_ingreso, row.fecha_salida) : '';
+  if (type === 'INSERT') return { ...base, text: `${by} cargó una reserva: ${h}${hab}${fechas ? `, ${fechas}` : ''}` };
+  if (type !== 'UPDATE') return null;
+  if (row.fecha_eliminacion && !(old && old.deleted)) {
+    if (!old) return null; // ya no estaba en pantalla
+    return { ...base, type: 'DELETE', text: `${by} eliminó la reserva de ${h}${hab}` };
+  }
+  if (!old) return { ...base, text: `${by} cambió la reserva de ${h}${hab}` };
+  if (row.estado !== old.status) {
+    if (row.estado === 'hospedado') return { ...base, type: 'CHECKIN', text: `${by} hizo el check-in de ${h}${hab}` };
+    if (row.estado === 'finalizada') return { ...base, type: 'CHECKOUT', text: `${by} hizo el check-out de ${h}${hab}` };
+    if (row.estado === 'cancelada') return { ...base, text: `${by} canceló la reserva de ${h}${hab}` };
+  }
+  if (row.habitacion && old.room && row.habitacion !== old.room)
+    return { ...base, text: `${by} pasó a ${h} de ${old.room} a ${row.habitacion}` };
+  if (row.fecha_ingreso !== old.checkIn || row.fecha_salida !== old.checkOut)
+    return { ...base, text: `${by} movió la reserva de ${h}${hab}: ahora ${fechas}` };
+  const paidDiff = (Number(row.monto_pagado) || 0) - (Number(old.paid) || 0);
+  if (paidDiff > 0) return { ...base, type: 'PAY', text: `${by} cobró ${currency(paidDiff)} a ${h}${hab}` };
+  if ((row.late_checkout_hora || '') !== (old.lateCheckout || ''))
+    return { ...base, text: row.late_checkout_hora ? `${by} le dio late check-out a ${h}${hab} hasta las ${row.late_checkout_hora}` : `${by} quitó el late check-out de ${h}${hab}` };
+  return { ...base, text: `${by} hizo cambios en la reserva de ${h}${hab}` };
+}
+
+// Varios cambios seguidos → un solo cartelito
+export function describeChanges(list) {
+  if (!list.length) return '';
+  if (list.length === 1) return list[0].text;
+  const by = list[0].by;
+  const g = list[0].group;
+  if (g && list.every((x) => x.group === g)) {
+    const rooms = roomsText([...new Set(list.map((x) => x.room).filter(Boolean))]);
+    const tipo = list.every((x) => x.type === list[0].type) ? list[0].type : '';
+    const verb =
+      tipo === 'INSERT' ? 'cargó un grupo' : tipo === 'CHECKIN' ? 'hizo el check-in del grupo' : tipo === 'CHECKOUT' ? 'hizo el check-out del grupo' : tipo === 'PAY' ? 'cobró al grupo' : tipo === 'DELETE' ? 'eliminó el grupo' : 'hizo cambios en el grupo';
+    return `${by} ${verb} de ${list[0].name}${rooms ? ` (${rooms})` : ''}`;
+  }
+  return `${by} hizo ${list.length} cambios en reservas`;
+}
