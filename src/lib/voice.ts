@@ -134,10 +134,32 @@ export function deleteText(r) {
 }
 
 // ── CARTELITOS DE CADA ACCIÓN ─────────────────────────────────────────────────
+// Al guardar no se pregunta nada (tocar Guardar ya confirma); el cartelito dice qué y dónde
+// quedó, así se ve en el momento si algo quedó mal (pedido de Gian).
+const whoOf = (r) => String(r?.guestName || '').trim();
+const whereOf = (list) => {
+  const rooms = roomsText(list.map((r) => r.room));
+  const fechas = stayRange(list[0]?.checkIn, list[0]?.checkOut);
+  return [rooms, fechas].filter(Boolean).join(', ');
+};
 export const SAVED = {
-  reserva: 'Reserva guardada',
-  grupo: (n) => `Grupo guardado · ${n} habitaciones`,
-  grupoCambios: 'Cambios guardados en todo el grupo',
+  // "Reserva de Lucía Gómez guardada · P1, del dom 8 al lun 9 de nov"
+  reserva: (r) => {
+    const w = whereOf([r]);
+    return `${whoOf(r) ? `Reserva de ${whoOf(r)} guardada` : 'Reserva guardada'}${w ? ` · ${w}` : ''}`;
+  },
+  // "Grupo de Lucía Gómez guardado · P1, P3 y P5, del dom 8 al lun 9 de nov"
+  grupo: (list) => {
+    const w = whereOf(list);
+    const g = list.find((r) => r.grupoTitular) || list[0];
+    return `${whoOf(g) ? `Grupo de ${whoOf(g)} guardado` : 'Grupo guardado'}${w ? ` · ${w}` : ''}`;
+  },
+  // Editar: "Cambios guardados · Lucía Gómez, P1"
+  cambios: (r) => {
+    const parts = [whoOf(r), r?.room].filter(Boolean).join(', ');
+    return `Cambios guardados${parts ? ` · ${parts}` : ''}`;
+  },
+  grupoCambios: (r) => `Cambios guardados en todo el grupo${whoOf(r) ? ` de ${whoOf(r)}` : ''}`,
   sumada: (room) => `${room} sumada al grupo`,
   separada: (room) => `${room} separada del grupo`,
   cobro: (n) => (n > 1 ? `Cobro guardado · ${n} habitaciones` : 'Cobro guardado'),

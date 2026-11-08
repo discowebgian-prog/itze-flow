@@ -534,10 +534,12 @@ export default function AppMejorada() {
       // Cartelito que se va solo
       notify(
         Array.isArray(input) && input.length > 1
-          ? SAVED.grupo(input.length)
+          ? SAVED.grupo(input)
           : opts.also?.length
-          ? SAVED.grupoCambios
-          : SAVED.reserva
+          ? SAVED.grupoCambios(first)
+          : !Array.isArray(input) && input.id
+          ? SAVED.cambios(first)
+          : SAVED.reserva(first)
       );
       return true;
     } catch (err) {
