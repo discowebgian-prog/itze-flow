@@ -10,7 +10,7 @@ import { ROOMS } from '../lib/constants';
 import { AnimatePresence } from 'motion/react';
 import { Backdrop, PopCard, CountUp, Collapse } from '../components/ui/Motion';
 import { InfoTip } from '../components/ui/InfoTip';
-import { notify, notifyError } from '../lib/voice';
+import { notify, notifyError, financeReading } from '../lib/voice';
 
 const PROJECTION_START_DAY = 8; // Antes hay muy pocos días para estimar
 
@@ -606,6 +606,23 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                 <div style={{ fontWeight: 800, fontSize: 16, color: isCurrent ? '#1E40AF' : '#111', textTransform: 'capitalize' }}>{m.label}</div>
                 <div style={{ fontSize: 11, color: isCurrent ? '#60A5FA' : '#9CA3AF', fontWeight: 600 }}>{m.count} reservas</div>
               </div>
+
+              {/* El mes en palabras (etapa 4 de la voz de Flow): arriba de los números, sin reemplazarlos */}
+              {!isFuture && passedDays > 0 && (
+                <div style={{ fontSize: 13, lineHeight: 1.5, color: '#334155', background: isCurrent ? '#fff' : '#F8FAFC', border: `1px solid ${isCurrent ? '#BFDBFE' : '#F0F0F0'}`, borderRadius: 10, padding: '10px 12px', marginBottom: 14 }}>
+                  💬{' '}
+                  {financeReading({
+                    name: MONTH_NAMES[parseInt(mStr) - 1],
+                    prevName: MONTH_NAMES[pmo - 1],
+                    isCurrent,
+                    pot,
+                    potPrev,
+                    occPct,
+                    profit: netProfit,
+                    projected: showProjection ? projectedRevenue : null,
+                  })}
+                </div>
+              )}
 
               {/* ── KPI HOTELEROS: OCUPACIÓN Y ADR ── */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>

@@ -25,7 +25,7 @@ import appLayoutCss from './styles/app-layout.css?raw';
 import { AnimatePresence, motion } from 'motion/react';
 import { Backdrop, PopCard, SPRING_POP, SPRING_SHEET } from './components/ui/Motion';
 import { Toast, OfflineBanner, useOnline } from './components/ui/Toast';
-import { notify, notifyError, humanError, SAVED, checkInText, checkOutText, deleteText, afterCheckIn, afterCheckOut, afterPay } from './lib/voice';
+import { notify, notifyError, humanError, SAVED, checkInText, checkOutText, deleteText, afterCheckIn, afterCheckOut, afterPay, describeChange, describeChanges } from './lib/voice';
 import { WhoAmI } from './components/ui/WhoAmI';
 import { getDeviceName, setDeviceName } from './lib/device';
 
@@ -47,6 +47,17 @@ export default function AppMejorada() {
   const isMobile = winW < 769;
   // Igual que el CSS (app-layout.css): tablet/compu angosta de 769 a 1280 px inclusive (menú lateral angosto)
   const isTablet = winW >= 769 && winW <= 1280;
+
+  // ── QUIÉN HIZO CADA CAMBIO (avisos entre Gian y Marce) ──
+  // Todo lo que esta app escribe en reservas lleva modificado_por = quien usa este aparato
+  // (supabase/modificado_por.sql). El check-out automático firma 'Flow' (no avisa).
+  const whoRef = useRef('');
+  const resRef = useRef(res);
+  resRef.current = res;
+  const rdb = {
+    update: (obj) => rdb.update({ modificado_por: whoRef.current || null, ...obj }),
+    insert: (rows) => rdb.insert(rows.map((r) => ({ modificado_por: whoRef.current || null, ...r }))),
+  };
 
   // Tarifas: si la tabla todavía no existe, la pestaña Tarifas avisa que falta el SQL
   const fetchTarifas = async () => {
@@ -98,7 +109,7 @@ export default function AppMejorada() {
         // ── AUTO CHECK-OUT AL CARGAR LA APP (desde las 14:00, o la hora del late check-out) ──
         if (estado === 'hospedado' && checkoutTimePassed(fechaCheckout, item.late_checkout_hora, nowMerida, hoyFmt)) {
             estado = 'finalizada';
-            supabase.from('reservas').update({ estado: 'finalizada' }).eq('id', item.id).then();
+            rdb.update({ estado: 'finalizada', modificado_por: 'Flow' }).eq('id', item.id).then();
         }
 
         return {
@@ -167,12 +178,32 @@ export default function AppMejorada() {
     fetchDecisiones();
     fetchTarifas();
 
+    // Aviso de lo que hizo la otra persona ("Marce hizo el check-in de Ana López (P2)").
+    // Se juntan los cambios que llegan seguidos (un grupo son varias filas) y sale un solo cartelito.
+    let pend = [];
+    let pendTimer = null;
+    const announce = (payload) => {
+      const row = payload.new || {};
+      const by = row.modificado_por;
+      if (!by || by === 'Flow' || by === whoRef.current) return;
+      const old = resRef.current.find((r) => String(r.id) === String(row.id));
+      const d = describeChange(by, payload.eventType, row, old);
+      if (!d) return;
+      pend.push(d);
+      clearTimeout(pendTimer);
+      pendTimer = setTimeout(() => {
+        notify(describeChanges(pend), 'info');
+        pend = [];
+      }, 1200);
+    };
+
     const canalReservas = supabase
       .channel('cambios-en-vivo')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'reservas' },
         (payload) => {
+          announce(payload);
           setTimeout(() => {
             fetchReservas(); 
           }, 500);
@@ -231,7 +262,7 @@ export default function AppMejorada() {
           
           // Actualiza en Supabase silenciosamente
           paraHacerCheckout.forEach(r => {
-            supabase.from('reservas').update({ estado: 'finalizada' }).eq('id', r.id).then();
+            rdb.update({ estado: 'finalizada', modificado_por: 'Flow' }).eq('id', r.id).then();
           });
 
           // Actualiza visualmente en tiempo real
@@ -293,6 +324,7 @@ export default function AppMejorada() {
   // Quién usa este aparato (Gian / Marce): se pregunta la primera vez y se recuerda acá
   const [deviceName, setDeviceNameState] = useState(getDeviceName);
   const [whoOpen, setWhoOpen] = useState(false);
+  whoRef.current = deviceName || user?.name || '';
   // Desde el aviso de cumpleaños de Inicio: qué huésped resaltar en Huéspedes › Cumpleaños
   const [guestFocus, setGuestFocus] = useState(null);
   useEffect(() => {
@@ -500,7 +532,7 @@ export default function AppMejorada() {
         const todas = [input, ...(opts.also || [])];
         const preparadas = todas.map((r) => ({ id: r.id, ...prepRes(r) }));
         for (const p of preparadas) {
-          const { error } = await supabase.from('reservas').update(p.datosLimpios).eq('id', p.id);
+          const { error } = await rdb.update(p.datosLimpios).eq('id', p.id);
           if (error) throw error;
         }
         setRes((prev) =>
@@ -528,9 +560,7 @@ export default function AppMejorada() {
           return p;
         });
 
-        const { data, error } = await supabase
-          .from('reservas')
-          .insert(preparadas.map((p) => p.datosLimpios))
+        const { data, error } = await rdb.insert(preparadas.map((p) => p.datosLimpios))
           .select();
 
         if (error) {
@@ -597,9 +627,7 @@ export default function AppMejorada() {
     setRes(res.map((r) => (r.id === id ? { ...r, ...changes } : r)));
 
     // 2. Le mandamos los datos a la nube para que las demás pantallas se enteren
-      const { error } = await supabase
-        .from('reservas')
-        .update({
+      const { error } = await rdb.update({
           fecha_ingreso: changes.checkIn,
           fecha_salida: changes.checkOut,
           habitacion: changes.room
@@ -624,9 +652,7 @@ export default function AppMejorada() {
     const responsable = who;
 
     // 1. Borrado Lógico en Supabase
-    const { error } = await supabase
-      .from('reservas')
-      .update({ 
+    const { error } = await rdb.update({ 
         estado: 'eliminada',
         fecha_eliminacion: momentoExacto,
         usuario_eliminacion: responsable
@@ -696,13 +722,11 @@ export default function AppMejorada() {
       let baseAct = null;
       if (!isGroup) {
         baseAct = { ...base, grupoId: gid, grupoTitular: true, grupoReservante: booker };
-        const { error: e1 } = await supabase
-          .from('reservas')
-          .update({ grupo_id: gid, grupo_titular: true, grupo_reservante: booker })
+        const { error: e1 } = await rdb.update({ grupo_id: gid, grupo_titular: true, grupo_reservante: booker })
           .eq('id', base.id);
         if (e1) throw e1;
       }
-      const { data, error } = await supabase.from('reservas').insert([pn.datosLimpios]).select();
+      const { data, error } = await rdb.insert([pn.datosLimpios]).select();
       if (error) throw error;
       const creada = {
         ...pn.reservaParaEstado,
@@ -724,9 +748,7 @@ export default function AppMejorada() {
   const ungroupRes = async (r) => {
     const members = groupOf(res, r);
     const ids = members.length <= 2 ? members.map((m) => m.id) : [r.id];
-    const { error } = await supabase
-      .from('reservas')
-      .update({ grupo_id: null, grupo_titular: false, grupo_reservante: null })
+    const { error } = await rdb.update({ grupo_id: null, grupo_titular: false, grupo_reservante: null })
       .in('id', ids);
     if (error) {
       notifyError(error, `separar ${r.room} del grupo`);
@@ -741,9 +763,7 @@ export default function AppMejorada() {
 
   const payRes = async (pagos) => {
     for (const p of pagos) {
-      const { error } = await supabase
-        .from('reservas')
-        .update({ monto_pagado: String(p.paid), forma_pago: p.paymentMethod })
+      const { error } = await rdb.update({ monto_pagado: String(p.paid), forma_pago: p.paymentMethod })
         .eq('id', p.id);
       if (error) {
         notifyError(error, 'guardar el cobro');
@@ -761,9 +781,7 @@ export default function AppMejorada() {
   };
   const restoreRes = async (id) => {
     // 1. Le avisamos a Supabase que la reserva vuelve a la vida
-    const { error } = await supabase
-      .from('reservas')
-      .update({ 
+    const { error } = await rdb.update({ 
         estado: 'por_llegar', 
         fecha_eliminacion: null, 
         usuario_eliminacion: null 
@@ -787,9 +805,7 @@ export default function AppMejorada() {
   };
 const toggleBlacklist = async (id, currentStatus) => {
     const newStatus = !currentStatus;
-    const { error } = await supabase
-      .from('reservas')
-      .update({ lista_negra: newStatus })
+    const { error } = await rdb.update({ lista_negra: newStatus })
       .eq('id', id);
 
     if (error) {
@@ -811,9 +827,7 @@ const toggleBlacklist = async (id, currentStatus) => {
     if (!r) return false;
     const newCost = hora ? Number(costo) || 0 : 0;
     const newTotal = Math.max(0, (Number(r.totalAmount) || 0) - lateCostOf(r) + newCost);
-    const { error } = await supabase
-      .from('reservas')
-      .update({
+    const { error } = await rdb.update({
         late_checkout_hora: hora || null,
         late_checkout_costo: hora ? newCost : null,
         monto: String(newTotal),
@@ -853,7 +867,7 @@ const toggleBlacklist = async (id, currentStatus) => {
     setCiModal(null);
 
     // 2. Impactamos en la base de datos de Supabase (si falla, vuelve a como estaba)
-    const { error } = await supabase.from('reservas').update({ estado: 'hospedado' }).in('id', ids);
+    const { error } = await rdb.update({ estado: 'hospedado' }).in('id', ids);
     if (error) {
       setRes((prev) => prev.map((x) => before.find((b) => b.id === x.id) || x));
       notifyError(error, 'hacer el check-in');
@@ -882,7 +896,7 @@ const toggleBlacklist = async (id, currentStatus) => {
     setCoModal(null);
 
     // 2. Impactamos en la base de datos de Supabase (si falla, vuelve a como estaba)
-    const { error } = await supabase.from('reservas').update({ estado: 'finalizada' }).in('id', ids);
+    const { error } = await rdb.update({ estado: 'finalizada' }).in('id', ids);
     if (error) {
       setRes((prev) => prev.map((x) => before.find((b) => b.id === x.id) || x));
       notifyError(error, 'hacer el check-out');
