@@ -6,11 +6,16 @@ import { supabase } from './supabase';
 // Igual que en Itzé Limpieza: service worker (public/sw.js) + suscripción del navegador
 // guardada en la tabla push_subs (supabase/push.sql). Quien hace un cambio le pide a
 // /api/push que avise a los demás aparatos (no a los que tienen su mismo nombre).
-// Claves VAPID (las genera Gian y las carga en Vercel; nunca van en el código):
-//   VITE_VAPID_PUBLIC_KEY → pública (la usa el navegador y la función)
-//   VAPID_PRIVATE_KEY     → privada (solo la función /api/push)
-export const VAPID_PUBLIC = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
-export const pushConfigured = () => !!VAPID_PUBLIC;
+// Clave pública VAPID: la da /api/push (se arma sola en el servidor; nadie la genera a mano)
+let publicKey = '';
+async function getPublicKey() {
+  if (publicKey) return publicKey;
+  const r = await fetch('/api/push');
+  const j = await r.json().catch(() => null);
+  if (!r.ok || !j?.publicKey) throw new Error(j?.error || 'No se pudo preparar los avisos.');
+  publicKey = j.publicKey;
+  return publicKey;
+}
 
 export const pushSupported = () =>
   typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
@@ -34,7 +39,16 @@ export function registerSW() {
 
 async function subscription() {
   const reg = await navigator.serviceWorker.ready;
-  return (await reg.pushManager.getSubscription()) || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(VAPID_PUBLIC) });
+  const key = b64u(await getPublicKey());
+  const old = await reg.pushManager.getSubscription();
+  if (old) {
+    // Si las claves del servidor cambiaron, se vuelve a anotar sola (sin que nadie haga nada)
+    const was = old.options?.applicationServerKey ? new Uint8Array(old.options.applicationServerKey) : null;
+    const same = was && was.length === key.length && was.every((b, i) => b === key[i]);
+    if (same || !was) return old;
+    await old.unsubscribe().catch(() => {});
+  }
+  return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
 }
 
 async function saveSub(sub, quien) {

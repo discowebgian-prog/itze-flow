@@ -1,7 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 import { useState } from 'react';
-import { pushSupported, pushGranted, pushBlocked, isIOS, isStandalone, enablePush, pushConfigured } from '../../lib/push';
+import { pushSupported, pushGranted, pushBlocked, isIOS, isStandalone, enablePush } from '../../lib/push';
 import { notify, notifyError } from '../../lib/voice';
 
 // "🔔 Activar avisos": que lleguen al celular aunque Flow esté cerrado.
@@ -13,10 +13,6 @@ export function PushButton({ deviceName }) {
 
   const iosNeedsInstall = !pushSupported() && isIOS() && !isStandalone();
   const click = async () => {
-    if (!pushConfigured()) {
-      setHelp('Todavía faltan las claves de avisos en Vercel (VITE_VAPID_PUBLIC_KEY y VAPID_PRIVATE_KEY).');
-      return;
-    }
     if (iosNeedsInstall) {
       setHelp('En iPhone: abrí Flow en Safari, tocá Compartir › "Agregar a pantalla de inicio" y abrí la app desde ese ícono. Ahí tocá otra vez "Activar avisos".');
       return;
