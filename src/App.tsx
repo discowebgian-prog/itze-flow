@@ -119,6 +119,7 @@ export default function AppMejorada() {
           guestPhone: telefonoLimpio,
           guestEmail: item.email || '',
           company: item.empresa || '',
+          birthDate: item.fecha_nacimiento || '',
           lateCheckout: item.late_checkout_hora || '',
           lateCost: item.late_checkout_costo ?? '',
           totalGuests: Number(item.cantidad_huespedes) || 1,
@@ -292,6 +293,11 @@ export default function AppMejorada() {
   // Quién usa este aparato (Gian / Marce): se pregunta la primera vez y se recuerda acá
   const [deviceName, setDeviceNameState] = useState(getDeviceName);
   const [whoOpen, setWhoOpen] = useState(false);
+  // Desde el aviso de cumpleaños de Inicio: qué huésped resaltar en Huéspedes › Cumpleaños
+  const [guestFocus, setGuestFocus] = useState(null);
+  useEffect(() => {
+    if (tab !== 'huespedes') setGuestFocus(null);
+  }, [tab]);
   const pickWho = (name) => {
     setDeviceName(name);
     setDeviceNameState(name);
@@ -404,6 +410,8 @@ export default function AppMejorada() {
         setHighlightStatus(data);
         setTimeout(() => setHighlightStatus(null), 2700);
       }
+      // { birthday: clave del huésped } → Huéspedes › Cumpleaños con su tarjeta resaltada
+      if (data && typeof data === 'object' && 'birthday' in data) setGuestFocus({ key: data.birthday || null });
     }
   };
   // Convierte una reserva de la app al formato de la base (y al de la pantalla)
@@ -454,6 +462,8 @@ export default function AppMejorada() {
           };
       // Las columnas de grupo solo se mandan si la reserva es de un grupo
       // (así las reservas comunes se siguen guardando aunque falte correr grupos.sql)
+      // Fecha de nacimiento (supabase/fecha_nacimiento.sql): solo se manda si hay una cargada
+      if (newRes.birthDate) datosLimpios.fecha_nacimiento = newRes.birthDate;
       if (newRes.grupoId) {
         datosLimpios.grupo_id = newRes.grupoId;
         datosLimpios.grupo_titular = !!newRes.grupoTitular;
@@ -1173,6 +1183,7 @@ const toggleBlacklist = async (id, currentStatus) => {
               onGoTo={goTo}
               deviceName={deviceName}
               onWho={() => setWhoOpen(true)}
+              decisions={guestDecisions}
             />
           )}
           {tab === 'calendario' && (
@@ -1224,6 +1235,7 @@ const toggleBlacklist = async (id, currentStatus) => {
               canReview={isAdmin && decisionsOk}
               onDecide={decideGuests}
               onUndo={undoGuestDecision}
+              focusBirthday={guestFocus}
             />
           )}
           {tab === 'tarifas' && (

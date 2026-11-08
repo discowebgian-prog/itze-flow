@@ -60,6 +60,7 @@ export const PERSON_FIELDS = [
   'guestPhonePrefix',
   'guestPhone',
   'guestEmail',
+  'birthDate',
   'url_ine_frente',
   'url_ine_dorso',
 ];

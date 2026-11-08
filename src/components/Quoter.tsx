@@ -21,6 +21,7 @@ import {
   roomNum,
   oneDay,
 } from '../lib/availability';
+import { quoteMessageEn } from '../lib/guestMessages';
 
 // ── COTIZAR (sin crear reserva) ───────────────────────────────────────────────
 // Se arma paso a paso: fechas → personas → en qué habitación va cada uno → cotización
@@ -134,6 +135,8 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
   const [dist, setDist] = useState({}); // habitación → personas
   const [openRoom, setOpenRoom] = useState(''); // habitación con el selector desplegado
   const [copied, setCopied] = useState(false);
+  // Idioma del mensaje para WhatsApp (en Cotizar todavía no sabemos la nacionalidad)
+  const [lang, setLang] = useState('es');
   const [planOn, setPlanOn] = useState(false); // cotizar con cambio de habitación
   const [calKey, setCalKey] = useState(0); // para que el almanaque salte al mes de las fechas sugeridas
   // Entrada tocada, esperando la salida: lo de abajo sigue con las fechas anteriores (atenuado) para que nada salte
@@ -363,7 +366,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
       }
     }
   }
-  const msg = done ? quoteMessage({ checkIn, checkOut, guests, items, total }) : '';
+  const msg = done ? (lang === 'en' ? quoteMessageEn : quoteMessage)({ checkIn, checkOut, guests, items, total }) : '';
   const cap1 = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 
   const setRoomGuests = (id, g) => {
@@ -930,6 +933,33 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
 
           {done && (
             <Step num={5} title="Mensaje para WhatsApp" done={copied}>
+              {/* Español / English: para huéspedes que no hablan español (en inglés aclara que son pesos MXN) */}
+              <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                {[['es', 'Español'], ['en', 'English']].map(([k, label]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => {
+                      setLang(k);
+                      setCopied(false);
+                    }}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: 20,
+                      fontFamily: 'inherit',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      border: lang === k ? '1.5px solid #16A34A' : '1px solid #D1D5DB',
+                      background: lang === k ? '#DCFCE7' : '#fff',
+                      color: lang === k ? '#166534' : '#6B7280',
+                    }}
+                  >
+                    {lang === k ? '✓ ' : ''}
+                    {label}
+                  </button>
+                ))}
+              </div>
               <div
                 style={{
                   whiteSpace: 'pre-wrap',
