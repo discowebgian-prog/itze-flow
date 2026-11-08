@@ -8,6 +8,8 @@ import dashboardCss from '../styles/dashboard.css?raw';
 import { LateBadge } from '../components/ui/LateBadge';
 import { CountUp } from '../components/ui/Motion';
 import { greeting, daySummary, nowMerida } from '../lib/voice';
+import { buildGuestDB } from '../lib/guests';
+import { birthdayList, wasGreeted } from '../lib/guestMessages';
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 export function Dashboard({
@@ -19,6 +21,7 @@ export function Dashboard({
   onGoTo,
   deviceName = '',
   onWho = null,
+  decisions = [],
 }) {
   // Saludo y resumen del día: se actualizan solos cada minuto (la hora cambia el saludo)
   const [now, setNow] = useState(nowMerida);
@@ -28,6 +31,9 @@ export function Dashboard({
   }, []);
   const hello = greeting(deviceName, now);
   const summary = daySummary(reservations, now);
+  // 🎂 Cumpleaños de hoy de todos los huéspedes (también los que ya se fueron), sin los ya saludados
+  const bdToday = birthdayList(Object.values(buildGuestDB(reservations, decisions)), now).filter((x) => x.next.days === 0);
+  const bdPending = bdToday.filter((x) => !wasGreeted(x.g.key, now));
 
   // --- NUEVO: Controladores de Animación ---
   const [pulseIn, setPulseIn] = useState(false);
@@ -113,6 +119,59 @@ export function Dashboard({
               {line}
             </div>
           ))}
+        </div>
+        {/* 🎂 Botoncito de cumpleaños: siempre está; si alguien cumple hoy y no lo saludamos, se marca como aviso */}
+        <div style={{ marginTop: 10 }}>
+          <button
+            className={bdPending.length ? 'tap pop-in' : 'tap'}
+            onClick={() => onGoTo('huespedes', { birthday: bdPending.length === 1 ? bdPending[0].g.key : bdToday.length === 1 ? bdToday[0].g.key : null })}
+            style={{
+              position: 'relative',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '7px 12px',
+              borderRadius: 20,
+              fontFamily: 'inherit',
+              fontSize: 12.5,
+              fontWeight: 700,
+              cursor: 'pointer',
+              border: bdPending.length ? '1.5px solid #DB2777' : '1px solid #E5E7EB',
+              background: bdPending.length ? '#FDF2F8' : '#fff',
+              color: bdPending.length ? '#9D174D' : '#6B7280',
+            }}
+          >
+            🎂{' '}
+            {bdPending.length === 1
+              ? `Hoy cumple ${bdPending[0].g.name} · Saludar`
+              : bdPending.length > 1
+              ? `Hoy cumplen ${bdPending.length} huéspedes · Saludar`
+              : bdToday.length
+              ? 'Cumpleaños · ya saludados ✓'
+              : 'Cumpleaños'}
+            {bdPending.length > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: -6,
+                  right: -6,
+                  minWidth: 18,
+                  height: 18,
+                  padding: '0 5px',
+                  borderRadius: 9,
+                  background: '#EF4444',
+                  color: '#fff',
+                  fontSize: 11,
+                  fontWeight: 800,
+                  lineHeight: '18px',
+                  textAlign: 'center',
+                  boxSizing: 'border-box',
+                }}
+              >
+                {bdPending.length}
+              </span>
+            )}
+          </button>
         </div>
       </div>
       <div

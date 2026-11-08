@@ -292,6 +292,11 @@ export default function AppMejorada() {
   // Quién usa este aparato (Gian / Marce): se pregunta la primera vez y se recuerda acá
   const [deviceName, setDeviceNameState] = useState(getDeviceName);
   const [whoOpen, setWhoOpen] = useState(false);
+  // Desde el aviso de cumpleaños de Inicio: qué huésped resaltar en Huéspedes › Cumpleaños
+  const [guestFocus, setGuestFocus] = useState(null);
+  useEffect(() => {
+    if (tab !== 'huespedes') setGuestFocus(null);
+  }, [tab]);
   const pickWho = (name) => {
     setDeviceName(name);
     setDeviceNameState(name);
@@ -404,6 +409,8 @@ export default function AppMejorada() {
         setHighlightStatus(data);
         setTimeout(() => setHighlightStatus(null), 2700);
       }
+      // { birthday: clave del huésped } → Huéspedes › Cumpleaños con su tarjeta resaltada
+      if (data && typeof data === 'object' && 'birthday' in data) setGuestFocus({ key: data.birthday || null });
     }
   };
   // Convierte una reserva de la app al formato de la base (y al de la pantalla)
@@ -1173,6 +1180,7 @@ const toggleBlacklist = async (id, currentStatus) => {
               onGoTo={goTo}
               deviceName={deviceName}
               onWho={() => setWhoOpen(true)}
+              decisions={guestDecisions}
             />
           )}
           {tab === 'calendario' && (
@@ -1224,6 +1232,7 @@ const toggleBlacklist = async (id, currentStatus) => {
               canReview={isAdmin && decisionsOk}
               onDecide={decideGuests}
               onUndo={undoGuestDecision}
+              focusBirthday={guestFocus}
             />
           )}
           {tab === 'tarifas' && (

@@ -76,12 +76,75 @@ export function birthdayText(bd) {
 
 const first = (name) => String(name || '').trim().split(/\s+/)[0] || '';
 
-// Mensaje de cumpleaños para el huésped
-export function birthdayMessage(name, lang = 'es') {
+// Mensaje de cumpleaños para el huésped. staying: está alojado ahora (si no, lo invitamos a volver)
+export function birthdayMessage(name, lang = 'es', staying = true) {
   const n = first(name);
-  return lang === 'en'
-    ? `Happy birthday${n ? `, ${n}` : ''}! 🎉 We hope you have a wonderful day. Warm wishes from everyone at Itzé Hostel 🌴`
-    : `¡Feliz cumpleaños${n ? `, ${n}` : ''}! 🎉 Que tengas un día hermoso. Un abrazo de todo el equipo de Itzé Hostel 🌴`;
+  if (lang === 'en')
+    return staying
+      ? `Happy birthday${n ? `, ${n}` : ''}! 🎉 We hope you have a wonderful day. Warm wishes from everyone at Itzé Hostel 🌴`
+      : `Happy birthday${n ? `, ${n}` : ''}! 🎉 Sending you a big hug from Itzé Hostel in Progreso. We'd love to see you again soon 🌴`;
+  return staying
+    ? `¡Feliz cumpleaños${n ? `, ${n}` : ''}! 🎉 Que tengas un día hermoso. Un abrazo de todo el equipo de Itzé Hostel 🌴`
+    : `¡Feliz cumpleaños${n ? `, ${n}` : ''}! 🎉 Te mandamos un abrazo grande desde Itzé Hostel, en Progreso. ¡Ojalá te volvamos a ver pronto! 🌴`;
+}
+
+// ── CUMPLEAÑOS DE TODOS LOS HUÉSPEDES (Huéspedes › Cumpleaños e Inicio) ───────
+// Próximo cumpleaños: { date, days (0 = hoy), age }
+export function nextBirthday(b, now = new Date()) {
+  if (!b) return null;
+  const today = parseD(fmt(now));
+  let d = new Date(today.getFullYear(), b.month - 1, b.day);
+  if (d < today) d = new Date(today.getFullYear() + 1, b.month - 1, b.day);
+  return { date: fmt(d), days: diffDays(fmt(today), fmt(d)), age: d.getFullYear() - b.year };
+}
+
+// guests: huéspedes de buildGuestDB. Devuelve los que tienen fecha (CURP), sin los "no grato",
+// ordenados por el cumpleaños más cercano: [{ g, b, next, staying, lang }]
+// staying: ese día está (o va a estar) alojado en el hostel
+export function birthdayList(guests, now = new Date()) {
+  return guests
+    .map((g) => {
+      const docs = [g.doc, ...(g.resList || []).map((r) => r.guestDoc)];
+      const b = docs.map(birthFromCurp).find(Boolean);
+      if (!b) return null;
+      if ((g.resList || []).some((r) => r.lista_negra)) return null;
+      const next = nextBirthday(b, now);
+      const staying = (g.resList || []).some(
+        (r) => r.status !== 'cancelada' && !r.deleted && r.checkIn <= next.date && next.date <= r.checkOut
+      );
+      const nat = (g.resList || []).map((r) => r.guestNationality).find(Boolean);
+      return { g, b, next, staying, lang: langFor(nat) };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.next.days - b.next.days);
+}
+
+// "Hoy" · "Mañana" · "En 5 días · sáb 14 de nov"
+export function whenText(next) {
+  if (!next) return '';
+  if (next.days === 0) return 'Hoy';
+  if (next.days === 1) return 'Mañana';
+  return `En ${next.days} días · ${dayNum(next.date)} de ${mes(next.date)}`;
+}
+
+// Saludados (por aparato): así el aviso de Inicio se apaga después de saludar
+const GREET_KEY = 'itze-flow-saludados';
+const greetedMap = () => {
+  try {
+    return JSON.parse(localStorage.getItem(GREET_KEY) || '{}') || {};
+  } catch {
+    return {};
+  }
+};
+export const wasGreeted = (key, now = new Date()) => greetedMap()[key] === fmt(now);
+export function markGreeted(key, now = new Date()) {
+  try {
+    const m = greetedMap();
+    m[key] = fmt(now);
+    localStorage.setItem(GREET_KEY, JSON.stringify(m));
+  } catch {
+    /* sin almacenamiento: el aviso sigue hasta mañana */
+  }
 }
 
 // Bienvenida para acompañantes (con la habitación y el PIN de la puerta)

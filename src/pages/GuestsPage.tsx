@@ -1,10 +1,11 @@
 /* eslint-disable */
 // @ts-nocheck
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Icon } from '../components/ui/Icon';
 import { currency } from '../lib/dates';
 import { waLink, buildGuestDB, freqBadge } from '../lib/guests';
 import { DuplicateReview } from '../components/guests/DuplicateReview';
+import { birthdayList, whenText, birthdayMessage, markGreeted, wasGreeted } from '../lib/guestMessages';
 
 // ── GUESTS PAGE (DIRECTORIO CRM) ──────────────────────────────────────────────
 export function GuestsPage({
@@ -16,16 +17,33 @@ export function GuestsPage({
   canReview = false,
   onDecide,
   onUndo,
+  focusBirthday = null, // desde Inicio: { key } del huésped que cumple hoy (o {} para abrir la lista)
 }) {
   const [q, setQ] = useState('');
-  const [tipo, setTipo] = useState('todos'); // todos | empresa | particular (Empresa = tiene nombre de empresa cargado)
+  // todos | empresa | particular (Empresa = tiene nombre de empresa cargado) | cumple (🎂 Cumpleaños)
+  const [tipo, setTipo] = useState(focusBirthday ? 'cumple' : 'todos');
+  const [flashKey, setFlashKey] = useState(null);
+  const [, setTick] = useState(0); // re-dibuja al marcar "saludado"
+  // Desde Inicio: abre Cumpleaños, baja hasta la tarjeta del que cumple y la resalta
+  useEffect(() => {
+    if (!focusBirthday) return undefined;
+    setTipo('cumple');
+    if (!focusBirthday.key) return undefined;
+    const t = setTimeout(() => {
+      const el = document.querySelector(`[data-gkey="${CSS.escape(focusBirthday.key)}"]`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setFlashKey(focusBirthday.key);
+      setTimeout(() => setFlashKey(null), 2600);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [focusBirthday]);
   const [reviewing, setReviewing] = useState(false);
 
   // Agrupamos el historial de los clientes (respetando las decisiones de duplicados)
   const gdb = buildGuestDB(reservations, decisions);
   
   // Filtramos por tipo (Empresa / Particular) y por búsqueda (nombre, documento o empresa)
-  const matchTipo = (g) => tipo === 'todos' || (tipo === 'empresa' ? g.isCompany : !g.isCompany);
+  const matchTipo = (g) => tipo === 'todos' || tipo === 'cumple' || (tipo === 'empresa' ? g.isCompany : !g.isCompany);
   const allGuests = Object.values(gdb).filter(g =>
     matchTipo(g) &&
     (!q ||
@@ -36,8 +54,19 @@ export function GuestsPage({
   const nEmpresas = Object.values(gdb).filter((g) => g.isCompany).length;
   const nParticulares = Object.values(gdb).length - nEmpresas;
 
-  // Ordenamos por los que más dinero han dejado (los mejores clientes primero)
-  allGuests.sort((a, b) => b.totalSpent - a.totalSpent);
+  // Cumpleaños (fecha de la CURP), del más cercano al más lejano
+  const bdays = birthdayList(Object.values(gdb));
+  const bdayOf = Object.fromEntries(bdays.map((x) => [x.g.key, x]));
+
+  if (tipo === 'cumple') {
+    // Solo los que tienen fecha, en orden de cumpleaños
+    const keep = new Set(allGuests.map((g) => g.key));
+    allGuests.length = 0;
+    bdays.forEach((x) => keep.has(x.g.key) && allGuests.push(x.g));
+  } else {
+    // Ordenamos por los que más dinero han dejado (los mejores clientes primero)
+    allGuests.sort((a, b) => b.totalSpent - a.totalSpent);
+  }
 
   if (reviewing && canReview) {
     return (
@@ -113,6 +142,7 @@ export function GuestsPage({
           { v: 'todos', label: 'Todos', bg: '#EFF6FF', txt: '#1E40AF' },
           { v: 'empresa', label: `🏢 Empresas (${nEmpresas})`, bg: '#EDE9FE', txt: '#5B21B6' },
           { v: 'particular', label: `👤 Particulares (${nParticulares})`, bg: '#F3F4F6', txt: '#374151' },
+          { v: 'cumple', label: `🎂 Cumpleaños (${bdays.length})`, bg: '#FDF2F8', txt: '#9D174D' },
         ].map((o) => {
           const on = tipo === o.v;
           return (
@@ -139,17 +169,32 @@ export function GuestsPage({
         })}
       </div>
 
+      {tipo === 'cumple' && (
+        <div style={{ fontSize: 12, color: '#6B7280', margin: '-6px 0 14px', lineHeight: 1.45 }}>
+          {bdays.length
+            ? 'Del más cercano al más lejano. La fecha sale de la CURP de la INE. "Saludar" abre WhatsApp con el mensaje listo.'
+            : 'Todavía no hay cumpleaños: la fecha sale de la CURP de la INE (los pasaportes no la traen guardada).'}
+        </div>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 12 }}>
         {allGuests.map((g, idx) => {
           const freq = freqBadge(g.visits);
           const lastRes = reservations.find(r => r.id === g.stays[g.stays.length - 1]);
+          // 🎂 En Cumpleaños, todos con su fecha; en las otras vistas, solo el que cumple hoy
+          const bd = bdayOf[g.key];
+          const showBd = bd && (tipo === 'cumple' || bd.next.days === 0);
+          const greeted = bd && bd.next.days === 0 && wasGreeted(g.key);
 
           return (
             <div className="li-in"
-              key={idx}
+              key={g.key || idx}
+              data-gkey={g.key}
               onClick={() => lastRes && onView(lastRes)}
               style={{ '--i': idx,
-                background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1px solid #E5E7EB',
+                background: '#fff', borderRadius: 10, padding: '12px 14px',
+                border: flashKey === g.key ? '2px solid #DB2777' : '1px solid #E5E7EB',
+                outline: flashKey === g.key ? '4px solid #FBCFE8' : 'none',
                 cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 10,
                 boxShadow: '0 1px 3px rgba(0,0,0,.02)', transition: 'transform 0.1s'
               }}
@@ -176,6 +221,49 @@ export function GuestsPage({
                   </div>
                 )}
               </div>
+
+              {showBd && (
+                <div
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                    background: bd.next.days === 0 ? '#FDF2F8' : '#FAFAFA',
+                    border: `1px solid ${bd.next.days === 0 ? '#FBCFE8' : '#F0F0F0'}`,
+                    borderRadius: 8, padding: '7px 10px',
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 800, color: bd.next.days === 0 ? '#9D174D' : '#374151' }}>
+                      🎂 {whenText(bd.next)}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#6B7280' }}>
+                      Cumple {bd.next.age}
+                      {bd.staying ? ' · lo pasa en el hostel' : ''}
+                    </div>
+                  </div>
+                  {g.phone && lastRes && (
+                    <a
+                      href={`${waLink(g.phone, lastRes.guestPhonePrefix, lastRes.guestNationality)}?text=${encodeURIComponent(birthdayMessage(g.name, bd.lang, bd.staying))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (bd.next.days === 0) {
+                          markGreeted(g.key);
+                          setTick((t) => t + 1);
+                        }
+                      }}
+                      style={{
+                        flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '5px 9px', borderRadius: 7, textDecoration: 'none', fontWeight: 700, fontSize: 11.5,
+                        background: greeted ? '#fff' : '#DB2777', color: greeted ? '#9D174D' : '#fff',
+                        border: greeted ? '1px solid #FBCFE8' : 'none',
+                      }}
+                    >
+                      <Icon name="whatsapp" size={13} /> {greeted ? '✓ Saludado' : 'Saludar'}
+                    </a>
+                  )}
+                </div>
+              )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', background: '#F8FAFC', borderRadius: 6, padding: '8px 10px', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>

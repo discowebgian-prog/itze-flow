@@ -10,7 +10,7 @@ import { RangeCalendar } from '../ui/RangeCalendar';
 import { Sel } from '../ui/Sel';
 import { ROOMS, SOURCES, RS, COUNTRIES, findCountry } from '../../lib/constants';
 import { TODAY, fmt, fmtD, addDays, diffDays, currency } from '../../lib/dates';
-import { lastVisitText } from '../../lib/guestMessages';
+import { lastVisitText, birthdayInStay, birthdayText } from '../../lib/guestMessages';
 import { findConflicts, calcStayTotal, lateCostOf } from '../../lib/reservations';
 import { quoteRoom, pricingMatches, applyQuote } from '../../lib/rates';
 import { QuoteInfo, money } from './QuoteInfo';
@@ -1073,6 +1073,17 @@ export function ResForm({
           {stay.last && lastVisitText(stay) && (
             <span style={{ fontSize: 11.5, color: '#6B7280' }}>{lastVisitText(stay)}</span>
           )}
+        </div>
+      )}
+
+      {/* 🎂 Cumple durante la estadía (fecha de la CURP): solo informa, no frena nada */}
+      {birthdayInStay(f) && f.status !== 'cancelada' && (
+        <div
+          className="pop-in"
+          style={{ background: '#FDF2F8', border: '1.5px solid #FBCFE8', borderRadius: 10, padding: '9px 12px', marginBottom: 12, fontSize: 12.5, color: '#9D174D', fontWeight: 700, lineHeight: 1.4 }}
+        >
+          {birthdayText(birthdayInStay(f))}
+          <span style={{ fontWeight: 500, color: '#BE185D' }}> · un lindo detalle para tener en cuenta</span>
         </div>
       )}
 

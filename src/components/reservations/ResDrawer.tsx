@@ -7,8 +7,8 @@ import { Badge } from '../ui/Badge';
 import { Icon } from '../ui/Icon';
 import { srcLabel, srcColor, BLOCK_COLORS, ROOMS } from '../../lib/constants';
 import { fmtD, fmtDT, diffDays, currency } from '../../lib/dates';
-import { waLink, stayInfo, stayBadge } from '../../lib/guests';
-import { lastVisitText, birthdayInStay, birthdayText, birthdayMessage, companionWelcome, langFor } from '../../lib/guestMessages';
+import { waLink, stayInfo, stayBadge, guestKey, makeResolver } from '../../lib/guests';
+import { lastVisitText, birthdayInStay, birthdayText, birthdayMessage, companionWelcome, langFor, markGreeted } from '../../lib/guestMessages';
 import { DocLink } from '../ui/DocLink';
 import { LATE_COLORS } from '../ui/LateBadge';
 import { LatePicker } from './LatePicker';
@@ -452,7 +452,11 @@ export function ResDrawer({
                       href={`${waLink(res.guestPhone, res.guestPhonePrefix, res.guestNationality)}?text=${encodeURIComponent(birthdayMessage(res.guestName, lang))}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Saludado hoy: se apaga el aviso de Inicio en este aparato
+                        if (bday.today) markGreeted(makeResolver(guestDecisions)(guestKey(res)));
+                      }}
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
