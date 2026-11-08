@@ -3,6 +3,10 @@
 import { createRoot } from 'react-dom/client';
 import { MotionConfig } from 'motion/react';
 import AppMejorada from './App';
+import { registerSW } from './lib/push';
+
+// Service worker solo para los avisos con la app cerrada (no guarda la app en caché)
+registerSW();
 
 // Font y Candado Anti-Zoom para Celulares
 if (typeof document !== 'undefined') {
