@@ -5,7 +5,7 @@ import { supabase } from './supabase';
 // Habla con la función segura /api/claude y devuelve el texto de la respuesta.
 export async function askClaude({ messages, maxTokens, effort = undefined }) {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Tu sesión venció. Volvé a iniciar sesión.');
+  if (!session) throw Object.assign(new Error('Tu sesión venció.'), { status: 401 });
 
   let resp;
   try {
@@ -18,10 +18,10 @@ export async function askClaude({ messages, maxTokens, effort = undefined }) {
       body: JSON.stringify({ messages, maxTokens, effort }),
     });
   } catch {
-    throw new Error('Error de red al conectar con Claude. Revisá tu conexión.');
+    throw new Error('Error de red al conectar con Claude.');
   }
 
   const data = await resp.json().catch(() => null);
-  if (!resp.ok) throw new Error(data?.error || `Error del servidor (${resp.status}).`);
+  if (!resp.ok) throw Object.assign(new Error(data?.error || `Error del servidor (${resp.status}).`), { status: resp.status });
   return data?.text || '';
 }

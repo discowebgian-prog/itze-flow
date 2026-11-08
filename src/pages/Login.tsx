@@ -37,7 +37,9 @@ export function Login({ onLogin }) {
     setBusy(false);
 
     if (error) {
-      setErr('Usuario o contraseña incorrectos');
+      // Datos mal o sin internet: no es lo mismo, así que se dice distinto
+      const net = !navigator.onLine || /fetch|network|load failed/i.test(error.message || '');
+      setErr(net ? 'No hay conexión. Revisá el internet y probá de nuevo.' : 'El correo o la contraseña no coinciden. Probá de nuevo.');
       shake();
     } else if (data.user) {
       // Usa la primera parte del correo como nombre temporal
@@ -50,7 +52,7 @@ export function Login({ onLogin }) {
 
   const handleRecovery = async () => {
     if (!uid) {
-      setErr('Por favor, escribe tu correo en el campo superior.');
+      setErr('Escribí tu correo arriba y te mando el enlace para cambiar la contraseña.');
       shake();
       return;
     }
@@ -60,7 +62,7 @@ export function Login({ onLogin }) {
     const { error } = await supabase.auth.resetPasswordForEmail(uid);
 
     if (error) {
-      setErr('Error al enviar el enlace. Revisa tu correo.');
+      setErr('No se pudo enviar el enlace. Revisá que el correo esté bien escrito y probá de nuevo.');
       shake();
     } else {
       setRecoverySent(true);

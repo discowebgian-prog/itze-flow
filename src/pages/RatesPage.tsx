@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { TODAY, fmt, addDays, parseD, currency } from '../lib/dates';
 import { supabase } from '../lib/supabase';
+import { notify, notifyError, humanError } from '../lib/voice';
 import {
   ROOM_TYPES,
   BASE_GUESTS,
@@ -125,7 +126,7 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
     setSaving(false);
     if (error) {
       console.error('Error al guardar tarifa:', error);
-      return setErr('No se pudo guardar. Probá de nuevo.');
+      return setErr(humanError(error, 'guardar el período'));
     }
     setEditing(null);
     onReload && onReload();
@@ -134,10 +135,11 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
   const remove = async (p) => {
     const { error } = await supabase.from('tarifas').delete().eq('id', p.id);
     if (error) {
-      console.error('Error al borrar tarifa:', error);
-      alert('No se pudo eliminar. Probá de nuevo.');
+      setConfirmDelId(null);
+      notifyError(error, `eliminar "${p.nombre || 'el período'}"`);
       return;
     }
+    notify(`"${p.nombre || 'Período'}" eliminado`);
     setConfirmDelId(null);
     onReload && onReload();
   };
