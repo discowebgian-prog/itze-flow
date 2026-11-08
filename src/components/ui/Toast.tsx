@@ -32,9 +32,79 @@ export function Toast({ isMobile }) {
   }, []);
 
   const k = KIND[t?.kind] || KIND.ok;
+  const close = () => {
+    clearTimeout(timer.current);
+    setT(null);
+  };
   return (
     <AnimatePresence>
-      {t && (
+      {t && t.center && (
+        // Al centro (check-in, check-out, cobro): tarjeta más grande, sin fondo oscuro y sin
+        // bloquear la pantalla (el toque pasa de largo). Se va sola.
+        <div
+          key="toast-center"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            pointerEvents: 'none',
+            padding: 24,
+          }}
+        >
+          <motion.div
+            key={t.id}
+            role="status"
+            initial={{ opacity: 0, scale: 0.86 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.2 } }}
+            transition={SPRING_POP}
+            style={{
+              background: k.bg,
+              color: '#fff',
+              borderRadius: 22,
+              padding: '20px 24px 18px',
+              maxWidth: 330,
+              textAlign: 'center',
+              boxShadow: `0 18px 40px ${k.shadow}, 0 2px 8px rgba(0,0,0,.08)`,
+            }}
+          >
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 21,
+                background: 'rgba(255,255,255,.22)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 22,
+                fontWeight: 900,
+                margin: '0 auto 10px',
+              }}
+            >
+              {k.icon}
+            </div>
+            {/* Primera parte en grande; lo demás (separado por " · ") debajo, más chico */}
+            {(() => {
+              const [head, ...rest] = String(t.text).split(' · ');
+              return (
+                <>
+                  <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.3 }}>{head}</div>
+                  {rest.map((x) => (
+                    <div key={x} style={{ fontSize: 13.5, fontWeight: 600, opacity: 0.92, marginTop: 4, lineHeight: 1.3 }}>
+                      {x}
+                    </div>
+                  ))}
+                </>
+              );
+            })()}
+          </motion.div>
+        </div>
+      )}
+      {t && !t.center && (
         <div
           key="toast"
           style={{
@@ -53,10 +123,7 @@ export function Toast({ isMobile }) {
           <motion.div
             key={t.id}
             role={t.kind === 'error' ? 'alert' : 'status'}
-            onClick={() => {
-              clearTimeout(timer.current);
-              setT(null);
-            }}
+            onClick={close}
             initial={{ opacity: 0, y: 24, scale: 0.92 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.96, transition: { duration: 0.18 } }}

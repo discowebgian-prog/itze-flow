@@ -20,13 +20,19 @@ export const onNotify = (fn) => {
   listeners.add(fn);
   return () => listeners.delete(fn);
 };
-export const notify = (text, kind = 'ok') => {
+// notify('Listo, Ana…', 'ok', { center: true }) → al centro y un poco más (check-in, check-out, cobro;
+// pedido de Gian). No bloquea: el toque pasa de largo y se puede seguir trabajando.
+export const notify = (text, kind = 'ok', opts = {}) => {
   if (!text) return;
-  listeners.forEach((fn) => fn({ text, kind, id: Date.now() + Math.random() }));
+  listeners.forEach((fn) => fn({ text, kind, center: !!opts.center, id: Date.now() + Math.random() }));
 };
-// Cuánto queda en pantalla: lo justo para leerlo
+// Cuánto queda en pantalla: lo justo para leerlo (los del centro, un poco más)
 export const toastMs = (t) =>
-  t.kind === 'error' ? 6500 : Math.min(4500, Math.max(2000, 1200 + String(t.text).length * 45));
+  t.kind === 'error'
+    ? 6500
+    : t.center
+    ? Math.min(6000, Math.max(3500, 2000 + String(t.text).length * 45))
+    : Math.min(4500, Math.max(2000, 1200 + String(t.text).length * 45));
 
 // ── ERRORES EN PALABRAS ───────────────────────────────────────────────────────
 // humanError(err, 'guardar la reserva') → "No se pudo guardar la reserva: parece que se cortó internet…"

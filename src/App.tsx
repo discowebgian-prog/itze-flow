@@ -726,7 +726,7 @@ export default function AppMejorada() {
     };
     setRes((prev) => prev.map(apply));
     setDrawer((prev) => (prev ? apply(prev) : prev));
-    notify(afterPay(pagos.map((p) => p.id), res.map(apply)));
+    notify(afterPay(pagos.map((p) => p.id), res.map(apply)), 'ok', { center: true });
     return true;
   };
   const restoreRes = async (id) => {
@@ -829,7 +829,7 @@ const toggleBlacklist = async (id, currentStatus) => {
       notifyError(error, 'hacer el check-in');
       return;
     }
-    notify(afterCheckIn(after.filter((x) => ids.includes(x.id)), after));
+    notify(afterCheckIn(after.filter((x) => ids.includes(x.id)), after), 'ok', { center: true });
   };
 
   const confCO = async (time) => {
@@ -858,7 +858,7 @@ const toggleBlacklist = async (id, currentStatus) => {
       notifyError(error, 'hacer el check-out');
       return;
     }
-    notify(afterCheckOut(before, res));
+    notify(afterCheckOut(before, res), 'ok', { center: true });
   };
 
   // 4. EL DISEÑO VISUAL (Ahora sí, adentro de la función principal)
