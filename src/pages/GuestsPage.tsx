@@ -172,8 +172,8 @@ export function GuestsPage({
       {tipo === 'cumple' && (
         <div style={{ fontSize: 12, color: '#6B7280', margin: '-6px 0 14px', lineHeight: 1.45 }}>
           {bdays.length
-            ? 'Del más cercano al más lejano. La fecha sale de la CURP de la INE. "Saludar" abre WhatsApp con el mensaje listo.'
-            : 'Todavía no hay cumpleaños: la fecha sale de la CURP de la INE (los pasaportes no la traen guardada).'}
+            ? 'Del más cercano al más lejano. La fecha sale de la CURP de la INE o de la fecha de nacimiento cargada (pasaportes). El día del cumple aparece "Saludar", que abre WhatsApp con el mensaje listo.'
+            : 'Todavía no hay cumpleaños: la fecha sale de la CURP de la INE o de la fecha de nacimiento cargada en la reserva (pasaportes).'}
         </div>
       )}
 

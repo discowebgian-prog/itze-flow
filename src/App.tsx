@@ -119,6 +119,7 @@ export default function AppMejorada() {
           guestPhone: telefonoLimpio,
           guestEmail: item.email || '',
           company: item.empresa || '',
+          birthDate: item.fecha_nacimiento || '',
           lateCheckout: item.late_checkout_hora || '',
           lateCost: item.late_checkout_costo ?? '',
           totalGuests: Number(item.cantidad_huespedes) || 1,
@@ -461,6 +462,8 @@ export default function AppMejorada() {
           };
       // Las columnas de grupo solo se mandan si la reserva es de un grupo
       // (así las reservas comunes se siguen guardando aunque falte correr grupos.sql)
+      // Fecha de nacimiento (supabase/fecha_nacimiento.sql): solo se manda si hay una cargada
+      if (newRes.birthDate) datosLimpios.fecha_nacimiento = newRes.birthDate;
       if (newRes.grupoId) {
         datosLimpios.grupo_id = newRes.grupoId;
         datosLimpios.grupo_titular = !!newRes.grupoTitular;

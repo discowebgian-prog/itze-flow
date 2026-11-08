@@ -53,10 +53,28 @@ export function birthFromCurp(doc) {
   return { year, month, day };
 }
 
+// Fecha cargada (escáner o a mano), "AAAA-MM-DD" válida o ''
+export function cleanBirthDate(v) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v || '').trim());
+  if (!m) return '';
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  if (y < 1900 || y > new Date().getFullYear() || mo < 1 || mo > 12 || d < 1 || d > 31) return '';
+  return m[0];
+}
+// Fecha de nacimiento de una reserva: la cargada (pasaportes) o la de la CURP
+export function birthOf(res) {
+  const v = cleanBirthDate(res?.birthDate);
+  if (v) {
+    const [y, mo, d] = v.split('-').map(Number);
+    return { year: y, month: mo, day: d };
+  }
+  return birthFromCurp(res?.guestDoc);
+}
+
 // ¿Cumple durante la estadía (del día de entrada al de salida, inclusive)?
 // Devuelve { date: 'AAAA-MM-DD', today: bool, age } o null.
 export function birthdayInStay(res, now = new Date()) {
-  const b = birthFromCurp(res?.guestDoc);
+  const b = birthOf(res);
   if (!b || !res?.checkIn || !res?.checkOut) return null;
   const ci = parseD(res.checkIn);
   const co = parseD(res.checkOut);
@@ -104,8 +122,7 @@ export function nextBirthday(b, now = new Date()) {
 export function birthdayList(guests, now = new Date()) {
   return guests
     .map((g) => {
-      const docs = [g.doc, ...(g.resList || []).map((r) => r.guestDoc)];
-      const b = docs.map(birthFromCurp).find(Boolean);
+      const b = [...(g.resList || [])].sort((x, y) => String(y.checkIn).localeCompare(String(x.checkIn))).map(birthOf).find(Boolean) || birthFromCurp(g.doc);
       if (!b) return null;
       if ((g.resList || []).some((r) => r.lista_negra)) return null;
       const next = nextBirthday(b, now);

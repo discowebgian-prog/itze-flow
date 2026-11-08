@@ -10,7 +10,7 @@ import { RangeCalendar } from '../ui/RangeCalendar';
 import { Sel } from '../ui/Sel';
 import { ROOMS, SOURCES, RS, COUNTRIES, findCountry } from '../../lib/constants';
 import { TODAY, fmt, fmtD, addDays, diffDays, currency } from '../../lib/dates';
-import { lastVisitText, birthdayInStay, birthdayText } from '../../lib/guestMessages';
+import { lastVisitText, birthdayInStay, birthdayText, birthFromCurp, cleanBirthDate } from '../../lib/guestMessages';
 import { findConflicts, calcStayTotal, lateCostOf } from '../../lib/reservations';
 import { quoteRoom, pricingMatches, applyQuote } from '../../lib/rates';
 import { QuoteInfo, money } from './QuoteInfo';
@@ -147,6 +147,8 @@ export function ResForm({
       next.guestDocType = ['INE', 'Pasaporte', 'Otro'].includes(scan.docType) ? scan.docType : x.guestDocType;
       next.guestNationality = country ? country.code : x.guestNationality;
       next.guestPhonePrefix = country && !next.guestPhone ? country.prefix : x.guestPhonePrefix;
+      // Fecha de nacimiento (para el 🎂): la lee del documento; con CURP igual sale de ahí
+      next.birthDate = cleanBirthDate(scan.birthDate) || (name ? '' : x.birthDate);
       return next;
     });
   };
@@ -369,7 +371,7 @@ export function ResForm({
         : [],
     [nameTyped, sugDismissed, picked, allRes, f.guestName, guestDecisions, initial?.id]
   );
-  const GUEST_FIELDS = ['guestName', 'guestDoc', 'guestDocType', 'guestNationality', 'guestPhonePrefix', 'guestPhone', 'guestEmail', 'company'];
+  const GUEST_FIELDS = ['guestName', 'guestDoc', 'guestDocType', 'guestNationality', 'guestPhonePrefix', 'guestPhone', 'guestEmail', 'company', 'birthDate'];
   const pickGuest = (s) => {
     const prev = {};
     GUEST_FIELDS.forEach((k) => (prev[k] = f[k]));
@@ -1147,6 +1149,15 @@ export function ResForm({
           onChange={(e) => sv('guestDoc', e.target.value)}
         />
       </div>
+      {/* Fecha de nacimiento (para los cumpleaños): con CURP sale sola; con pasaporte la lee el escáner o se escribe */}
+      {!birthFromCurp(f.guestDoc) && (
+        <Inp
+          label="Fecha de nacimiento (opcional · para el 🎂)"
+          type="date"
+          value={f.birthDate || ''}
+          onChange={(e) => sv('birthDate', e.target.value)}
+        />
+      )}
 
       <div style={{ marginBottom: 12 }}>
         <label

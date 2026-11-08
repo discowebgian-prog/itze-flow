@@ -181,6 +181,7 @@ export function suggestGuests(allRes, query, decisions = [], excludeId = null, m
           guestPhone: pick('guestPhone'),
           guestEmail: pick('guestEmail'),
           company: pick('company'),
+          birthDate: pick('birthDate'),
         },
       };
     });
