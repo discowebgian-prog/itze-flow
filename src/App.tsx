@@ -55,8 +55,8 @@ export default function AppMejorada() {
   const resRef = useRef(res);
   resRef.current = res;
   const rdb = {
-    update: (obj) => rdb.update({ modificado_por: whoRef.current || null, ...obj }),
-    insert: (rows) => rdb.insert(rows.map((r) => ({ modificado_por: whoRef.current || null, ...r }))),
+    update: (obj) => supabase.from('reservas').update({ modificado_por: whoRef.current || null, ...obj }),
+    insert: (rows) => supabase.from('reservas').insert(rows.map((r) => ({ modificado_por: whoRef.current || null, ...r }))),
   };
 
   // Tarifas: si la tabla todavía no existe, la pestaña Tarifas avisa que falta el SQL
