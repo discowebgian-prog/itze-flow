@@ -10,6 +10,7 @@ import { ROOMS } from '../lib/constants';
 import { AnimatePresence } from 'motion/react';
 import { Backdrop, PopCard, CountUp, Collapse } from '../components/ui/Motion';
 import { InfoTip } from '../components/ui/InfoTip';
+import { notify, notifyError } from '../lib/voice';
 
 const PROJECTION_START_DAY = 8; // Antes hay muy pocos días para estimar
 
@@ -43,6 +44,7 @@ export function FinancePage({ reservations, allRes, properties, user, restoreRes
   const [gastos, setGastos] = useState([]);
   const [formGasto, setFormGasto] = useState({ fecha: fmt(TODAY), monto: '', categoria: 'Insumos', notas: '' });
   const [guardandoGasto, setGuardandoGasto] = useState(false);
+  const [confirmGastoId, setConfirmGastoId] = useState(null); // "¿Eliminar este gasto?" en la misma línea
 
   // ── ESTADOS PARA REVENUE INTELLIGENCE Y EL POP-UP ──
   const [analyzingMonth, setAnalyzingMonth] = useState(null);
@@ -78,16 +80,24 @@ export function FinancePage({ reservations, allRes, properties, user, restoreRes
     }]).select();
     setGuardandoGasto(false);
     
-    if (!error && data) {
-      setGastos([data[0], ...gastos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)));
-      setFormGasto({ ...formGasto, monto: '', notas: '' });
+    if (error || !data) {
+      notifyError(error, 'guardar el gasto');
+      return;
     }
+    setGastos([data[0], ...gastos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)));
+    setFormGasto({ ...formGasto, monto: '', notas: '' });
+    notify(`Gasto guardado · ${currency(data[0].monto)} en ${data[0].categoria}`);
   };
 
   const eliminarGasto = async (id) => {
-    if(!window.confirm('¿Eliminar gasto?')) return;
-    await supabase.from('gastos').delete().eq('id', id);
+    const { error } = await supabase.from('gastos').delete().eq('id', id);
+    setConfirmGastoId(null);
+    if (error) {
+      notifyError(error, 'eliminar el gasto');
+      return;
+    }
     setGastos(gastos.filter((g) => g.id !== id));
+    notify('Gasto eliminado');
   };
 
   const analizarRevenue = async (m, metrics) => {
@@ -193,8 +203,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
       setChatMessages(prev => ({ ...prev, [m.key]: [{ role: 'user', content: prompt }, { role: 'assistant', content: text }] }));
       setInsightModal({ title: `Diagnóstico Estratégico: ${m.label}`, content: text, monthKey: m.key });
     } catch (err) {
-      console.error('Error:', err);
-      alert(`⚠️ ${err.message}`);
+      notifyError(err, 'armar el diagnóstico');
     } finally {
       setAnalyzingMonth(null);
     }
@@ -221,8 +230,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
 
       setChatMessages(prev => ({ ...prev, [monthKey]: [...nuevoHistorial, { role: 'assistant', content: respuesta }] }));
     } catch (err) {
-      console.error('Error:', err);
-      alert(`⚠️ ${err.message}`);
+      notifyError(err, 'responder la pregunta');
     } finally {
       setChatLoading(false);
     }
@@ -500,7 +508,15 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                      </div>
                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                        <span style={{ fontWeight: 800, color: '#EF4444', fontSize: 14 }}>-{currency(g.monto)}</span>
-                       <button onClick={() => eliminarGasto(g.id)} style={{ background: 'transparent', border: 'none', color: '#9CA3AF', cursor: 'pointer', fontSize: 16, padding: '2px 6px' }}>×</button>
+                       {confirmGastoId === g.id ? (
+                         <span className="pop-in" style={{ fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                           <button onClick={() => eliminarGasto(g.id)} style={{ background: 'transparent', border: 'none', color: '#DC2626', cursor: 'pointer', fontWeight: 800, fontFamily: 'inherit', fontSize: 12, padding: '2px 4px' }}>Sí, eliminar</button>
+                           <span style={{ color: '#D1D5DB' }}>·</span>
+                           <button onClick={() => setConfirmGastoId(null)} style={{ background: 'transparent', border: 'none', color: '#6B7280', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit', fontSize: 12, padding: '2px 4px' }}>Cancelar</button>
+                         </span>
+                       ) : (
+                         <button aria-label="Eliminar gasto" onClick={() => setConfirmGastoId(g.id)} style={{ background: 'transparent', border: 'none', color: '#9CA3AF', cursor: 'pointer', fontSize: 16, padding: '2px 6px' }}>×</button>
+                       )}
                      </div>
                    </div>
                  ))}

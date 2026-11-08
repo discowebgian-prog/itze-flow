@@ -510,7 +510,7 @@ export function ResForm({
 
     // --- 1. VALIDACIÓN DE CAMPOS OBLIGATORIOS ---
     if (!f.guestName || f.guestName.trim() === '') {
-      setValErr('El Nombre del huésped es obligatorio.');
+      setValErr('Falta el nombre del huésped.');
       return;
     }
     if (multiOn) {
@@ -531,16 +531,16 @@ export function ResForm({
         return;
       }
       if (!splitPay && (f.paid === '' || f.paid === null)) {
-        setValErr('El Pagado del grupo es obligatorio (podés poner 0).');
+        setValErr('Falta cuánto pagó el grupo (si todavía nada, poné 0).');
         return;
       }
     } else {
       if (f.pricing.ratePerNight === '' || f.pricing.ratePerNight === null) {
-        setValErr('La Tarifa base/noche es obligatoria.');
+        setValErr('Falta la tarifa por noche.');
         return;
       }
       if (f.paid === '' || f.paid === null) {
-        setValErr('El Monto pagado es obligatorio (podés poner 0).');
+        setValErr('Falta cuánto pagó (si todavía nada, poné 0).');
         return;
       }
     }

@@ -24,6 +24,8 @@ import { Timeline } from './pages/Timeline';
 import appLayoutCss from './styles/app-layout.css?raw';
 import { AnimatePresence, motion } from 'motion/react';
 import { Backdrop, PopCard, SPRING_POP, SPRING_SHEET } from './components/ui/Motion';
+import { Toast, OfflineBanner, useOnline } from './components/ui/Toast';
+import { notify, notifyError, humanError, SAVED, checkInText, checkOutText, deleteText } from './lib/voice';
 
 
 // ── APP ───────────────────────────────────────────────────────────────────────
@@ -193,10 +195,18 @@ export default function AppMejorada() {
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
+    // Al volver internet, se pone al día solo
+    const handleOnline = () => {
+      fetchReservas();
+      fetchDecisiones();
+      fetchTarifas();
+    };
+    window.addEventListener('online', handleOnline);
 
     return () => {
       supabase.removeChannel(canalReservas);
       document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('online', handleOnline);
     };
   }, [user?.id]);
 
@@ -257,7 +267,6 @@ export default function AppMejorada() {
   });
   const [calView, setCalView] = useState('timeline');
   const [prefill, setPrefill] = useState({});
-  const [toastMsg, setToastMsg] = useState(null); 
   const [calOffset, setCalOffset] = useState(-2);  
 
   // Cierra la sesión de este dispositivo; el resto del equipo sigue conectado.
@@ -276,6 +285,8 @@ export default function AppMejorada() {
   // 1. Verificación de Login
   // Cotizar (antes del "if (!user)": los useState no pueden ir después de un return)
   const [quoterOpen, setQuoterOpen] = useState(false);
+  // Sin conexión: franja ámbar arriba (y cartelito al volver)
+  const online = useOnline();
   // Animación al cambiar de pantalla: de qué lado entra la nueva (según el orden del menú)
   const prevTabRef = useRef(tab);
   const tabDirRef = useRef(0);
@@ -310,8 +321,7 @@ export default function AppMejorada() {
         onConflict: 'clave_a,clave_b',
       });
     if (error) {
-      console.error('Error al guardar decisión:', error);
-      alert('No se pudo guardar la decisión. Probá de nuevo.');
+      notifyError(error, 'guardar la decisión');
       return false;
     }
     const { data } = await supabase.from('huespedes_decisiones').select('*');
@@ -322,8 +332,7 @@ export default function AppMejorada() {
   const undoGuestDecision = async (id) => {
     const { error } = await supabase.from('huespedes_decisiones').delete().eq('id', id);
     if (error) {
-      console.error('Error al deshacer decisión:', error);
-      alert('No se pudo deshacer. Probá de nuevo.');
+      notifyError(error, 'deshacer');
       return;
     }
     setGuestDecisions((ds) => ds.filter((d) => d.id !== id));
@@ -503,7 +512,7 @@ export default function AppMejorada() {
 
         if (error) {
           if (first.grupoId && /grupo_/.test(error.message || '')) {
-            throw new Error('falta correr el SQL de grupos en Supabase (supabase/grupos_reservante.sql).');
+            throw Object.assign(new Error('falta correr el SQL de grupos en Supabase (supabase/grupos_reservante.sql).'), { code: '42703' });
           }
           throw error;
         }
@@ -522,23 +531,25 @@ export default function AppMejorada() {
       setCalOffset(diasDistancia - 2); // Lo centramos dejando 2 días de margen a la izquierda
       setTab('calendario'); // Forzamos ir a la pestaña del calendario para ver la reserva
       
-      // Lanzamos el cartel flotante y lo borramos a los 2 segundos
-      setToastMsg(
+      // Cartelito que se va solo
+      notify(
         Array.isArray(input) && input.length > 1
-          ? `Grupo guardado · ${input.length} habitaciones`
+          ? SAVED.grupo(input)
           : opts.also?.length
-          ? 'Cambios guardados en todo el grupo'
-          : 'Reserva guardada'
+          ? SAVED.grupoCambios(first)
+          : !Array.isArray(input) && input.id
+          ? SAVED.cambios(first)
+          : SAVED.reserva(first)
       );
-      setTimeout(() => setToastMsg(null), 2000);
       return true;
     } catch (err) {
-      console.error('Error al conectar con la base de datos:', err);
-      alert('Hubo un problema al guardar la reserva en la nube: ' + err.message);
+      // El formulario queda abierto con lo que se escribió
+      notifyError(err, Array.isArray(input) && input.length > 1 ? 'guardar el grupo' : 'guardar la reserva', { keep: true });
       return false;
     }
   };
   const updateRes = async (id, changes) => {
+    const before = res.find((r) => r.id === id);
     // 1. Movemos la reserva visualmente al instante para que la app se sienta rápida
     setRes(res.map((r) => (r.id === id ? { ...r, ...changes } : r)));
 
@@ -553,8 +564,9 @@ export default function AppMejorada() {
         .eq('id', id);
 
     if (error) {
-      console.error('Error al sincronizar el movimiento:', error);
-      alert('Hubo un error al guardar el movimiento en la nube. Revisá tu conexión.');
+      // Vuelve a donde estaba, para que la pantalla no muestre algo que no se guardó
+      if (before) setRes((prev) => prev.map((r) => (r.id === id ? before : r)));
+      notifyError(error, 'mover la reserva');
     }
   };
   const delRes = async (idOrIds) => {
@@ -579,14 +591,14 @@ export default function AppMejorada() {
       .in('id', ids);
 
     if (error) {
-      console.error('Error al archivar en Supabase:', error);
-      alert('Hubo un problema al intentar borrar la reserva.');
+      notifyError(error, 'eliminar la reserva');
       return;
     }
 
     // 2. La sacamos de la vista inmediatamente
     setRes((prev) => prev.filter((r) => !ids.includes(r.id)));
     setDrawer(null);
+    notify(SAVED.eliminada(ids.length));
   };
 
   // Cobro desde el panel: cambia lo pagado (y la forma de pago) de una o varias habitaciones.
@@ -656,14 +668,11 @@ export default function AppMejorada() {
       };
       setRes((prev) => [...prev.map((r) => (baseAct && r.id === base.id ? baseAct : r)), creada]);
       if (baseAct) setDrawer(baseAct);
-      setToastMsg(`${extra.room} sumada al grupo`);
-      setTimeout(() => setToastMsg(null), 2000);
+      notify(SAVED.sumada(extra.room));
       return true;
     } catch (err) {
-      const msg = /grupo_/.test(err?.message || '')
-        ? 'falta correr el SQL de grupos en Supabase (supabase/grupos_reservante.sql).'
-        : err?.message;
-      alert('No se pudo sumar la habitación: ' + msg);
+      const e = /grupo_/.test(err?.message || '') ? Object.assign(err, { code: '42703' }) : err;
+      notifyError(e, `sumar ${extra.room || 'la habitación'}`);
       return false;
     }
   };
@@ -677,14 +686,13 @@ export default function AppMejorada() {
       .update({ grupo_id: null, grupo_titular: false, grupo_reservante: null })
       .in('id', ids);
     if (error) {
-      alert('No se pudo separar del grupo: ' + error.message);
+      notifyError(error, `separar ${r.room} del grupo`);
       return false;
     }
     const clean = (x) => (ids.includes(x.id) ? { ...x, grupoId: null, grupoTitular: false, grupoReservante: null } : x);
     setRes((prev) => prev.map(clean));
     setDrawer((prev) => (prev ? clean(prev) : prev));
-    setToastMsg(`${r.room} separada del grupo`);
-    setTimeout(() => setToastMsg(null), 2000);
+    notify(SAVED.separada(r.room));
     return true;
   };
 
@@ -695,7 +703,7 @@ export default function AppMejorada() {
         .update({ monto_pagado: String(p.paid), forma_pago: p.paymentMethod })
         .eq('id', p.id);
       if (error) {
-        alert('No se pudo guardar el cobro: ' + error.message);
+        notifyError(error, 'guardar el cobro');
         return false;
       }
     }
@@ -705,8 +713,7 @@ export default function AppMejorada() {
     };
     setRes((prev) => prev.map(apply));
     setDrawer((prev) => (prev ? apply(prev) : prev));
-    setToastMsg(pagos.length > 1 ? `Cobro guardado · ${pagos.length} habitaciones` : 'Cobro guardado');
-    setTimeout(() => setToastMsg(null), 2000);
+    notify(SAVED.cobro(pagos.length));
     return true;
   };
   const restoreRes = async (id) => {
@@ -721,10 +728,10 @@ export default function AppMejorada() {
       .eq('id', id);
 
     if (error) {
-      console.error('Error al restaurar:', error);
-      alert('Hubo un problema al restaurar la reserva.');
+      notifyError(error, 'recuperar la reserva');
       return;
     }
+    notify(SAVED.restaurada);
 
     // 2. La revivimos en la pantalla
     setRes(
@@ -743,7 +750,7 @@ const toggleBlacklist = async (id, currentStatus) => {
       .eq('id', id);
 
     if (error) {
-      alert('Error al actualizar la lista negra en la nube.');
+      notifyError(error, newStatus ? 'marcar como no grato' : 'quitar de la lista negra');
       return;
     }
 
@@ -752,6 +759,7 @@ const toggleBlacklist = async (id, currentStatus) => {
 
     // 2. ¡EL DETALLE VISUAL! Actualiza el panel abierto para que el botón reaccione al instante
     setDrawer(prev => prev && prev.id === id ? { ...prev, lista_negra: newStatus } : prev);
+    notify(SAVED.listaNegra(newStatus));
   };
   // Late check-out rápido desde el panel: guarda hora y costo y ajusta el total
   // (resta el costo anterior y suma el nuevo). hora vacía = quitar late check-out.
@@ -769,14 +777,13 @@ const toggleBlacklist = async (id, currentStatus) => {
       })
       .eq('id', id);
     if (error) {
-      alert('No se pudo guardar el late check-out: ' + error.message);
+      notifyError(error, 'guardar el late check-out');
       return false;
     }
     const changes = { lateCheckout: hora || '', lateCost: hora ? newCost : '', totalAmount: newTotal };
     setRes((prev) => prev.map((x) => (x.id === id ? { ...x, ...changes } : x)));
     setDrawer((prev) => (prev && prev.id === id ? { ...prev, ...changes } : prev));
-    setToastMsg(hora ? 'Late check-out guardado' : 'Late check-out quitado');
-    setTimeout(() => setToastMsg(null), 2000);
+    notify(SAVED.late(hora));
     return true;
   };
   const handleCI = (r) => {
@@ -789,15 +796,12 @@ const toggleBlacklist = async (id, currentStatus) => {
   };
   // ciModal / coModal: una reserva, o un array (check-in/out de todo el grupo)
   const modalIds = (m) => (Array.isArray(m) ? m.map((x) => x.id) : [m.id]);
-  const modalWho = (m) =>
-    Array.isArray(m)
-      ? `el grupo de ${m[0]?.guestName || ''} (${m.map((x) => x.room).filter(Boolean).join(', ')})`
-      : m.guestName;
 
   const confCI = async (time) => {
     if (!ciModal) return;
     const ids = modalIds(ciModal);
 
+    const before = res.filter((x) => ids.includes(x.id));
     // 1. Actualizamos la vista local de inmediato para una experiencia fluida
     setRes(
       res.map((x) =>
@@ -806,13 +810,18 @@ const toggleBlacklist = async (id, currentStatus) => {
     );
     setCiModal(null);
 
-    // 2. Impactamos en la base de datos de Supabase de manera segura
-    await supabase.from('reservas').update({ estado: 'hospedado' }).in('id', ids);
+    // 2. Impactamos en la base de datos de Supabase (si falla, vuelve a como estaba)
+    const { error } = await supabase.from('reservas').update({ estado: 'hospedado' }).in('id', ids);
+    if (error) {
+      setRes((prev) => prev.map((x) => before.find((b) => b.id === x.id) || x));
+      notifyError(error, 'hacer el check-in');
+    }
   };
 
   const confCO = async (time) => {
     if (!coModal) return;
     const ids = modalIds(coModal);
+    const before = res.filter((x) => ids.includes(x.id));
 
     // 1. Actualizamos la vista local
     setRes(
@@ -828,8 +837,12 @@ const toggleBlacklist = async (id, currentStatus) => {
     );
     setCoModal(null);
 
-    // 2. Impactamos en la base de datos de Supabase
-    await supabase.from('reservas').update({ estado: 'finalizada' }).in('id', ids);
+    // 2. Impactamos en la base de datos de Supabase (si falla, vuelve a como estaba)
+    const { error } = await supabase.from('reservas').update({ estado: 'finalizada' }).in('id', ids);
+    if (error) {
+      setRes((prev) => prev.map((x) => before.find((b) => b.id === x.id) || x));
+      notifyError(error, 'hacer el check-out');
+    }
   };
 
   // 4. EL DISEÑO VISUAL (Ahora sí, adentro de la función principal)
@@ -974,6 +987,7 @@ const toggleBlacklist = async (id, currentStatus) => {
           )}
         </div>
       </div>
+      <OfflineBanner show={!online} />
 
       <div className="app-layout">
         {/* Sidebar Lateral */}
@@ -1334,16 +1348,17 @@ const toggleBlacklist = async (id, currentStatus) => {
               }}
             >
               <div style={{ fontSize: 16, fontWeight: 800, color: '#991B1B' }}>
-                🗑 ¿Eliminar reserva?
+                🗑 {deleteText(res.find((x) => x.id === modal.id)).title}
               </div>
+              {deleteText(res.find((x) => x.id === modal.id)).where && (
+                <div style={{ fontSize: 12.5, fontWeight: 600, color: '#B91C1C', marginTop: 3 }}>
+                  {deleteText(res.find((x) => x.id === modal.id)).where}
+                </div>
+              )}
             </div>
             <div style={{ padding: '18px 22px' }}>
-              <p style={{ margin: '0 0 8px', fontSize: 13, color: '#374151' }}>
-                La reserva <b>no se borrará definitivamente</b>. Quedará en la
-                papelera y solo el administrador podrá recuperarla.
-              </p>
-              <p style={{ margin: '0 0 20px', fontSize: 12, color: '#9CA3AF' }}>
-                Para eliminar permanentemente, contactá al administrador.
+              <p style={{ margin: '0 0 20px', fontSize: 13, color: '#374151' }}>
+                {deleteText(res.find((x) => x.id === modal.id)).detail}
               </p>
               {modal.groupIds && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
@@ -1515,12 +1530,22 @@ const toggleBlacklist = async (id, currentStatus) => {
               </div>
             </div>
             <div style={{ padding: '20px 22px' }}>
-              <p style={{ fontSize: 14, color: '#374151', marginBottom: 6 }}>
-                ¿Confirmas el ingreso de <b>{modalWho(ciModal)}</b>?
-              </p>
-              <p style={{ fontSize: 12, color: '#6B7280', marginBottom: 20 }}>
-                Esta acción marcará la reserva como "Hospedado" y registrará la hora de entrada.
-              </p>
+              {(() => {
+                const t = checkInText(ciModal);
+                return (
+                  <>
+                    <p style={{ fontSize: 14, color: '#374151', marginBottom: 6 }}>
+                      ¿Confirmás el ingreso de <b>{t.who}</b>{t.where}?
+                    </p>
+                    <p style={{ fontSize: 12, color: '#6B7280', marginBottom: t.warn ? 10 : 20 }}>{t.detail}</p>
+                    {t.warn && (
+                      <p style={{ fontSize: 12, color: '#92400E', background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 8, padding: '7px 10px', margin: '0 0 18px', fontWeight: 600 }}>
+                        💰 {t.warn}
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
                   onClick={() => setCiModal(null)}
@@ -1598,12 +1623,22 @@ const toggleBlacklist = async (id, currentStatus) => {
               </div>
             </div>
             <div style={{ padding: '20px 22px' }}>
-              <p style={{ fontSize: 14, color: '#374151', marginBottom: 6 }}>
-                ¿Confirmas la salida de <b>{modalWho(coModal)}</b>?
-              </p>
-              <p style={{ fontSize: 12, color: '#6B7280', marginBottom: 20 }}>
-                La estadía pasará a "Finalizada" y se liberará la propiedad en el calendario.
-              </p>
+              {(() => {
+                const t = checkOutText(coModal);
+                return (
+                  <>
+                    <p style={{ fontSize: 14, color: '#374151', marginBottom: 6 }}>
+                      ¿Confirmás la salida de <b>{t.who}</b>{t.where}?
+                    </p>
+                    <p style={{ fontSize: 12, color: '#6B7280', marginBottom: t.warn ? 10 : 20 }}>{t.detail}</p>
+                    {t.warn && (
+                      <p style={{ fontSize: 12, color: '#92400E', background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 8, padding: '7px 10px', margin: '0 0 18px', fontWeight: 600 }}>
+                        💰 {t.warn}
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
                   onClick={() => setCoModal(null)}
@@ -1642,42 +1677,8 @@ const toggleBlacklist = async (id, currentStatus) => {
           </PopCard>
         </Backdrop>
       )}</AnimatePresence>
-      {/* DISEÑO DEL CARTEL FLOTANTE (TOAST) */}
-      <AnimatePresence>{toastMsg && (
-        <div key="toast"
-          style={{
-            position: 'fixed',
-            bottom: isMobile ? 106 : 40, // en el celular, arriba del menú de abajo
-            left: 0,
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            zIndex: 9999,
-            pointerEvents: 'none',
-          }}
-        >
-          <motion.div
-            initial={{ opacity: 0, y: 24, scale: 0.92 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 12, scale: 0.96, transition: { duration: 0.18 } }}
-            transition={SPRING_POP}
-            style={{
-              background: '#10B981',
-              color: '#fff',
-              padding: '12px 24px',
-              borderRadius: 30,
-              fontSize: 14,
-              fontWeight: 800,
-              boxShadow: '0 8px 16px rgba(16,185,129,.25)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-            }}
-          >
-            <span style={{ fontSize: 16 }}>✓</span> {toastMsg}
-          </motion.div>
-        </div>
-      )}</AnimatePresence>
+      {/* CARTELITO: aparece abajo y se va solo (src/components/ui/Toast.tsx) */}
+      <Toast isMobile={isMobile} />
 
     </motion.div>
   );

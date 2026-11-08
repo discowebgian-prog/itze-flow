@@ -1,6 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 import { supabase } from './supabase';
+import { notify } from './voice';
 
 // ── FOTOS DE DOCUMENTOS (bucket privado "documentos") ────────────────────────
 // En la base se guarda el enlace de la foto. Con el bucket privado ese enlace
@@ -37,10 +38,10 @@ export async function openDoc(url) {
   if (!target && /^https?:/i.test(String(url || ''))) target = url;
   if (!target) {
     if (w) w.close();
-    alert('No se pudo abrir la foto del documento. Probá de nuevo.');
+    notify('No se pudo abrir la foto del documento. Probá de nuevo en un momento.', 'error');
     return;
   }
   if (w) w.location.href = target;
   else if (!window.open(target, '_blank'))
-    alert('El navegador bloqueó la ventana. Permití ventanas emergentes para esta página.');
+    notify('El navegador no dejó abrir la foto. Permití las ventanas emergentes para Itzé Flow y probá de nuevo.', 'error');
 }
