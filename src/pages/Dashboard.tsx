@@ -10,6 +10,7 @@ import { CountUp } from '../components/ui/Motion';
 import { greeting, daySummary, nowMerida } from '../lib/voice';
 import { buildGuestDB } from '../lib/guests';
 import { birthdayList, wasGreeted } from '../lib/guestMessages';
+import { PushButton } from '../components/ui/PushButton';
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 export function Dashboard({
@@ -176,6 +177,8 @@ export function Dashboard({
               </span>
             )}
           </button>
+          {/* 🔔 Activar avisos con la app cerrada (desaparece cuando ya están activos en este aparato) */}
+          {deviceName && <PushButton deviceName={deviceName} />}
         </div>
       </div>
       <div

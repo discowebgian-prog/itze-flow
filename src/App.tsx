@@ -28,6 +28,7 @@ import { Toast, OfflineBanner, useOnline } from './components/ui/Toast';
 import { notify, notifyError, humanError, SAVED, checkInText, checkOutText, deleteText, afterCheckIn, afterCheckOut, afterPay, describeChange, describeChanges } from './lib/voice';
 import { WhoAmI } from './components/ui/WhoAmI';
 import { getDeviceName, setDeviceName } from './lib/device';
+import { syncPush, sendPush } from './lib/push';
 
 
 // ── APP ───────────────────────────────────────────────────────────────────────
@@ -54,9 +55,23 @@ export default function AppMejorada() {
   const whoRef = useRef('');
   const resRef = useRef(res);
   resRef.current = res;
+  // Foto de las reservas justo antes de escribir: así el aviso al otro aparato puede decir qué cambió
+  // (cuando vuelve el eco del tiempo real, la pantalla ya muestra el cambio)
+  const writeRef = useRef({ at: 0, res: [] });
+  const markWrite = () => {
+    if (Date.now() - writeRef.current.at > 3000) writeRef.current = { at: Date.now(), res: resRef.current };
+    else writeRef.current.at = Date.now();
+  };
+  // OJO: adentro va supabase.from('reservas') directo (si se llama a rdb, se llama a sí mismo y no guarda nada)
   const rdb = {
-    update: (obj) => supabase.from('reservas').update({ modificado_por: whoRef.current || null, ...obj }),
-    insert: (rows) => supabase.from('reservas').insert(rows.map((r) => ({ modificado_por: whoRef.current || null, ...r }))),
+    update: (obj) => {
+      if (obj.modificado_por !== 'Flow') markWrite();
+      return supabase.from('reservas').update({ modificado_por: whoRef.current || null, ...obj });
+    },
+    insert: (rows) => {
+      markWrite();
+      return supabase.from('reservas').insert(rows.map((r) => ({ modificado_por: whoRef.current || null, ...r })));
+    },
   };
 
   // Tarifas: si la tabla todavía no existe, la pestaña Tarifas avisa que falta el SQL
@@ -182,10 +197,27 @@ export default function AppMejorada() {
     // Se juntan los cambios que llegan seguidos (un grupo son varias filas) y sale un solo cartelito.
     let pend = [];
     let pendTimer = null;
+    // Lo que hizo ESTE aparato: aviso al celular de los demás (con la app cerrada), vía /api/push
+    let mine = [];
+    let mineTimer = null;
     const announce = (payload) => {
       const row = payload.new || {};
       const by = row.modificado_por;
-      if (!by || by === 'Flow' || by === whoRef.current) return;
+      if (!by || by === 'Flow') return;
+      if (by === whoRef.current) {
+        const w = writeRef.current;
+        if (Date.now() - w.at > 8000) return; // lo hizo otro aparato con el mismo nombre
+        const prev = w.res.find((r) => String(r.id) === String(row.id));
+        const dm = describeChange(by, payload.eventType, row, prev);
+        if (!dm) return;
+        mine.push(dm);
+        clearTimeout(mineTimer);
+        mineTimer = setTimeout(() => {
+          sendPush(describeChanges(mine), by);
+          mine = [];
+        }, 1200);
+        return;
+      }
       const old = resRef.current.find((r) => String(r.id) === String(row.id));
       const d = describeChange(by, payload.eventType, row, old);
       if (!d) return;
@@ -325,6 +357,10 @@ export default function AppMejorada() {
   const [deviceName, setDeviceNameState] = useState(getDeviceName);
   const [whoOpen, setWhoOpen] = useState(false);
   whoRef.current = deviceName || user?.name || '';
+  // Avisos con la app cerrada: renueva la suscripción de este aparato con su nombre
+  useEffect(() => {
+    if (user?.id && deviceName) syncPush(deviceName);
+  }, [user?.id, deviceName]);
   // Desde el aviso de cumpleaños de Inicio: qué huésped resaltar en Huéspedes › Cumpleaños
   const [guestFocus, setGuestFocus] = useState(null);
   useEffect(() => {
