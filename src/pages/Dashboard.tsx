@@ -1,12 +1,13 @@
 /* eslint-disable */
 // @ts-nocheck
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Badge } from '../components/ui/Badge';
 import { PROPS } from '../lib/constants';
 import { TODAY, fmt, parseD, addDays, currency } from '../lib/dates';
 import dashboardCss from '../styles/dashboard.css?raw';
 import { LateBadge } from '../components/ui/LateBadge';
 import { CountUp } from '../components/ui/Motion';
+import { greeting, daySummary, nowMerida } from '../lib/voice';
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 export function Dashboard({
@@ -16,7 +17,18 @@ export function Dashboard({
   propStatus,
   setPropStatus,
   onGoTo,
+  deviceName = '',
+  onWho = null,
 }) {
+  // Saludo y resumen del día: se actualizan solos cada minuto (la hora cambia el saludo)
+  const [now, setNow] = useState(nowMerida);
+  useEffect(() => {
+    const t = setInterval(() => setNow(nowMerida()), 60000);
+    return () => clearInterval(t);
+  }, []);
+  const hello = greeting(deviceName, now);
+  const summary = daySummary(reservations, now);
+
   // --- NUEVO: Controladores de Animación ---
   const [pulseIn, setPulseIn] = useState(false);
   const [pulseOut, setPulseOut] = useState(false);
@@ -58,7 +70,7 @@ export function Dashboard({
             letterSpacing: 1.2,
           }}
         >
-          {TODAY.toLocaleDateString('es-MX', {
+          {now.toLocaleDateString('es-MX', {
             weekday: 'long',
             day: 'numeric',
             month: 'long'
@@ -73,8 +85,35 @@ export function Dashboard({
             letterSpacing: -0.6,
           }}
         >
-          Panorama de hoy
+          {/* "Buen día, Gian ☀️": tocar el nombre cambia quién usa el aparato */}
+          {deviceName && onWho ? (
+            <>
+              {hello.text.replace(`, ${deviceName}`, ', ')}
+              <span
+                onClick={onWho}
+                title="Cambiar quién usa este aparato"
+                style={{ cursor: 'pointer', textDecoration: 'underline dotted #CBD5E1', textUnderlineOffset: 6, textDecorationThickness: 2 }}
+              >
+                {deviceName}
+              </span>
+            </>
+          ) : (
+            hello.text
+          )}{' '}
+          <span style={{ fontSize: 22 }}>{hello.emoji}</span>
         </h2>
+        {/* El día en palabras (1 a 3 renglones) */}
+        <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {summary.map((line, i) => (
+            <div
+              key={line}
+              className="li-in"
+              style={{ '--i': i, fontSize: 14.5, color: i === 0 ? '#334155' : '#64748B', fontWeight: i === 0 ? 600 : 500, lineHeight: 1.4 }}
+            >
+              {line}
+            </div>
+          ))}
+        </div>
       </div>
       <div
         style={{
