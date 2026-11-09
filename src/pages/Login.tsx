@@ -92,7 +92,7 @@ export function Login({ onLogin }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontFamily: "'Inter',system-ui,sans-serif",
+        fontFamily: 'var(--font)',
         padding: 20,
       }}
     >

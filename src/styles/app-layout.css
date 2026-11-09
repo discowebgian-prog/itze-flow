@@ -1,9 +1,9 @@
 
         /* Reset y Tipografía Global */
-        *, *::before, *::after { box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif !important; }
-        html, body, #root { margin: 0 !important; padding: 0 !important; max-width: 100% !important; width: 100%; background: #F8FAFC; color: #111; overflow: hidden; }
+        *, *::before, *::after { box-sizing: border-box; font-family: var(--font) !important; }
+        html, body, #root { margin: 0 !important; padding: 0 !important; max-width: 100% !important; width: 100%; background: var(--bg); color: var(--ink); overflow: hidden; -webkit-font-smoothing: antialiased; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: var(--handle); border-radius: 10px; }
         input[type=date]::-webkit-calendar-picker-indicator { opacity: .4; }
         button, input, select, textarea { font-family: inherit; }
 
@@ -22,7 +22,7 @@
         
         /* Sistema de Layout Responsivo (CSS Puro) */
         .app-layout { display: flex; width: 100%; height: calc(100vh - 54px); overflow-x: clip; }
-        .sidebar { display: flex; flex-direction: column; flex-shrink: 0; background: #fff; border-right: 1px solid #F0F0F0; height: 100%; overflow-y: auto; transition: width 0.2s ease; }
+        .sidebar { display: flex; flex-direction: column; flex-shrink: 0; background: var(--card); border-right: .5px solid var(--line); height: 100%; overflow-y: auto; transition: width 0.2s ease; }
         
         /* Contenido principal ocupando 100% con scroll independiente */
         .main-content { flex: 1; min-width: 0; padding: 16px; height: 100%; overflow-y: auto; transition: padding 0.2s ease; }
@@ -49,7 +49,7 @@
           .sidebar { display: none !important; }
           /* Espacio final = alto del menú de abajo (~89 px + zona segura) + aire, para poder ver lo último sin que el menú lo tape */
           .main-content { padding: 16px 12px calc(120px + env(safe-area-inset-bottom, 0px)) !important; overflow-y: visible; }
-          .bn { display: flex !important; position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #E5E7EB; z-index: 99; padding-bottom: env(safe-area-inset-bottom, 12px); box-shadow: 0 -2px 10px rgba(0,0,0,0.03); }
+          .bn { display: flex !important; position: fixed; bottom: 0; left: 0; right: 0; background: var(--bar); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); border-top: .5px solid var(--line); z-index: 99; padding-bottom: env(safe-area-inset-bottom, 12px); }
         }
 
       /* 📱 OPTIMIZACIÓN MOBILE LANDSCAPE (CELULAR ACOSTADO) */
@@ -72,7 +72,7 @@
             padding: 0 !important; 
             margin: 0 !important; 
             min-height: 100vh !important; 
-            background: #fff !important; 
+            background: var(--bg) !important; 
           }
           
           /* 3. SEPARAMOS LOS MÁRGENES PARA QUE SAFARI NO LOS IGNORE */

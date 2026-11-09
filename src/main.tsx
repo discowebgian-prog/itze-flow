@@ -4,20 +4,15 @@ import { createRoot } from 'react-dom/client';
 import { MotionConfig } from 'motion/react';
 import AppMejorada from './App';
 import { registerSW } from './lib/push';
+// Estilo de Flow (colores, letra, formas) en un solo lugar
+import './styles/theme.css';
 
 // Service worker solo para los avisos con la app cerrada (no guarda la app en caché)
 registerSW();
 
 // Font y Candado Anti-Zoom para Celulares
 if (typeof document !== 'undefined') {
-  // 1. Cargar la fuente
-  if (!document.getElementById('gf')) {
-    const l = document.createElement('link');
-    l.id = 'gf';
-    l.rel = 'stylesheet';
-    l.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap';
-    document.head.appendChild(l);
-  }
+  // 1. Letra: la redondeada del sistema (como Itzé Limpieza), sin descargar nada. Está en --font (theme.css).
 
   // 2. Bloquear el zoom automático (Comportamiento de App Nativa)
   let metaViewport = document.querySelector('meta[name="viewport"]');

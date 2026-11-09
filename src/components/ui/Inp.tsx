@@ -10,7 +10,7 @@ export function Inp({ label, ...p }) {
             display: 'block',
             fontSize: 11,
             fontWeight: 700,
-            color: '#888',
+            color: 'var(--mut)',
             marginBottom: 4,
             textTransform: 'uppercase',
             letterSpacing: 0.4,
@@ -23,9 +23,11 @@ export function Inp({ label, ...p }) {
         {...p}
         style={{
           width: '100%',
-          padding: '9px 12px',
-          border: '1.5px solid #E5E7EB',
-          borderRadius: 8,
+          padding: '10px 12px',
+          border: '1px solid var(--line)',
+          borderRadius: 'var(--r-field)',
+          background: 'var(--card)',
+          color: 'var(--ink)',
           fontSize: 13,
           fontFamily: 'inherit',
           outline: 'none',
