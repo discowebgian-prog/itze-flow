@@ -11,6 +11,24 @@ import { QuoteButton } from '../components/Quoter';
 import { AnimatePresence } from 'motion/react';
 import { Backdrop, PopCard } from '../components/ui/Motion';
 
+// Polígono con las esquinas redondeadas: cada punto es [x, y, radio]; radio 0 = esquina en punta
+function roundedShape(pts) {
+  const n = pts.length;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const [px, py] = pts[(i + n - 1) % n];
+    const [x, y, rad] = pts[i];
+    const [nx, ny] = pts[(i + 1) % n];
+    const d1 = Math.hypot(px - x, py - y) || 1;
+    const d2 = Math.hypot(nx - x, ny - y) || 1;
+    const k = Math.min(rad, d1 / 2, d2 / 2);
+    const a = [x + ((px - x) / d1) * k, y + ((py - y) / d1) * k];
+    const b = [x + ((nx - x) / d2) * k, y + ((ny - y) / d2) * k];
+    out.push(`${i ? 'L' : 'M'}${a[0]},${a[1]} Q${x},${y} ${b[0]},${b[1]}`);
+  }
+  return out.join(' ') + ' Z';
+}
+
 // ── TIMELINE DESKTOP ──────────────────────────────────────────────────────────
 export function Timeline({
   reservations,
@@ -718,14 +736,19 @@ export function Timeline({
                   const W = Math.max(4, r.pxR - r.pxL - 4);
                   const isDrag = drag && drag.id === r.id;
                   const cid = `c${r.id}`;
-                  const tx = (r.cutLeft ? 8 : 10) + (r.source === 'Booking' ? 4 : 0);
+                  const tx = (r.cutLeft ? 8 : Math.min(14, W * 0.2) + 4) + (r.source === 'Booking' ? 4 : 0);
 
-                  // Barra con esquinas redondeadas, como el resto de la app. Si la estadía sigue fuera de lo
-                  // que se ve (empieza antes o termina después), ese lado queda recto: la barra continúa.
-                  const RAD = Math.min(10, H / 2, W / 2);
-                  const rl = r.cutLeft ? 0 : RAD;
-                  const rr = r.cutRight ? 0 : RAD;
-                  const shape = `M${rl},0 H${W - rr} A${rr},${rr} 0 0 1 ${W},${rr} V${H - rr} A${rr},${rr} 0 0 1 ${W - rr},${H} H${rl} A${rl},${rl} 0 0 1 0,${H - rl} V${rl} A${rl},${rl} 0 0 1 ${rl},0 Z`;
+                  // Forma de la barra: puntas en ángulo (entra a la tarde, sale a la mañana) con las esquinas
+                  // redondeadas, como el resto de la app. Si la estadía sigue fuera de lo que se ve, ese lado
+                  // queda recto y sin redondear: la barra continúa.
+                  const D = Math.min(10, W * 0.25);
+                  const RAD = 6;
+                  const shape = roundedShape([
+                    [r.cutLeft ? 0 : D, 0, r.cutLeft ? 0 : RAD],
+                    [W, 0, r.cutRight ? 0 : RAD],
+                    [r.cutRight ? W : W - D, H, r.cutRight ? 0 : RAD],
+                    [0, H, r.cutLeft ? 0 : RAD],
+                  ]);
 
                   return (
                     <div
