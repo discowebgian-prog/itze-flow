@@ -1549,6 +1549,7 @@ const toggleBlacklist = async (id, currentStatus) => {
           title={prefill.chain ? `Nueva reserva · ${prefill.chain.i} de ${prefill.chain.total} (cambio de habitación)` : 'Nueva reserva'}
           onClose={() => setModal(null)}
           isMobile={isMobile}
+          tall
         >
           <ResForm
             key={prefill.key}
