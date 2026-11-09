@@ -62,3 +62,7 @@ export function checkoutTimePassed(checkOutDate, late, nowMerida, hoyFmt) {
   const limit = m ? Number(m[1]) * 60 + Number(m[2]) : CHECKOUT_HOUR * 60;
   return nowMin >= Math.max(limit, CHECKOUT_HOUR * 60);
 }
+
+// Estadía sin cargo: total $0 y nadie pagó (noches gratis que cubren todo, 100% de descuento…).
+// No es "pagado": no hubo pago de por medio.
+export const isFreeStay = (r) => (Number(r?.totalAmount) || 0) <= 0 && (Number(r?.paid) || 0) <= 0;

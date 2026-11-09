@@ -12,7 +12,8 @@ import { lastVisitText, birthdayInStay, birthdayText, birthdayMessage, companion
 import { DocLink } from '../ui/DocLink';
 import { LATE_COLORS } from '../ui/LateBadge';
 import { LatePicker } from './LatePicker';
-import { lateHour, lateCostOf, findConflicts, calcStayTotal } from '../../lib/reservations';
+import { lateHour, lateCostOf, findConflicts, calcStayTotal, isFreeStay } from '../../lib/reservations';
+import { freeStayText } from '../../lib/voice';
 import { groupOf, groupTitular, groupName, hasOwnContact, balanceOf } from '../../lib/groups';
 import { GROUP_COLORS } from '../ui/GroupBadge';
 import { quoteRoom, pricingMatches } from '../../lib/rates';
@@ -899,7 +900,46 @@ export function ResDrawer({
               {currency(res.totalAmount)}
             </div>
           </div>
-          {saldo <= 0 ? (
+          {isFreeStay(res) ? (
+            // Sin cargo (noches gratis que cubren todo…): no es "pagado", no hubo pago
+            <div
+              style={{
+                background: '#F5F3FF',
+                border: '1.5px solid #DDD6FE',
+                borderRadius: 10,
+                padding: '12px 16px',
+                marginBottom: 10,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: '50%',
+                  background: '#EDE9FE',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 18,
+                  flexShrink: 0,
+                }}
+              >
+                🎁
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: '#5B21B6', fontWeight: 800, textTransform: 'uppercase' }}>
+                  Sin cargo
+                </div>
+                <div style={{ fontWeight: 800, fontSize: 20, color: '#6D28D9' }}>
+                  {freeStayText(res) === 'Sin cargo' ? currency(0) : freeStayText(res)}
+                </div>
+                <div style={{ fontSize: 11, color: '#6B7280', marginTop: 1 }}>No hay nada que cobrar</div>
+              </div>
+            </div>
+          ) : saldo <= 0 ? (
             // Pagado del todo: se lee primero "pagado", el saldo queda chiquito abajo
             <div
               style={{
@@ -1092,7 +1132,11 @@ export function ResDrawer({
                   🔗 Saldo del grupo: <b style={{ whiteSpace: 'nowrap' }}>{currency(groupSaldo)}</b>
                 </span>
               ) : (
-                <span style={{ fontWeight: 800, color: '#047857' }}>🔗 Grupo pagado completo ✓</span>
+                members.every(isFreeStay) ? (
+                  <span style={{ fontWeight: 800, color: '#6D28D9' }}>🔗 Grupo sin cargo 🎁</span>
+                ) : (
+                  <span style={{ fontWeight: 800, color: '#047857' }}>🔗 Grupo pagado completo ✓</span>
+                )
               )}
               {groupSaldo > 0 && onPay && (
                 <button
