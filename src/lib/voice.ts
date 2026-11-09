@@ -250,6 +250,31 @@ function moves(list, one, many) {
 }
 const cap1 = (t) => (t ? t.charAt(0).toUpperCase() + t.slice(1) : t);
 
+// Nombres de los que faltan: hasta 3; si son más, los 2 primeros "y N más"
+function whoList(u) {
+  if (u.length <= 3) return listY(u.map((x) => x.label));
+  return `${u.slice(0, 2).map((x) => x.label).join(', ')} y ${u.length - 2} más`;
+}
+// Avance de llegadas o salidas de hoy (pending = faltan, done = ya hechas)
+// "Ya llegó Ana López (P2); falta que llegue Juan Pérez (P4)." · "Ya llegaron 2 de 5; falta que lleguen…"
+// Sin ninguna hecha: "Hoy llegan …" · Todas hechas: "Ya llegaron todos los de hoy ✓" (con una sola, su nombre)
+function progress(pending, done, did1, didN, will1, willN, hoy1, hoyN, allDone) {
+  const d = units(done);
+  // Grupo que llega (o se va) por partes: "parte del grupo de Torres (P1)" · "el resto del grupo de Torres (P3)"
+  const split = new Set(
+    units(pending).filter((u) => u.group && d.some((x) => x.group && x.res[0].grupoId === u.res[0].grupoId)).map((u) => u.res[0].grupoId)
+  );
+  const relabel = (u, word) =>
+    u.group && split.has(u.res[0].grupoId) ? { ...u, label: `${word} grupo de ${u.name || 'sin nombre'} (${roomsText(u.rooms)})` } : u;
+  const p = units(pending).map((u) => relabel(u, 'el resto del'));
+  d.forEach((u, i) => (d[i] = relabel(u, 'parte del')));
+  if (!p.length && !d.length) return '';
+  if (!d.length) return `${p.length === 1 ? hoy1 : hoyN} ${whoList(p)}.`;
+  if (!p.length) return d.length === 1 ? `Ya ${did1} ${d[0].label} ✓` : allDone;
+  const ya = d.length === 1 ? `Ya ${did1} ${d[0].label}` : `Ya ${didN} ${d.length} de ${d.length + p.length}`;
+  return `${ya}; falta que ${p.length === 1 ? will1 : willN} ${whoList(p)}.`;
+}
+
 // Resumen del día para Inicio: 1 a 3 renglones cortos, en palabras.
 // De día cuenta lo que falta de hoy; desde las 19:00, lo que falta y lo de mañana.
 export function daySummary(reservations, now = nowMerida()) {
@@ -263,11 +288,25 @@ export function daySummary(reservations, now = nowMerida()) {
   const night = now.getHours() >= 19;
   const lines = [];
 
+  // Ya hechos hoy (para contar el avance después del primer check-in o check-out)
+  const inDone = all.filter((r) => r.checkIn === today && (r.status === 'hospedado' || r.status === 'finalizada'));
+  const outDone = all.filter((r) => r.checkOut === today && r.status === 'finalizada');
+  const started = !night && (inDone.length > 0 || outDone.length > 0);
+
   const hoy = night
     ? [moves(arrivals, 'que llegue', 'que lleguen'), moves(departures, 'que se vaya', 'que se vayan')].filter(Boolean)
     : [moves(arrivals, 'llega', 'llegan'), moves(departures, 'se va', 'se van')].filter(Boolean);
   if (hoy.length) {
-    lines.push(night ? `Todavía falta ${hoy.join(' y ')}.` : `Hoy ${hoy.join(' y ')}.`);
+    if (started) {
+      // Con el día en marcha: quién ya llegó o se fue y quién falta, con nombres
+      // "Ya llegó Ana López (P2); falta que llegue Juan Pérez (P4)." · "Ya llegaron todos los de hoy ✓"
+      lines.push(
+        ...[
+          progress(arrivals, inDone, 'llegó', 'llegaron', 'llegue', 'lleguen', 'Hoy llega', 'Hoy llegan', 'Ya llegaron todos los de hoy ✓'),
+          progress(departures, outDone, 'se fue', 'se fueron', 'se vaya', 'se vayan', 'Hoy se va', 'Hoy se van', 'Ya se fueron todos los de hoy ✓'),
+        ].filter(Boolean)
+      );
+    } else lines.push(night ? `Todavía falta ${hoy.join(' y ')}.` : `Hoy ${hoy.join(' y ')}.`);
     // Late check-out de los que se van hoy (de noche ya no hace falta)
     units(night ? [] : departures)
       .filter((u) => u.res.some((r) => r.lateCheckout))
