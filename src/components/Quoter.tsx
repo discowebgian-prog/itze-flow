@@ -286,12 +286,14 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
   const sofaOK = sofa !== false;
   // Por defecto el sofá cama cuenta como una cama más (a la mayoría no le molesta); "No" lo saca
   const sofaMode = sofa === false ? 'no' : 'ok';
-  const selKey = (sel) => (sel ? sel.map((x) => x.id + x.g).join() : '-');
+  const selKey = (sel) => (sel ? sel.map((x) => x.id + x.g + (x.alts || []).join('')).join() : '-');
   // Lugares de una habitación según si comparten cama (sh) y si usan el sofá cama (sf)
   const noSofaCap = (r, sh) => (sh ? bedInfo(r).plazas : bedInfo(r).camas);
   const capFor = (r, sh, sf) => noSofaCap(r, sh) + (sf ? bedInfo(r).sofa : 0);
-  // Elige habitaciones para "need" personas: la de menos lugar que alcance (así quedan libres las grandes);
-  // empate, la que no necesita el sofá cama y después la más barata.
+  // Elige habitaciones para "need" personas: entre las que alcanzan, la más chica de verdad (capacidad
+  // de la habitación, así quedan libres las grandes para grupos); empate, la que no necesita el sofá cama
+  // y después la más barata. Si siguen empatadas (ej. 1, 2, 3 y 5 para 2 personas), son alternativas
+  // iguales: van todas en `alts` y la sugerencia las nombra a todas.
   // Si ninguna alcanza sola, la más grande y sigue con las que faltan.
   // mode: 'ok' (por defecto: el sofá cama vale igual que una cama) · 'no' (no quieren usarlo)
   const pickRooms = (need, sh, mode) => {
@@ -303,22 +305,32 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
     while (rest > 0 && pool.length) {
       const fit = pool.filter((r) => capOf(r) >= rest);
       const sofaUse = (r) => (Math.min(rest, capOf(r)) > noSofaCap(r, sh) ? 1 : 0);
-      const avoidSofa = (r) => (mode === 'avoid' ? sofaUse(r) : 0);
       // Empate de tamaño: siempre mejor la que no necesita el sofá cama
-      const r = fit.length
-        ? [...fit].sort((a, b) => avoidSofa(a) - avoidSofa(b) || capOf(a) - capOf(b) || sofaUse(a) - sofaUse(b) || byPrice(a, b))[0]
-        : [...pool].sort((a, b) => capOf(b) - capOf(a) || sofaUse(a) - sofaUse(b) || byPrice(a, b))[0];
+      const cmpFit = (a, b) => a.maxGuests - b.maxGuests || sofaUse(a) - sofaUse(b) || byPrice(a, b);
+      const sorted = fit.length
+        ? [...fit].sort(cmpFit)
+        : [...pool].sort((a, b) => capOf(b) - capOf(a) || sofaUse(a) - sofaUse(b) || byPrice(a, b));
+      const r = sorted[0];
       const g = Math.min(rest, capOf(r));
-      out.push({ id: r.id, g, cap: capOf(r), max: r.maxGuests, sofa: g > noSofaCap(r, sh) });
+      const alts = fit.length ? sorted.slice(1).filter((x) => cmpFit(x, r) === 0).map((x) => x.id) : [];
+      out.push({ id: r.id, g, cap: capOf(r), max: r.maxGuests, sofa: g > noSofaCap(r, sh), alts });
       rest -= g;
       pool = pool.filter((x) => x !== r);
     }
     return rest > 0 ? null : out;
   };
-  // "la habitación 1, con una persona en el sofá cama" · "la habitación 1 (3, una en el sofá cama) y la 6 (1)"
+  // Habitaciones que lleva la sugerencia (con las alternativas iguales, cuando es una sola)
+  const recIds = (sel) => (sel.length === 1 ? [sel[0].id, ...sel[0].alts] : sel.map((x) => x.id));
+  const listO = (a) => (a.length <= 1 ? a.join('') : `${a.slice(0, -1).join(', ')} o ${a[a.length - 1]}`);
+  // "la habitación 1, con una persona en el sofá cama" · "cualquiera de estas: la habitación 1, 2, 3 o 5"
+  // · "la habitación 1 (3, una en el sofá cama) y la 6 (1)"
   const roomsTxt = (sel) =>
     sel.length === 1
-      ? `la habitación ${roomNum(sel[0].id)}${sel[0].sofa ? ', con una persona en el sofá cama' : ''}`
+      ? sel[0].alts.length
+        ? `cualquiera de estas: la habitación ${listO([sel[0].id, ...sel[0].alts].sort().map(roomNum))}${
+            sel[0].sofa ? ', con una persona en el sofá cama' : ''
+          }`
+        : `la habitación ${roomNum(sel[0].id)}${sel[0].sofa ? ', con una persona en el sofá cama' : ''}`
       : listY(
           sel.map(
             (x, k) => `${k === 0 ? 'la habitación' : 'la'} ${roomNum(x.id)} (${x.g}${x.sofa ? ', una en el sofá cama' : ''})`
@@ -341,7 +353,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
       sofaAsk = left > 1 && (sofa !== null || !!(pickRooms(left, sh, 'ok') || []).some((x) => x.sofa));
       const como = left === 1 ? '' : share ? ', compartiendo cama' : ', cada uno en su cama';
       if (sel) {
-        recRooms = sel.map((x) => x.id);
+        recRooms = recIds(sel);
         recText = `⭐ ${para}${como}${sinSofa || (como ? ',' : '')} te conviene ${roomsTxt(sel)}${why(sel)}.`;
       } else {
         recText = `${para}${como}${sofa === false ? ' y sin usar el sofá cama' : ''} no nos alcanzan las habitaciones libres.`;
@@ -352,18 +364,18 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
       const solo = pickRooms(left, false, sofaMode);
       const same = shared && solo && selKey(shared) === selKey(solo);
       if (same) {
-        recRooms = shared.map((x) => x.id);
+        recRooms = recIds(shared);
         // Mismas habitaciones, pero si cada uno quiere su cama alguien va al sofá cama: se aclara
         const soloSofa = solo.some((x) => x.sofa) && !shared.some((x) => x.sofa);
         recText = soloSofa
           ? `⭐ ${para} te conviene ${roomsTxt(shared)} (si cada uno quiere su cama, una persona va en el sofá cama).`
           : `⭐ ${para} te conviene ${roomsTxt(shared)}${why(shared)}.`;
       } else if (shared && solo) {
-        recRooms = [...new Set([...shared, ...solo].map((x) => x.id))];
+        recRooms = [...new Set([...recIds(shared), ...recIds(solo)])];
         recText = `⭐ ${para}: si pueden compartir cama, te conviene ${roomsTxt(shared)}; si cada uno quiere su cama, ${roomsTxt(solo)}.`;
       } else if (shared || solo) {
         const sel = shared || solo;
-        recRooms = sel.map((x) => x.id);
+        recRooms = recIds(sel);
         recText = `⭐ ${para} te conviene ${roomsTxt(sel)}.`;
       }
     }
