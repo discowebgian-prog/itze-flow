@@ -1,6 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 import { lateHour } from '../../lib/reservations';
+import { Icon } from './Icon';
 
 // Etiqueta "🕐 Late 16:00" para reservas con late check-out (no muestra nada si no tiene)
 export const LATE_COLORS = { bg: '#E0E7FF', txt: '#3730A3', border: '#A5B4FC' };
@@ -20,8 +21,8 @@ export function LateBadge({ r, size = 11, style = {} }) {
         background: '#4F46E5',
         color: '#fff',
         border: '1px solid #4F46E5',
-        padding: '1px 6px',
-        borderRadius: 5,
+        padding: '1px 7px',
+        borderRadius: 7,
         fontSize: size,
         fontWeight: 800,
         lineHeight: 1.3,
@@ -29,7 +30,7 @@ export function LateBadge({ r, size = 11, style = {} }) {
         ...style,
       }}
     >
-      🕐 Late {h}
+      <Icon name="clock" size={size + 1} strokeWidth={2.5} />Late {h}
     </span>
   );
 }

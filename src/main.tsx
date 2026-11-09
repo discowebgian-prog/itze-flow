@@ -13,6 +13,12 @@ registerSW();
 // Font y Candado Anti-Zoom para Celulares
 if (typeof document !== 'undefined') {
   // 1. Letra: la redondeada del sistema (como Itzé Limpieza), sin descargar nada. Está en --font (theme.css).
+  //    Si el aparato no la tiene, se marca <html class="no-rounded"> y los títulos usan un grosor más liviano.
+  try {
+    const c = document.createElement('canvas').getContext('2d');
+    const w = (f) => { c.font = `40px ${f}`; return c.measureText('Buenas tardes, Gian 0123').width; };
+    if (w('ui-rounded, monospace') === w('monospace')) document.documentElement.classList.add('no-rounded');
+  } catch (e) {}
 
   // 2. Bloquear el zoom automático (Comportamiento de App Nativa)
   let metaViewport = document.querySelector('meta[name="viewport"]');
