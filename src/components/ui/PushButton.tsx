@@ -1,6 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 import { useState } from 'react';
+import { Icon } from './Icon';
 import { pushSupported, pushGranted, pushBlocked, isIOS, isStandalone, enablePush } from '../../lib/push';
 import { notify, notifyError } from '../../lib/voice';
 
@@ -40,7 +41,7 @@ export function PushButton({ deviceName }) {
   };
 
   return (
-    <div style={{ marginTop: 8 }}>
+    <div>
       <button
         className="tap"
         onClick={click}
@@ -48,21 +49,22 @@ export function PushButton({ deviceName }) {
           display: 'inline-flex',
           alignItems: 'center',
           gap: 6,
-          padding: '7px 12px',
+          padding: '8px 14px',
           borderRadius: 20,
           fontFamily: 'inherit',
-          fontSize: 12.5,
-          fontWeight: 700,
+          fontSize: 14,
+          fontWeight: 600,
           cursor: 'pointer',
-          border: '1px solid #BFDBFE',
-          background: '#EFF6FF',
-          color: '#1D4ED8',
+          border: 'none',
+          background: 'var(--acc-soft)',
+          color: 'var(--acc)',
         }}
       >
-        🔔 Activar avisos en este aparato
+        <Icon name="bell" size={16} />
+        Activar avisos en este aparato
       </button>
       {help && (
-        <div className="pop-in" style={{ marginTop: 6, fontSize: 12, color: '#475569', lineHeight: 1.45, maxWidth: 420 }}>
+        <div className="pop-in" style={{ marginTop: 6, fontSize: 12, color: 'var(--ink-2)', lineHeight: 1.45, maxWidth: 420 }}>
           {help}
         </div>
       )}
