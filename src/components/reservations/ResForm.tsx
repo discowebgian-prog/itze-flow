@@ -12,6 +12,7 @@ import { ROOMS, SOURCES, RS, COUNTRIES, findCountry } from '../../lib/constants'
 import { TODAY, fmt, fmtD, addDays, diffDays, currency, parseD } from '../../lib/dates';
 import { lastVisitText, birthdayInStay, birthdayText, cleanBirthDate } from '../../lib/guestMessages';
 import { findConflicts, calcStayTotal, lateCostOf } from '../../lib/reservations';
+import { freeStayText } from '../../lib/voice';
 import { quoteRoom, pricingMatches, applyQuote } from '../../lib/rates';
 import { QuoteInfo, money } from './QuoteInfo';
 import { listY, Step, QT_CSS, scrollToStep } from '../Quoter';
@@ -541,7 +542,7 @@ export function ResForm({
         setValErr(`Falta la tarifa/noche de ${sinTarifa.join(', ')}.`);
         return;
       }
-      if (!splitPay && (f.paid === '' || f.paid === null)) {
+      if (!splitPay && !freeStay && (f.paid === '' || f.paid === null)) {
         setValErr('Falta cuánto pagó el grupo (si todavía nada, poné 0).');
         return;
       }
@@ -550,7 +551,7 @@ export function ResForm({
         setValErr('Falta la tarifa por noche.');
         return;
       }
-      if (f.paid === '' || f.paid === null) {
+      if (!freeStay && (f.paid === '' || f.paid === null)) {
         setValErr('Falta cuánto pagó (si todavía nada, poné 0).');
         return;
       }
@@ -660,7 +661,11 @@ export function ResForm({
         return r !== '' && r !== null && r !== undefined;
       })
     : f.pricing.ratePerNight !== '' && f.pricing.ratePerNight !== null;
-  const paidOk = multiOn && splitPay ? true : f.paid !== '' && f.paid !== null;
+  const paidShown = multiOn && splitPay ? groupPaidSplit : f.paid;
+  const saldoPendiente = Math.max(0, Number(f.totalAmount || 0) - Number(paidShown || 0));
+  // Sin cargo (noches gratis que cubren todo…): no pide "Pagado" y no dice "Cuenta saldada"
+  const freeStay = ratesOk && f.totalAmount !== '' && Number(f.totalAmount) <= 0 && !(Number(paidShown) > 0);
+  const paidOk = multiOn && splitPay ? true : (f.paid !== '' && f.paid !== null) || freeStay;
   const cobroDone = ratesOk && paidOk && !(lateOpen && !f.lateCheckout);
   const showPersonas = multiOn ? selRooms.length > 0 : ((!isHostel || selRoom) && maxG > 1) || f.companions.length > 0;
   const personasDone = multiOn || f.companions.every((c) => (c.name || '').trim());
@@ -671,8 +676,6 @@ export function ResForm({
     .filter(Boolean)
     .forEach((id) => (nums[id] = ++k));
 
-  const paidShown = multiOn && splitPay ? groupPaidSplit : f.paid;
-  const saldoPendiente = Math.max(0, Number(f.totalAmount || 0) - Number(paidShown || 0));
 
   return (
     <div>
@@ -1798,10 +1801,10 @@ export function ResForm({
           </div>
           <div
             style={{
-              background: saldoPendiente > 0 ? '#FEF2F2' : '#ECFDF5',
+              background: freeStay ? '#F5F3FF' : saldoPendiente > 0 ? '#FEF2F2' : '#ECFDF5',
               padding: '10px 14px',
               borderRadius: 8,
-              border: `1.5px solid ${saldoPendiente > 0 ? '#FECACA' : '#A7F3D0'}`,
+              border: `1.5px solid ${freeStay ? '#DDD6FE' : saldoPendiente > 0 ? '#FECACA' : '#A7F3D0'}`,
               textAlign: 'right',
               minWidth: 130,
               marginBottom: 12,
@@ -1811,22 +1814,26 @@ export function ResForm({
               style={{
                 fontSize: 10,
                 fontWeight: 800,
-                color: saldoPendiente > 0 ? '#DC2626' : '#059669',
+                color: freeStay ? '#5B21B6' : saldoPendiente > 0 ? '#DC2626' : '#059669',
                 textTransform: 'uppercase',
                 letterSpacing: 0.5,
                 marginBottom: 2,
               }}
             >
-              {saldoPendiente > 0 ? 'Saldo pendiente' : 'Cuenta saldada'}
+              {freeStay ? 'Sin cargo' : saldoPendiente > 0 ? 'Saldo pendiente' : 'Cuenta saldada'}
             </div>
             <div
               style={{
                 fontSize: 18,
                 fontWeight: 900,
-                color: saldoPendiente > 0 ? '#B45309' : '#059669',
+                color: freeStay ? '#6D28D9' : saldoPendiente > 0 ? '#B45309' : '#059669',
               }}
             >
-              {currency(saldoPendiente)}
+              {freeStay
+                ? freeStayText(f) === 'Sin cargo'
+                  ? currency(0)
+                  : `🎁 ${freeStayText(f)}`
+                : currency(saldoPendiente)}
             </div>
           </div>
         </div>

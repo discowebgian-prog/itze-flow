@@ -447,3 +447,11 @@ export function describeChanges(list) {
   }
   return `${by} hizo ${list.length} cambios en reservas`;
 }
+
+// Estadía sin cargo (ver isFreeStay en reservations.ts): "Noche gratis" / "Noches gratis" si fue por ese
+// descuento; si no, "Sin cargo". En vez de "Pagado", porque no hubo pago.
+export const freeStayText = (r) => {
+  const p = r?.pricing || {};
+  if (p.discountType !== 'noche_gratis') return 'Sin cargo';
+  return (Number(p.discountValue) || 0) > 1 ? 'Noches gratis' : 'Noche gratis';
+};

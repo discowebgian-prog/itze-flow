@@ -8,6 +8,8 @@ import { waLink } from '../lib/guests';
 import { LateBadge } from '../components/ui/LateBadge';
 import { GroupBadge } from '../components/ui/GroupBadge';
 import { QuoteButton } from '../components/Quoter';
+import { isFreeStay } from '../lib/reservations';
+import { freeStayText } from '../lib/voice';
 
 // ── RESERVATIONS LIST (AGENDA DIARIA ESTILO PULSE) ────────────────────────────
 export function ResList({ reservations, properties, onView, onAdd, onQuote }) {
@@ -174,6 +176,8 @@ export function ResList({ reservations, properties, onView, onAdd, onQuote }) {
           <Badge status={r.status} />
           {saldo > 0 ? (
             <span style={{ fontSize: 11, fontWeight: 800, color: '#EF4444' }}>Debe {currency(saldo)}</span>
+          ) : isFreeStay(r) ? (
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#7C3AED' }}>🎁 {freeStayText(r)}</span>
           ) : (
             <span style={{ fontSize: 11, fontWeight: 800, color: '#10B981' }}>Pagado</span>
           )}
