@@ -15,6 +15,9 @@ self.addEventListener('push', (e) => {
       badge: '/icon-192.png',
       data: { url: d.url || '/' },
       tag: d.tag || 'itze-flow-' + Date.now(),
+      // Buen día de las 8:00: reemplaza al de ayer y avisa igual (renotify); queda hasta que se cierra
+      renotify: !!d.tag,
+      requireInteraction: !!d.sticky,
       vibrate: [120, 60, 120],
     })
   );

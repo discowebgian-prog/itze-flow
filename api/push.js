@@ -6,6 +6,8 @@
 // y cada celular se vuelve a anotar solo al abrir Flow (ver syncPush).
 //   GET  /api/push → { publicKey } (la clave pública, para que el celular se anote)
 //   POST /api/push → manda el aviso
+//   POST /api/push con encabezado x-flow-clave → "Buen día" de las 8:00 (lo dispara Supabase, ver
+//        supabase/buen_dia.sql): a cada celular, su nombre y el día en palabras de Inicio.
 //
 // - Solo responde a usuarios con sesión válida de Supabase.
 // - Lee las suscripciones de push_subs con la sesión del usuario (RLS) y avisa a todas
@@ -13,6 +15,7 @@
 // - Las suscripciones vencidas (el celular las borró) se eliminan solas.
 import webpush from 'web-push';
 import crypto from 'node:crypto';
+import { daySummary, greeting, nowMerida } from './_voz.mjs';
 
 function vapidKeys() {
   if (process.env.VAPID_PRIVATE_KEY && process.env.VITE_VAPID_PUBLIC_KEY) {
@@ -43,6 +46,8 @@ export default async function handler(req, res) {
   const keys = vapidKeys();
   if (!url || !anonKey) return res.status(500).json({ error: 'Falta la configuración de Supabase en Vercel.' });
   if (!keys) return res.status(500).json({ error: 'Falta CLAUDE_API_KEY en Vercel.' });
+
+  if (req.headers['x-flow-clave']) return buenDia(req, res, { url, anonKey, keys });
 
   const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   if (!token) return res.status(401).json({ error: 'Sesión no válida.' });
@@ -79,4 +84,55 @@ export default async function handler(req, res) {
     )
   );
   return res.status(200).json({ sent, removed: gone.length });
+}
+
+// Fila de la base → lo que usa el día en palabras (mismos nombres que en la app)
+const toRes = (r) => ({
+  guestName: r.huesped || '',
+  room: r.habitacion || '',
+  checkIn: r.fecha_ingreso || '',
+  checkOut: r.fecha_salida || '',
+  status: r.estado || 'por_llegar',
+  totalAmount: Number(r.monto) || 0,
+  paid: Number(r.monto_pagado) || 0,
+  totalGuests: Number(r.cantidad_huespedes) || 1,
+  lateCheckout: r.late_checkout_hora || '',
+  grupoId: r.grupo_id || null,
+  grupoTitular: r.grupo_titular === true,
+  grupoReservante: r.grupo_reservante || null,
+});
+
+// "Buen día, Marce ☀️" + el día en palabras, a cada celular con avisos activos.
+// Sin sesión: Supabase lo llama a las 8:00 con la clave de flow_secreto. La función flow_buen_dia
+// (en la base) revisa la clave y recién ahí devuelve las reservas de hoy y las suscripciones.
+async function buenDia(req, res, { url, anonKey, keys }) {
+  const headers = { apikey: anonKey, Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json' };
+  const r = await fetch(`${url}/rest/v1/rpc/flow_buen_dia`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ p_clave: String(req.headers['x-flow-clave']) }),
+  }).catch(() => null);
+  if (!r || !r.ok) return res.status(502).json({ error: 'No se pudo leer el día (¿falta correr supabase/buen_dia.sql?).' });
+  const data = await r.json();
+  if (!data) return res.status(401).json({ error: 'Clave no válida.' });
+
+  const now = nowMerida();
+  const lines = daySummary((data.reservas || []).map(toRes), now);
+  const body = lines.join('\n') || 'Día tranquilo: nadie entra ni sale hoy.';
+  webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'https://itze-flow.vercel.app', keys.pub, keys.priv);
+  let sent = 0;
+  await Promise.all(
+    (data.subs || []).map(async (s) => {
+      const g = greeting(s.quien || '', now);
+      // tag fijo: el de mañana reemplaza al de hoy; sticky: en la compu / Android queda hasta que se cierra
+      const payload = JSON.stringify({ title: `${g.text} ${g.emoji}`, body, url: '/', tag: 'itze-flow-buen-dia', sticky: true });
+      try {
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 6 * 3600 });
+        sent++;
+      } catch (e) {
+        console.error('Buen día no enviado', e && e.statusCode);
+      }
+    })
+  );
+  return res.status(200).json({ sent, lines: lines.length });
 }
