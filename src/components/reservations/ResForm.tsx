@@ -626,6 +626,7 @@ export function ResForm({
   const target = roomsDone ? (f.status && f.source ? 3 : 2) : 1;
   const [stage, setStage] = useState(() => (isNew ? target : 3));
   const [glowStep, setGlowStep] = useState(''); // paso recién aparecido: entra con resaltado de una vez
+  const roomRef = useRef(null);
   const canalRef = useRef(null);
   const guestRef = useRef(null);
   useEffect(() => {
@@ -633,13 +634,21 @@ export function ResForm({
     setStage(target);
     setGlowStep(target === 2 ? 'canal' : 'huesped');
   }, [target]);
-  // Deslizamientos: Estado y canal se ve entero; al tocar el canal, Huésped queda arriba (fotos primero)
+  // Deslizamientos: al elegir la habitación, Habitación queda arriba y Estado y canal entero debajo
+  // (si no entran las dos, Estado y canal arriba); al tocar el canal, Huésped queda arriba (fotos primero)
+  const showCanal = () => {
+    const c = canalRef.current;
+    const r = roomRef.current;
+    if (!c) return;
+    let box = c.parentElement;
+    while (box && !/(auto|scroll)/.test(getComputedStyle(box).overflowY)) box = box.parentElement;
+    const viewH = box ? box.clientHeight : window.innerHeight;
+    const both = r ? c.getBoundingClientRect().bottom - r.getBoundingClientRect().top : Infinity;
+    scrollToStep(both + 40 <= viewH ? roomRef : canalRef);
+  };
   useEffect(() => {
     if (!glowStep) return;
-    const t =
-      glowStep === 'canal'
-        ? setTimeout(() => scrollToStep(canalRef, 'nearest'), 250)
-        : setTimeout(() => scrollToStep(guestRef), 350);
+    const t = glowStep === 'canal' ? setTimeout(showCanal, 250) : setTimeout(() => scrollToStep(guestRef), 350);
     return () => clearTimeout(t);
   }, [glowStep]);
 
@@ -789,7 +798,7 @@ export function ResForm({
       >
       {/* 2 · Habitación (o varias) */}
       {isHostel && (
-        <Step num={nums.hab} title={multiOn ? 'Habitaciones' : 'Habitación'} done={roomsDone}>
+        <Step num={nums.hab} title={multiOn ? 'Habitaciones' : 'Habitación'} done={roomsDone} boxRef={roomRef}>
           {multiOn && (
             <div style={{ fontSize: 12, color: '#6B7280', margin: '-6px 0 8px' }}>Tocá todas las del grupo.</div>
           )}
@@ -991,6 +1000,9 @@ export function ResForm({
       )}
       </Step>
       )}
+      {/* Esperando estado y canal: lugar vacío debajo para que Habitación pueda quedar arriba y Estado y canal
+          entero (en iPhone la barra de Safari tapa el final de la hoja). Se va al aparecer el resto. */}
+      {stage === 2 && <div aria-hidden style={{ height: '45vh' }} />}
 
       {/* 4 en adelante: aparece al tocar el canal */}
       {stage >= 3 && (
