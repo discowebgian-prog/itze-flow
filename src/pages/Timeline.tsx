@@ -718,16 +718,14 @@ export function Timeline({
                   const W = Math.max(4, r.pxR - r.pxL - 4);
                   const isDrag = drag && drag.id === r.id;
                   const cid = `c${r.id}`;
-                  const tx = (r.cutLeft ? 8 : Math.min(14, W * 0.2) + 4) + (r.source === 'Booking' ? 4 : 0);
+                  const tx = (r.cutLeft ? 8 : 10) + (r.source === 'Booking' ? 4 : 0);
 
-                  const D = Math.min(10, W * 0.25);
-                  const ptTopLeft = r.cutLeft ? '0,0' : `${D},0`;
-                  const ptTopRight = r.cutRight ? `${W},0` : `${W},0`; 
-                  const ptBottomRight = r.cutRight
-                    ? `${W},${H}`
-                    : `${W - D},${H}`; 
-                  const ptBottomLeft = r.cutLeft ? `0,${H}` : `0,${H}`; 
-                  const cp = `${ptTopLeft} ${ptTopRight} ${ptBottomRight} ${ptBottomLeft}`;
+                  // Barra con esquinas redondeadas, como el resto de la app. Si la estadía sigue fuera de lo
+                  // que se ve (empieza antes o termina después), ese lado queda recto: la barra continúa.
+                  const RAD = Math.min(10, H / 2, W / 2);
+                  const rl = r.cutLeft ? 0 : RAD;
+                  const rr = r.cutRight ? 0 : RAD;
+                  const shape = `M${rl},0 H${W - rr} A${rr},${rr} 0 0 1 ${W},${rr} V${H - rr} A${rr},${rr} 0 0 1 ${W - rr},${H} H${rl} A${rl},${rl} 0 0 1 0,${H - rl} V${rl} A${rl},${rl} 0 0 1 ${rl},0 Z`;
 
                   return (
                     <div
@@ -793,7 +791,7 @@ export function Timeline({
                         >
                           <defs>
                             <clipPath id={cid}>
-                              <polygon points={cp} />
+                              <path d={shape} />
                             </clipPath>
                           </defs>
                           <rect
@@ -803,8 +801,19 @@ export function Timeline({
                             height={H}
                             fill={bc.bg}
                             clipPath={`url(#${cid})`}
-                            rx={r.cutLeft ? 0 : 4}
                           />
+                          {/* Avisos (saldo, etc.): rayitas abajo, dentro de la forma de la barra */}
+                          {alerts.map((a, i) => (
+                            <rect
+                              key={a.key}
+                              x={0}
+                              y={H - SH * (alerts.length - i)}
+                              width={W}
+                              height={SH}
+                              fill={a.color}
+                              clipPath={`url(#${cid})`}
+                            />
+                          ))}
                           {/* NUEVA MARCA VISUAL BOOKING EN PC */}
                           {r.source === 'Booking' && (
                             <rect
@@ -859,7 +868,7 @@ export function Timeline({
                           style={{
                             height: H,
                             borderRadius:
-                              alerts.length > 0 ? '5px 5px 0 0' : '5px',
+                              alerts.length > 0 ? '8px 8px 0 0' : '8px',
                             background: bc.bg,
                             display: 'flex',
                             flexDirection: 'column',
@@ -905,7 +914,7 @@ export function Timeline({
                           </span>
                         </div>
                       )}
-                     {alerts.length > 0 && (
+                     {alerts.length > 0 && W <= 12 && (
                             <div
                               style={{
                                 position: 'absolute',
