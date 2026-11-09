@@ -64,7 +64,7 @@ export function ResForm({
     lateCost: '',
     checkIn: prefillDate || fmt(TODAY),
     checkOut: fmt(addDays(prefillDate ? parseD(prefillDate) : TODAY, 1)),
-    status: 'por_llegar',
+    status: '', // se elige al cargar (junto con el canal abre el resto del formulario)
     totalAmount: '',
     paid: '',
     paymentMethod: 'efectivo',
@@ -512,6 +512,10 @@ export function ResForm({
     if (isSaving) return;
 
     // --- 1. VALIDACIÓN DE CAMPOS OBLIGATORIOS ---
+    if (!f.status) {
+      setValErr('Elegí el estado de la reserva (Por llegar, Hospedado…).');
+      return;
+    }
     if (!f.source) {
       setValErr('Elegí el canal de la reserva.');
       return;
@@ -619,7 +623,7 @@ export function ResForm({
   const picking = !f.checkOut; // entrada tocada, falta la salida: lo de abajo queda atenuado
   const roomsDone =
     nights > 0 && (!isHostel || (multiOn ? selRooms.length > 1 && !!titularRoom : !!f.room));
-  const target = roomsDone ? (f.source ? 3 : 2) : 1;
+  const target = roomsDone ? (f.status && f.source ? 3 : 2) : 1;
   const [stage, setStage] = useState(() => (isNew ? target : 3));
   const [glowStep, setGlowStep] = useState(''); // paso recién aparecido: entra con resaltado de una vez
   const canalRef = useRef(null);
@@ -949,7 +953,7 @@ export function ResForm({
 
       {/* 3 · Estado y canal (aparece al elegir fechas y habitación) */}
       {stage >= 2 && (
-      <Step num={nums.canal} title="Estado y canal" done={!!f.source} glow={glowStep === 'canal'} boxRef={canalRef}>
+      <Step num={nums.canal} title="Estado y canal" done={!!(f.status && f.source)} glow={glowStep === 'canal'} boxRef={canalRef}>
       <ChipGroup
         label="Estado"
         value={f.status}
@@ -975,8 +979,15 @@ export function ResForm({
             : { bg: '#D1FAE5', txt: '#065F46' }),
         }))}
       />
-      {!f.source && (
-        <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: -4 }}>¿Por dónde llegó la reserva? Tocá el canal para seguir.</div>
+      {(!f.status || !f.source) && (
+        <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: -4, lineHeight: 1.4 }}>
+          {!f.status && !f.source
+            ? 'Tocá el estado y el canal para seguir.'
+            : !f.status
+            ? 'Tocá el estado para seguir.'
+            : '¿Por dónde llegó la reserva? Tocá el canal para seguir.'}
+          {!f.status && f.checkIn === fmt(TODAY) && ' Si ya está en el hostel, elegí Hospedado.'}
+        </div>
       )}
       </Step>
       )}
