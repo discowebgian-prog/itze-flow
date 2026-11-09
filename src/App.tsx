@@ -1056,7 +1056,7 @@ const toggleBlacklist = async (id, currentStatus) => {
                 cursor: 'pointer',
               }}
             >
-              + Nueva
+              <Icon name="plus" size={16} strokeWidth={2.5} />Nueva
             </button>
             </>
           ) : (
@@ -1066,7 +1066,7 @@ const toggleBlacklist = async (id, currentStatus) => {
                 title="Cambiar quién usa este aparato"
                 style={{ background: 'none', border: 'none', fontSize: 13, fontWeight: 600, color: 'var(--ink-2)', cursor: 'pointer', fontFamily: 'inherit', padding: '4px 6px', borderRadius: 6 }}
               >
-                👤 {deviceName || user.name}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="user" size={16} />{deviceName || user.name}</span>
               </button>
               <button
                 onClick={handleLogout}
@@ -1175,7 +1175,7 @@ const toggleBlacklist = async (id, currentStatus) => {
                   gap: 6,
                 }}
               >
-                +{' '}
+                <Icon name="plus" size={16} strokeWidth={2.5} />
                 <span
                   className="sa"
                   style={{ display: isTablet ? 'none' : 'inline' }}
@@ -1208,7 +1208,7 @@ const toggleBlacklist = async (id, currentStatus) => {
                   gap: 8,
                 }}
               >
-                ↩ Cerrar sesión
+                <Icon name="checkOut" size={15} />Cerrar sesión
               </button>
             )}
           </div>
@@ -1533,7 +1533,7 @@ const toggleBlacklist = async (id, currentStatus) => {
         </Backdrop>
       )}</AnimatePresence>
       <AnimatePresence>{quoterOpen && (
-        <Modal key="quoter" title="🧮 Cotizar" onClose={() => setQuoterOpen(false)} isMobile={isMobile} tall>
+        <Modal key="quoter" title="Cotizar" icon="calculator" onClose={() => setQuoterOpen(false)} isMobile={isMobile} tall>
           <Quoter
             allRes={res}
             tarifas={tarifas}

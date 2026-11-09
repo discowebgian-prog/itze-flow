@@ -6,6 +6,7 @@ import { roomTypeOf, quoteStay } from '../lib/rates';
 import { findConflicts } from '../lib/reservations';
 import { TODAY, fmt, addDays, parseD, diffDays, currency, DAYS } from '../lib/dates';
 import { RangeCalendar } from './ui/RangeCalendar';
+import { Icon } from './ui/Icon';
 import { money } from './reservations/QuoteInfo';
 import {
   nightAvailability,
@@ -117,7 +118,7 @@ export function Step({ num, title, done = false, glow = false, boxRef = undefine
             fontWeight: 800,
           }}
         >
-          {done ? '✓' : num}
+          {done ? <Icon name="tick" size={15} strokeWidth={3} /> : num}
         </span>
         <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-.01em' }}>{title}</span>
         {note && <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--mut)' }}>{note}</span>}
@@ -1131,7 +1132,7 @@ export function QuoteButton({ onClick, compact = false, style = {} }) {
         ...style,
       }}
     >
-      🧮{compact ? '' : ' Cotizar'}
+      <Icon name="calculator" size={16} />{compact ? '' : 'Cotizar'}
     </button>
   );
 }

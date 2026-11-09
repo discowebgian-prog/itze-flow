@@ -2,6 +2,7 @@
 // @ts-nocheck
 import { useState } from 'react';
 import { TODAY, fmt, fmtD, parseD, MONTHS, DAYS } from '../../lib/dates';
+import { Icon } from './Icon';
 
 // ── RANGE CALENDAR ────────────────────────────────────────────────────────────
 // fixedRows: siempre 6 semanas, así el almanaque no cambia de alto al pasar de mes (lo usa Cotizar)
@@ -73,17 +74,19 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows 
           onClick={() => setBase(new Date(y, m - 1, 1))}
           style={{
             border: 'none',
-            background: '#F3F4F6',
-            borderRadius: 8,
-            width: 30,
-            height: 30,
+            background: 'var(--fill)',
+            borderRadius: '50%',
+            width: 32,
+            height: 32,
             cursor: 'pointer',
-            fontWeight: 700,
-            fontSize: 14,
-            color: '#555',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 0,
+            color: 'var(--acc)',
           }}
         >
-          ◀
+          <Icon name="chevL" size={18} strokeWidth={2.5} />
         </button>
         <div
           style={{
@@ -101,17 +104,19 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows 
           onClick={() => setBase(new Date(y, m + 1, 1))}
           style={{
             border: 'none',
-            background: '#F3F4F6',
-            borderRadius: 8,
-            width: 30,
-            height: 30,
+            background: 'var(--fill)',
+            borderRadius: '50%',
+            width: 32,
+            height: 32,
             cursor: 'pointer',
-            fontWeight: 700,
-            fontSize: 14,
-            color: '#555',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 0,
+            color: 'var(--acc)',
           }}
         >
-          ▶
+          <Icon name="chev" size={18} strokeWidth={2.5} />
         </button>
       </div>
       <div

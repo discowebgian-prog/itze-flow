@@ -2,13 +2,15 @@
 // @ts-nocheck
 import { motion, useDragControls } from 'motion/react';
 import { Backdrop, SPRING_SHEET, SPRING_POP, shouldClose, dragStartOk } from './Motion';
+import { Icon } from './Icon';
 
 // ── MODAL ─────────────────────────────────────────────────────────────────────
 // tall: en el celular la hoja ocupa siempre el 92% del alto, así no crece ni se achica (y no mueve lo que estás tocando)
 // Animación tipo iOS: en el celular la hoja sube desde abajo y se cierra deslizándola hacia abajo desde la barrita
 // o el título (además de la X y tocar afuera). En compu aparece al centro con un leve zoom.
 // Para que también se anime al salir, quien la usa la envuelve en <AnimatePresence> con una key.
-export function Modal({ title, onClose, children, isMobile, tall = false }) {
+// icon: ícono opcional al lado del título (ej. 'calculator' en Cotizar), en azul
+export function Modal({ title, onClose, children, isMobile, tall = false, icon = '' }) {
   const drag = useDragControls();
   return (
     <Backdrop
@@ -79,12 +81,17 @@ export function Modal({ title, onClose, children, isMobile, tall = false }) {
               fontSize: 20,
               letterSpacing: '-.01em',
               color: 'var(--ink)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
             }}
           >
+            {icon && <Icon name={icon} size={22} color="var(--acc)" />}
             {title}
           </span>
           <button
             onClick={onClose}
+            aria-label="Cerrar"
             style={{
               background: 'var(--fill)',
               border: 'none',
@@ -100,7 +107,7 @@ export function Modal({ title, onClose, children, isMobile, tall = false }) {
               fontFamily: 'inherit',
             }}
           >
-            ×
+            <Icon name="close" size={17} strokeWidth={2.5} />
           </button>
         </div>
         </div>
