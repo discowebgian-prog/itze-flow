@@ -87,146 +87,139 @@ export function ResList({ reservations, properties, onView, onAdd, onQuote }) {
   const hospedados = reservations.filter(r => r.checkIn < selectedDate && r.checkOut > selectedDate && r.status !== 'cancelada');
   const canceladas = reservations.filter(r => r.checkIn === selectedDate && r.status === 'cancelada');
 
-  // Componente interno para dibujar cada tarjetita de reserva
-  // Se llama como función (ResCard({ r, i })), no como <ResCard/>: al estar definida adentro,
-  // como componente se rearmaba en cada render y la animación de entrada se repetía
+  // Fecha corta para las filas: "9 nov"
+  const shortD = (d) => parseD(d).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }).replace('.', '');
+
+  // Fila de una reserva (lista tipo iPhone). Se llama como función (ResCard({ r, i })), no como <ResCard/>:
+  // al estar definida adentro, como componente se rearmaba en cada render y la animación de entrada se repetía
   const ResCard = ({ r, i = 0 }) => {
     const prop = properties.find((p) => p.id === r.propertyId);
     const saldo = r.totalAmount - r.paid;
     return (
-      <div
-        key={r.id}
-        className="li-in"
-        onClick={() => onView(r)}
-        style={{
-          '--i': i,
-          background: '#fff', borderRadius: 12, padding: '14px 16px', border: '1px solid #F0F0F0',
-          cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          boxShadow: '0 1px 3px rgba(0,0,0,.02)', marginBottom: 8, gap: 12
-        }}
-      >
+      <div key={r.id} className="li-in ui-row" onClick={() => onView(r)} style={{ '--i': i, alignItems: 'flex-start' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          
-          {/* Fila Principal: Nombre + Habitación Destacada + WhatsApp */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ fontWeight: 700, fontSize: 14, color: '#111' }}>{r.guestName}</div>
-            
+          {/* Nombre + habitación + etiquetas + WhatsApp */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+            <div style={{ fontWeight: 600, fontSize: 15.5, color: 'var(--ink)' }}>{r.guestName}</div>
             {r.room && (
-              <span 
-                style={{ 
-                  background: '#F1F5F9', 
-                  color: '#475569', 
-                  padding: '1px 6px', 
-                  borderRadius: 5, 
-                  fontSize: 11, 
-                  fontWeight: 800, 
-                  border: '1px solid #E2E8F0',
-                  lineHeight: 1
-                }}
-              >
+              <span style={{ background: 'var(--fill)', color: 'var(--ink-2)', padding: '2px 7px', borderRadius: 7, fontSize: 12, fontWeight: 700, lineHeight: 1.2 }}>
                 {r.room}
               </span>
             )}
-
             <LateBadge r={r} />
             <GroupBadge r={r} />
-
             {r.guestPhone && (
               <a
                 href={waLink(r.guestPhone, r.guestPhonePrefix, r.guestNationality)}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
+                title="Enviar WhatsApp"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: 24,
-                  height: 24,
-                  borderRadius: 6,
-                  background: '#ECFDF5',
-                  color: '#059669',
-                  border: '1px solid #A7F3D0',
+                  width: 26,
+                  height: 26,
+                  borderRadius: '50%',
+                  background: '#DCFCE7',
+                  color: '#16A34A',
                   textDecoration: 'none',
-                  transition: 'all 0.2s'
                 }}
-                title="Enviar WhatsApp"
-                onMouseOver={(e) => (e.currentTarget.style.background = '#D1FAE5')}
-                onMouseOut={(e) => (e.currentTarget.style.background = '#ECFDF5')}
               >
                 <Icon name="whatsapp" size={14} />
               </a>
             )}
           </div>
-
-          {/* Fila Secundaria: Propiedad */}
-          <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>
-            {prop?.name}
-          </div>
-
-          {/* Fila Inferior: Fechas de Estadía */}
-          <div style={{ fontSize: 10, fontWeight: 600, color: '#6B7280', marginTop: 4, display: 'flex', gap: 6 }}>
-            <span>CI: {fmtD(r.checkIn)}</span>
-            <span>CO: {fmtD(r.checkOut)}</span>
+          {/* Propiedad y fechas */}
+          <div style={{ fontSize: 12.5, color: 'var(--mut)', marginTop: 3 }}>
+            {prop?.name} · {shortD(r.checkIn)} → {shortD(r.checkOut)}
           </div>
         </div>
 
-        {/* Lado Derecho: Estado y Saldos */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+        {/* Estado y saldo */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5, flexShrink: 0 }}>
           <Badge status={r.status} />
           {saldo > 0 ? (
-            <span style={{ fontSize: 11, fontWeight: 800, color: '#EF4444' }}>Debe {currency(saldo)}</span>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--red)' }}>Debe {currency(saldo)}</span>
           ) : isFreeStay(r) ? (
-            <span style={{ fontSize: 11, fontWeight: 800, color: '#7C3AED' }}>🎁 {freeStayText(r)}</span>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#7C3AED', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Icon name="gift" size={13} />
+              {freeStayText(r)}
+            </span>
           ) : (
-            <span style={{ fontSize: 11, fontWeight: 800, color: '#10B981' }}>Pagado</span>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#16A34A' }}>Pagado</span>
           )}
         </div>
       </div>
     );
   };
 
+  // Grupo de filas con título (Llegadas, Salidas…)
+  const section = (title, icon, col, list, extra = {}) =>
+    list.length > 0 && (
+      <section className="ui-group" style={extra}>
+        <h3>
+          <Icon name={icon} size={20} color={col} strokeWidth={2.2} />
+          {title} ({list.length})
+        </h3>
+        {list.map((r, i) => ResCard({ r, i }))}
+      </section>
+    );
+
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#111' }}>Agenda Diaria</h2>
+    <div style={{ maxWidth: 820 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, gap: 10, flexWrap: 'wrap' }}>
+        <h2 style={{ margin: 0, fontSize: 30, fontWeight: 'var(--w-title)', color: 'var(--ink)', letterSpacing: 'var(--ls-title)' }}>Agenda diaria</h2>
         <div style={{ display: 'flex', gap: 6 }}>
-        {onQuote && <QuoteButton onClick={onQuote} />}
-        <button
-          onClick={() => onAdd()}
-          style={{
-            padding: '8px 16px', background: '#3B82F6', border: 'none', borderRadius: 8,
-            color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
-          }}
-        >
-          + Nueva
-        </button>
+          {onQuote && <QuoteButton onClick={onQuote} />}
+          <button
+            onClick={() => onAdd()}
+            style={{
+              padding: '7px 14px', background: 'var(--acc)', border: 'none', borderRadius: 20,
+              color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+            }}
+          >
+            <Icon name="plus" size={16} strokeWidth={2.5} />
+            Nueva
+          </button>
         </div>
       </div>
 
-      <input
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Buscar por nombre de huésped..."
-        style={{
-          width: '100%', padding: '10px 14px', border: '1.5px solid #E5E7EB', borderRadius: 10,
-          fontSize: 13, fontFamily: 'inherit', outline: 'none', marginBottom: 16, boxSizing: 'border-box',
-        }}
-      />
+      {/* Buscador tipo iPhone */}
+      <div style={{ position: 'relative', marginBottom: 16 }}>
+        <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--mut)', display: 'flex' }}>
+          <Icon name="search" size={17} />
+        </span>
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Buscar por nombre de huésped"
+          style={{
+            width: '100%', padding: '11px 14px 11px 38px', border: 'none', borderRadius: 'var(--r-field)',
+            background: 'var(--fill)', color: 'var(--ink)', fontSize: 15, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
+          }}
+        />
+      </div>
 
       {isSearching ? (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#6B7280', marginBottom: 10, textTransform: 'uppercase' }}>
-            Resultados de búsqueda ({searchedRes.length})
-          </div>
+        <section className="ui-group">
+          <h3>
+            <Icon name="search" size={20} color="var(--acc)" strokeWidth={2.2} />
+            Resultados ({searchedRes.length})
+          </h3>
           {searchedRes.map((r, i) => ResCard({ r, i }))}
-          {searchedRes.length === 0 && <div style={{ textAlign: 'center', color: '#9CA3AF', padding: 20 }}>No se encontraron huéspedes.</div>}
-        </div>
+          {searchedRes.length === 0 && <div style={{ textAlign: 'center', color: 'var(--mut)', padding: 20 }}>No se encontraron huéspedes.</div>}
+        </section>
       ) : (
         <>
-         {/* MES QUE SE ESTÁ VIENDO + IR A HOY */}
+          {/* MES QUE SE ESTÁ VIENDO + IR A HOY */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: '#111' }}>📅 {monthLabel}</div>
+            <div style={{ fontSize: 17, fontWeight: 'var(--w-title)', color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 7 }}>
+              <Icon name="cal" size={18} color="var(--acc)" />
+              {monthLabel}
+            </div>
             <button
               type="button"
               onClick={goToday}
@@ -234,12 +227,12 @@ export function ResList({ reservations, properties, onView, onAdd, onQuote }) {
                 padding: '6px 14px',
                 minHeight: 32,
                 borderRadius: 20,
-                border: '1.5px solid #3B82F6',
-                // Azul lleno cuando estás lejos de hoy; contorno cuando ya estás en hoy
-                background: selectedDate === todayStr && todayInView ? '#fff' : '#3B82F6',
-                color: selectedDate === todayStr && todayInView ? '#3B82F6' : '#fff',
-                fontWeight: 800,
-                fontSize: 12,
+                border: 'none',
+                // Azul lleno cuando estás lejos de hoy; suave cuando ya estás en hoy
+                background: selectedDate === todayStr && todayInView ? 'var(--acc-soft)' : 'var(--acc)',
+                color: selectedDate === todayStr && todayInView ? 'var(--acc)' : '#fff',
+                fontWeight: 700,
+                fontSize: 13,
                 fontFamily: 'inherit',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
@@ -249,37 +242,37 @@ export function ResList({ reservations, properties, onView, onAdd, onQuote }) {
             </button>
           </div>
 
-         {/* CARRUSEL DE FECHAS ESTILO PULSE */}
-          <div ref={ribbonRef} onScroll={updateViewMonth} style={{ display: 'flex', overflowX: 'auto', gap: 8, paddingBottom: 12, marginBottom: 16, borderBottom: '1px solid #E5E7EB', scrollBehavior: 'smooth' }} className="hide-scroll">
+          {/* TIRA DE FECHAS */}
+          <div ref={ribbonRef} onScroll={updateViewMonth} style={{ display: 'flex', overflowX: 'auto', gap: 8, padding: '2px 2px 12px', marginBottom: 12, scrollBehavior: 'smooth' }} className="hide-scroll">
             {ribbonDates.map((d) => {
               const dStr = fmt(d);
               const isSelected = selectedDate === dStr;
               const isToday = fmt(TODAY) === dStr;
-              const hasActivity = reservations.some(r => (r.checkIn === dStr || r.checkOut === dStr) && r.status !== 'cancelada');
-              
+              const hasActivity = reservations.some((r) => (r.checkIn === dStr || r.checkOut === dStr) && r.status !== 'cancelada');
               return (
                 <div
                   id={`date-${dStr}`}
                   key={dStr}
+                  className="tap"
                   onClick={() => setSelectedDate(dStr)}
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    minWidth: 52, height: 68, borderRadius: 12, cursor: 'pointer', flexShrink: 0,
-                    background: isSelected ? '#3B82F6' : isToday ? '#EFF6FF' : '#fff',
-                    border: `1.5px solid ${isSelected ? '#3B82F6' : isToday ? '#BFDBFE' : '#E5E7EB'}`,
-                    transition: 'all 0.2s'
+                    minWidth: 52, height: 70, borderRadius: 16, cursor: 'pointer', flexShrink: 0,
+                    background: isSelected ? 'var(--acc)' : isToday ? 'var(--acc-soft)' : 'var(--card)',
+                    boxShadow: isSelected ? '0 4px 12px rgba(37,99,235,.28)' : 'var(--shadow)',
+                    transition: 'background .2s, box-shadow .2s',
                   }}
                 >
-                  <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: isSelected ? 'rgba(255,255,255,0.8)' : '#6B7280' }}>
+                  <span style={{ fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', color: isSelected ? 'rgba(255,255,255,0.85)' : 'var(--mut)' }}>
                     {DAYS[d.getDay()]}
                   </span>
-                  <span style={{ fontSize: 16, fontWeight: 900, color: isSelected ? '#fff' : '#111', lineHeight: 1.2 }}>
+                  <span style={{ fontSize: 18, fontWeight: 'var(--w-title)', color: isSelected ? '#fff' : isToday ? 'var(--acc)' : 'var(--ink)', lineHeight: 1.2 }}>
                     {d.getDate()}
                   </span>
-                  <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: isSelected ? 'rgba(255,255,255,0.8)' : '#9CA3AF' }}>
+                  <span style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', color: isSelected ? 'rgba(255,255,255,0.85)' : 'var(--mut)' }}>
                     {MONTHS[d.getMonth()]}
                   </span>
-                  <div style={{ width: 4, height: 4, borderRadius: '50%', background: hasActivity ? (isSelected ? '#fff' : '#10B981') : 'transparent', marginTop: 3 }} />
+                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: hasActivity ? (isSelected ? '#fff' : 'var(--ok)') : 'transparent', marginTop: 3 }} />
                 </div>
               );
             })}
@@ -287,51 +280,23 @@ export function ResList({ reservations, properties, onView, onAdd, onQuote }) {
 
           {/* DESGLOSE DEL DÍA */}
           <div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 16 }}>
-              {selectedDate === fmt(TODAY) ? 'Hoy, ' : ''} {parseD(selectedDate).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
+            <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--mut)', marginBottom: 12 }}>
+              {(() => {
+                const t = parseD(selectedDate).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+                return selectedDate === fmt(TODAY) ? `Hoy, ${t}` : t.charAt(0).toUpperCase() + t.slice(1);
+              })()}
             </div>
 
             {llegadas.length === 0 && salidas.length === 0 && hospedados.length === 0 && canceladas.length === 0 && (
-              <div style={{ textAlign: 'center', color: '#9CA3AF', padding: 30, fontSize: 13, background: '#fff', borderRadius: 12, border: '1px dashed #E5E7EB' }}>
+              <div className="ui-card" style={{ textAlign: 'center', color: 'var(--mut)', padding: 30, fontSize: 15 }}>
                 No hay movimientos registrados para este día.
               </div>
             )}
 
-            {llegadas.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <h3 style={{ fontSize: 12, color: '#059669', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  📥 Llegadas ({llegadas.length})
-                </h3>
-                {llegadas.map((r, i) => ResCard({ r, i }))}
-              </div>
-            )}
-
-            {salidas.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <h3 style={{ fontSize: 12, color: '#D97706', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  📤 Salidas ({salidas.length})
-                </h3>
-                {salidas.map((r, i) => ResCard({ r, i }))}
-              </div>
-            )}
-
-            {hospedados.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <h3 style={{ fontSize: 12, color: '#2563EB', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
-  🛏️ Alojados ({hospedados.length})
-</h3>
-                {hospedados.map((r, i) => ResCard({ r, i }))}
-              </div>
-            )}
-
-            {canceladas.length > 0 && (
-              <div style={{ marginBottom: 20, opacity: 0.7 }}>
-                <h3 style={{ fontSize: 12, color: '#DC2626', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  🚫 Canceladas ({canceladas.length})
-                </h3>
-                {canceladas.map((r, i) => ResCard({ r, i }))}
-              </div>
-            )}
+            {section('Llegadas', 'rin', '#2563EB', llegadas)}
+            {section('Salidas', 'rout', '#EA580C', salidas)}
+            {section('Alojados', 'bed', '#059669', hospedados)}
+            {section('Canceladas', 'close', '#DC2626', canceladas, { opacity: 0.75 })}
           </div>
         </>
       )}
