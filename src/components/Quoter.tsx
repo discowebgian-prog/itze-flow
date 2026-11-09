@@ -294,7 +294,8 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
   // de la habitación, así quedan libres las grandes para grupos); empate, la que no necesita el sofá cama
   // y después la más barata. Si siguen empatadas (ej. 1, 2, 3 y 5 para 2 personas), son alternativas
   // iguales: van todas en `alts` y la sugerencia las nombra a todas.
-  // Si ninguna alcanza sola, la más grande y sigue con las que faltan.
+  // Si ninguna alcanza sola, la más grande y sigue con las que faltan. Con varias habitaciones también
+  // se guardan las iguales de cada una (ver `roomsTxt`).
   // mode: 'ok' (por defecto: el sofá cama vale igual que una cama) · 'no' (no quieren usarlo)
   const pickRooms = (need, sh, mode) => {
     const capOf = (r) => capFor(r, sh, mode !== 'no');
@@ -307,23 +308,23 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
       const sofaUse = (r) => (Math.min(rest, capOf(r)) > noSofaCap(r, sh) ? 1 : 0);
       // Empate de tamaño: siempre mejor la que no necesita el sofá cama
       const cmpFit = (a, b) => a.maxGuests - b.maxGuests || sofaUse(a) - sofaUse(b) || byPrice(a, b);
-      const sorted = fit.length
-        ? [...fit].sort(cmpFit)
-        : [...pool].sort((a, b) => capOf(b) - capOf(a) || sofaUse(a) - sofaUse(b) || byPrice(a, b));
+      const cmpBig = (a, b) => capOf(b) - capOf(a) || sofaUse(a) - sofaUse(b) || byPrice(a, b);
+      const cmp = fit.length ? cmpFit : cmpBig;
+      const sorted = [...(fit.length ? fit : pool)].sort(cmp);
       const r = sorted[0];
       const g = Math.min(rest, capOf(r));
-      const alts = fit.length ? sorted.slice(1).filter((x) => cmpFit(x, r) === 0).map((x) => x.id) : [];
+      const alts = sorted.slice(1).filter((x) => cmp(x, r) === 0).map((x) => x.id);
       out.push({ id: r.id, g, cap: capOf(r), max: r.maxGuests, sofa: g > noSofaCap(r, sh), alts });
       rest -= g;
       pool = pool.filter((x) => x !== r);
     }
     return rest > 0 ? null : out;
   };
-  // Habitaciones que lleva la sugerencia (con las alternativas iguales, cuando es una sola)
-  const recIds = (sel) => (sel.length === 1 ? [sel[0].id, ...sel[0].alts] : sel.map((x) => x.id));
+  // Habitaciones que llevan ⭐: las de la sugerencia y sus iguales
+  const recIds = (sel) => sel.flatMap((x) => [x.id, ...x.alts]);
   const listO = (a) => (a.length <= 1 ? a.join('') : `${a.slice(0, -1).join(', ')} o ${a[a.length - 1]}`);
   // "la habitación 1, con una persona en el sofá cama" · "cualquiera de estas: la habitación 1, 2, 3 o 5"
-  // · "la habitación 1 (3, una en el sofá cama) y la 6 (1)"
+  // · "la habitación 1 (3, una en el sofá cama) y la 6 (1)" · "la habitación 1 (5; o la 2, 3 o 5) y la 6 (2)"
   const roomsTxt = (sel) =>
     sel.length === 1
       ? sel[0].alts.length
@@ -331,11 +332,42 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
             sel[0].sofa ? ', con una persona en el sofá cama' : ''
           }`
         : `la habitación ${roomNum(sel[0].id)}${sel[0].sofa ? ', con una persona en el sofá cama' : ''}`
-      : listY(
-          sel.map(
-            (x, k) => `${k === 0 ? 'la habitación' : 'la'} ${roomNum(x.id)} (${x.g}${x.sofa ? ', una en el sofá cama' : ''})`
-          )
+      : listY(manyTxt(sel));
+  // Varias habitaciones, con sus iguales: "la habitación 1 (5; o la 2, 3 o 5) y la 6 (2)". Si dos o más de
+  // la sugerencia son iguales entre sí y hay más para elegir: "dos entre la 1, 2 y 5 (3 en cada una, …)".
+  const manyTxt = (sel) => {
+    const picked = new Set(sel.map((x) => x.id));
+    const done = new Set();
+    const named = new Set();
+    const parts = [];
+    sel.forEach((x) => {
+      if (done.has(x.id)) return;
+      const first = parts.length === 0;
+      const eq = [x.id, ...x.alts];
+      const mates = sel.filter((y) => y !== x && !done.has(y.id) && x.alts.includes(y.id));
+      const k = mates.length + 1;
+      if (mates.length && eq.length > k && mates.every((y) => y.g === x.g && y.sofa === x.sofa)) {
+        [x, ...mates].forEach((y) => done.add(y.id));
+        eq.forEach((id) => named.add(id));
+        const cuantas = ['', '', 'dos', 'tres', 'cuatro', 'cinco'][k] || String(k);
+        parts.push(
+          `${cuantas}${first ? ' habitaciones' : ''} entre la ${listY([...eq].sort().map(roomNum))} (${x.g} en cada una${
+            x.sofa ? ', una en el sofá cama' : ''
+          })`
         );
+        return;
+      }
+      done.add(x.id);
+      const alts = x.alts.filter((id) => !picked.has(id) && !named.has(id)).sort();
+      alts.forEach((id) => named.add(id));
+      parts.push(
+        `${first ? 'la habitación' : 'la'} ${roomNum(x.id)} (${x.g}${x.sofa ? ', una en el sofá cama' : ''}${
+          alts.length ? `; o la ${listO(alts.map(roomNum))}` : ''
+        })`
+      );
+    });
+    return parts;
+  };
   let recRooms = [];
   let recText = '';
   let sofaAsk = false; // ¿mostrar "¿Quieren usar el sofá cama?"?
