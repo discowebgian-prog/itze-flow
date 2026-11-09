@@ -54,3 +54,10 @@ html.no-rounded { --w-title: 700; --ls-title: -.01em; }
 input:not([type=checkbox]):not([type=radio]):not([type=range]):focus,
 select:focus,
 textarea:focus { box-shadow: 0 0 0 3px rgba(37, 99, 235, .22); }
+
+/* Listas tipo iPhone (Reservas y las próximas pantallas): tarjeta con título y filas separadas por línea fina */
+.ui-group { background: var(--card); border-radius: var(--r-card); box-shadow: var(--shadow); padding: 4px 0 6px; margin-bottom: 16px; }
+.ui-group > h3 { margin: 14px 16px 6px; font-size: 18px; font-weight: var(--w-title); letter-spacing: -.01em; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+.ui-row { display: flex; align-items: center; gap: 12px; padding: 11px 16px; cursor: pointer; position: relative; }
+.ui-row + .ui-row::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--line); }
+@media (hover: hover) { .ui-row:hover { background: rgba(120, 120, 128, .06); } }

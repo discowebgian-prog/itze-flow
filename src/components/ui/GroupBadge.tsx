@@ -2,6 +2,7 @@
 // @ts-nocheck
 // ── ETIQUETA DE GRUPO ("🔗 Grupo") ────────────────────────────────────────────
 // Marca las reservas que son parte de un grupo (varias habitaciones de un titular).
+import { Icon } from './Icon';
 
 export const GROUP_COLORS = { bg: '#CCFBF1', txt: '#0F766E', border: '#5EEAD4' };
 
@@ -24,7 +25,7 @@ export function GroupBadge({ r, size = 11, count }) {
         lineHeight: 1.4,
       }}
     >
-      🔗 Grupo{count ? ` · ${count}` : ''}
+      <Icon name="link" size={size + 1} strokeWidth={2.5} />Grupo{count ? ` · ${count}` : ''}
     </span>
   );
 }
