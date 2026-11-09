@@ -6,6 +6,7 @@ import { roomTypeOf, quoteStay } from '../lib/rates';
 import { findConflicts } from '../lib/reservations';
 import { TODAY, fmt, addDays, parseD, diffDays, currency, DAYS } from '../lib/dates';
 import { RangeCalendar } from './ui/RangeCalendar';
+import { Icon } from './ui/Icon';
 import { money } from './reservations/QuoteInfo';
 import {
   nightAvailability,
@@ -41,9 +42,9 @@ export const QT_CSS = `
 .qt-in { animation: qtIn .38s cubic-bezier(.2,.8,.2,1) both; }
 /* Resaltado de una vez (Personas al elegir fechas): aro azul que se apaga */
 @keyframes qtGlow {
-  0% { box-shadow: 0 0 0 0 rgba(37,99,235,.5); border-color: #2563EB; background: #EFF6FF; }
-  65% { box-shadow: 0 0 0 10px rgba(37,99,235,0); border-color: #93C5FD; background: #fff; }
-  100% { box-shadow: 0 1px 3px rgba(0,0,0,.04); border-color: #E5E7EB; background: #fff; }
+  0% { box-shadow: 0 0 0 0 rgba(37,99,235,.5); border-color: var(--acc); background: var(--acc-soft); }
+  65% { box-shadow: 0 0 0 10px rgba(37,99,235,0); border-color: #93C5FD; background: var(--card); }
+  100% { box-shadow: var(--shadow); border-color: transparent; background: var(--card); }
 }
 .qt-in.qt-glow { animation: qtIn .38s cubic-bezier(.2,.8,.2,1) both, qtGlow 1.4s .3s ease-out both; }
 @media (prefers-reduced-motion: reduce) { .qt-in, .qt-in.qt-glow { animation: none; } }
@@ -93,12 +94,12 @@ export function Step({ num, title, done = false, glow = false, boxRef = undefine
       className={glow ? 'qt-in qt-glow' : 'qt-in'}
       style={{
         scrollMarginTop: 12,
-        background: '#fff',
-        border: '1px solid #E5E7EB',
-        borderRadius: 14,
-        padding: '14px 14px 15px',
-        marginBottom: 8,
-        boxShadow: '0 1px 3px rgba(0,0,0,.04)',
+        background: 'var(--card)',
+        border: '1px solid transparent',
+        borderRadius: 20,
+        padding: '15px 15px 16px',
+        marginBottom: 10,
+        boxShadow: 'var(--shadow)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
@@ -108,7 +109,7 @@ export function Step({ num, title, done = false, glow = false, boxRef = undefine
             height: 26,
             borderRadius: '50%',
             flexShrink: 0,
-            background: done ? '#16A34A' : '#2563EB',
+            background: done ? 'var(--ok)' : 'var(--acc)',
             color: '#fff',
             display: 'inline-flex',
             alignItems: 'center',
@@ -117,10 +118,10 @@ export function Step({ num, title, done = false, glow = false, boxRef = undefine
             fontWeight: 800,
           }}
         >
-          {done ? '✓' : num}
+          {done ? <Icon name="tick" size={15} strokeWidth={3} /> : num}
         </span>
-        <span style={{ fontSize: 15, fontWeight: 800, color: '#111' }}>{title}</span>
-        {note && <span style={{ fontSize: 12, fontWeight: 600, color: '#9CA3AF' }}>{note}</span>}
+        <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-.01em' }}>{title}</span>
+        {note && <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--mut)' }}>{note}</span>}
       </div>
       {children}
     </section>
@@ -1118,11 +1119,11 @@ export function QuoteButton({ onClick, compact = false, style = {} }) {
         alignItems: 'center',
         justifyContent: 'center',
         gap: 5,
-        padding: compact ? '7px 10px' : '7px 12px',
-        background: '#fff',
-        border: '1.5px solid #2563EB',
-        borderRadius: 8,
-        color: '#2563EB',
+        padding: compact ? '7px 10px' : '7px 13px',
+        background: 'var(--acc-soft)',
+        border: 'none',
+        borderRadius: 20,
+        color: 'var(--acc)',
         fontFamily: 'inherit',
         fontWeight: 700,
         fontSize: 13,
@@ -1131,7 +1132,7 @@ export function QuoteButton({ onClick, compact = false, style = {} }) {
         ...style,
       }}
     >
-      🧮{compact ? '' : ' Cotizar'}
+      <Icon name="calculator" size={16} />{compact ? '' : 'Cotizar'}
     </button>
   );
 }

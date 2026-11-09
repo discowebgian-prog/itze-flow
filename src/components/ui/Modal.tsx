@@ -2,20 +2,24 @@
 // @ts-nocheck
 import { motion, useDragControls } from 'motion/react';
 import { Backdrop, SPRING_SHEET, SPRING_POP, shouldClose, dragStartOk } from './Motion';
+import { Icon } from './Icon';
 
 // ── MODAL ─────────────────────────────────────────────────────────────────────
 // tall: en el celular la hoja ocupa siempre el 92% del alto, así no crece ni se achica (y no mueve lo que estás tocando)
 // Animación tipo iOS: en el celular la hoja sube desde abajo y se cierra deslizándola hacia abajo desde la barrita
 // o el título (además de la X y tocar afuera). En compu aparece al centro con un leve zoom.
 // Para que también se anime al salir, quien la usa la envuelve en <AnimatePresence> con una key.
-export function Modal({ title, onClose, children, isMobile, tall = false }) {
+// icon: ícono opcional al lado del título (ej. 'calculator' en Cotizar), en azul
+export function Modal({ title, onClose, children, isMobile, tall = false, icon = '' }) {
   const drag = useDragControls();
   return (
     <Backdrop
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,.5)',
+        background: 'rgba(0,0,0,.4)',
+        WebkitBackdropFilter: 'blur(6px)',
+        backdropFilter: 'blur(6px)',
         zIndex: 200,
         display: 'flex',
         alignItems: isMobile ? 'flex-end' : 'center',
@@ -36,14 +40,14 @@ export function Modal({ title, onClose, children, isMobile, tall = false }) {
         dragElastic={{ top: 0, bottom: 1 }}
         onDragEnd={(e, info) => shouldClose(info) && onClose()}
         style={{
-          background: '#fff',
-          borderRadius: isMobile ? '20px 20px 0 0' : '16px',
+          background: 'var(--bg)',
+          borderRadius: isMobile ? 'var(--r-sheet) var(--r-sheet) 0 0' : 'var(--r-card)',
           width: '100%',
           maxWidth: isMobile ? '100%' : 520,
           maxHeight: '92vh',
           height: isMobile && tall ? '92vh' : undefined,
           overflow: 'auto',
-          boxShadow: '0 -4px 40px rgba(0,0,0,.18)',
+          boxShadow: '0 -4px 40px rgba(0,0,0,.16)',
         }}
       >
         {/* Barrita y título: de acá se arrastra la hoja para cerrarla */}
@@ -54,11 +58,11 @@ export function Modal({ title, onClose, children, isMobile, tall = false }) {
         {isMobile && (
           <div
             style={{
-              width: 36,
-              height: 4,
-              background: '#E5E7EB',
-              borderRadius: 2,
-              margin: '12px auto 0',
+              width: 38,
+              height: 5,
+              background: 'var(--handle)',
+              borderRadius: 3,
+              margin: '8px auto 0',
             }}
           />
         )}
@@ -68,42 +72,47 @@ export function Modal({ title, onClose, children, isMobile, tall = false }) {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            borderBottom: '1px solid #F0F0F0',
-            paddingBottom: 14,
+            paddingBottom: 8,
           }}
         >
           <span
             style={{
-              fontWeight: 700,
-              fontSize: isMobile ? 16 : 17,
-              color: '#111',
+              fontWeight: 800,
+              fontSize: 20,
+              letterSpacing: '-.01em',
+              color: 'var(--ink)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
             }}
           >
+            {icon && <Icon name={icon} size={22} color="var(--acc)" />}
             {title}
           </span>
           <button
             onClick={onClose}
+            aria-label="Cerrar"
             style={{
-              background: '#F3F4F6',
+              background: 'var(--fill)',
               border: 'none',
-              borderRadius: 8,
-              width: 32,
-              height: 32,
+              borderRadius: '50%',
+              width: 30,
+              height: 30,
               cursor: 'pointer',
               fontSize: 18,
-              color: '#555',
+              color: 'var(--mut)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontFamily: 'inherit',
             }}
           >
-            ×
+            <Icon name="close" size={17} strokeWidth={2.5} />
           </button>
         </div>
         </div>
         <div
-          style={{ padding: isMobile ? '16px 20px 32px' : '20px 24px 28px' }}
+          style={{ padding: isMobile ? '12px 16px 32px' : '14px 20px 28px' }}
         >
           {children}
         </div>

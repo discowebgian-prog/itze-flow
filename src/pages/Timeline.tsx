@@ -11,6 +11,24 @@ import { QuoteButton } from '../components/Quoter';
 import { AnimatePresence } from 'motion/react';
 import { Backdrop, PopCard } from '../components/ui/Motion';
 
+// Polígono con las esquinas redondeadas: cada punto es [x, y, radio]; radio 0 = esquina en punta
+function roundedShape(pts) {
+  const n = pts.length;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const [px, py] = pts[(i + n - 1) % n];
+    const [x, y, rad] = pts[i];
+    const [nx, ny] = pts[(i + 1) % n];
+    const d1 = Math.hypot(px - x, py - y) || 1;
+    const d2 = Math.hypot(nx - x, ny - y) || 1;
+    const k = Math.min(rad, d1 / 2, d2 / 2);
+    const a = [x + ((px - x) / d1) * k, y + ((py - y) / d1) * k];
+    const b = [x + ((nx - x) / d2) * k, y + ((ny - y) / d2) * k];
+    out.push(`${i ? 'L' : 'M'}${a[0]},${a[1]} Q${x},${y} ${b[0]},${b[1]}`);
+  }
+  return out.join(' ') + ' Z';
+}
+
 // ── TIMELINE DESKTOP ──────────────────────────────────────────────────────────
 export function Timeline({
   reservations,
@@ -720,14 +738,17 @@ export function Timeline({
                   const cid = `c${r.id}`;
                   const tx = (r.cutLeft ? 8 : Math.min(14, W * 0.2) + 4) + (r.source === 'Booking' ? 4 : 0);
 
+                  // Forma de la barra: puntas en ángulo (entra a la tarde, sale a la mañana) con las esquinas
+                  // redondeadas, como el resto de la app. Si la estadía sigue fuera de lo que se ve, ese lado
+                  // queda recto y sin redondear: la barra continúa.
                   const D = Math.min(10, W * 0.25);
-                  const ptTopLeft = r.cutLeft ? '0,0' : `${D},0`;
-                  const ptTopRight = r.cutRight ? `${W},0` : `${W},0`; 
-                  const ptBottomRight = r.cutRight
-                    ? `${W},${H}`
-                    : `${W - D},${H}`; 
-                  const ptBottomLeft = r.cutLeft ? `0,${H}` : `0,${H}`; 
-                  const cp = `${ptTopLeft} ${ptTopRight} ${ptBottomRight} ${ptBottomLeft}`;
+                  const RAD = 6;
+                  const shape = roundedShape([
+                    [r.cutLeft ? 0 : D, 0, r.cutLeft ? 0 : RAD],
+                    [W, 0, r.cutRight ? 0 : RAD],
+                    [r.cutRight ? W : W - D, H, r.cutRight ? 0 : RAD],
+                    [0, H, r.cutLeft ? 0 : RAD],
+                  ]);
 
                   return (
                     <div
@@ -793,7 +814,7 @@ export function Timeline({
                         >
                           <defs>
                             <clipPath id={cid}>
-                              <polygon points={cp} />
+                              <path d={shape} />
                             </clipPath>
                           </defs>
                           <rect
@@ -803,8 +824,19 @@ export function Timeline({
                             height={H}
                             fill={bc.bg}
                             clipPath={`url(#${cid})`}
-                            rx={r.cutLeft ? 0 : 4}
                           />
+                          {/* Avisos (saldo, etc.): rayitas abajo, dentro de la forma de la barra */}
+                          {alerts.map((a, i) => (
+                            <rect
+                              key={a.key}
+                              x={0}
+                              y={H - SH * (alerts.length - i)}
+                              width={W}
+                              height={SH}
+                              fill={a.color}
+                              clipPath={`url(#${cid})`}
+                            />
+                          ))}
                           {/* NUEVA MARCA VISUAL BOOKING EN PC */}
                           {r.source === 'Booking' && (
                             <rect
@@ -859,7 +891,7 @@ export function Timeline({
                           style={{
                             height: H,
                             borderRadius:
-                              alerts.length > 0 ? '5px 5px 0 0' : '5px',
+                              alerts.length > 0 ? '8px 8px 0 0' : '8px',
                             background: bc.bg,
                             display: 'flex',
                             flexDirection: 'column',
@@ -905,7 +937,7 @@ export function Timeline({
                           </span>
                         </div>
                       )}
-                     {alerts.length > 0 && (
+                     {alerts.length > 0 && W <= 12 && (
                             <div
                               style={{
                                 position: 'absolute',

@@ -950,8 +950,8 @@ const toggleBlacklist = async (id, currentStatus) => {
       transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
       style={{
         minHeight: '100vh',
-        background: '#F8FAFC',
-        fontFamily: "'Inter',system-ui,sans-serif",
+        background: 'var(--bg)',
+        fontFamily: 'var(--font)',
       }}
     >
       <style>{appLayoutCss}</style>
@@ -960,8 +960,10 @@ const toggleBlacklist = async (id, currentStatus) => {
       <div
         className="top-nav"
         style={{
-          background: '#fff',
-          borderBottom: '1px solid #F0F0F0',
+          background: 'var(--bar)',
+          WebkitBackdropFilter: 'var(--blur)',
+          backdropFilter: 'var(--blur)',
+          borderBottom: '.5px solid var(--line)',
           padding: '0 16px',
           height: 54,
           display: 'flex',
@@ -970,7 +972,6 @@ const toggleBlacklist = async (id, currentStatus) => {
           position: 'sticky',
           top: 0,
           zIndex: 100,
-          boxShadow: '0 1px 3px rgba(0,0,0,.04)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -985,14 +986,14 @@ const toggleBlacklist = async (id, currentStatus) => {
             <img src="https://i.postimg.cc/3NDCCVdT/gecko2.png" alt="Itzé" style={{ width: 36, height: 36, objectFit: 'contain' }} />
           </div>
           <div>
-            <span style={{ fontWeight: 800, fontSize: 15, color: '#111' }}>
+            <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--ink)', letterSpacing: '-.01em' }}>
               Itzé Flow Pro
             </span>
             {isMobile && (
               <div
                 style={{
                   fontSize: 10,
-                  color: '#9CA3AF',
+                  color: 'var(--mut)',
                   lineHeight: 1,
                   marginTop: 1,
                 }}
@@ -1044,10 +1045,10 @@ const toggleBlacklist = async (id, currentStatus) => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 5,
-                padding: '7px 12px',
-                background: 'linear-gradient(135deg,#3B82F6,#6366F1)',
+                padding: '7px 13px',
+                background: 'var(--acc)',
                 border: 'none',
-                borderRadius: 8,
+                borderRadius: 20,
                 color: '#fff',
                 fontFamily: 'inherit',
                 fontWeight: 700,
@@ -1055,7 +1056,7 @@ const toggleBlacklist = async (id, currentStatus) => {
                 cursor: 'pointer',
               }}
             >
-              + Nueva
+              <Icon name="plus" size={16} strokeWidth={2.5} />Nueva
             </button>
             </>
           ) : (
@@ -1063,21 +1064,21 @@ const toggleBlacklist = async (id, currentStatus) => {
               <button
                 onClick={() => setWhoOpen(true)}
                 title="Cambiar quién usa este aparato"
-                style={{ background: 'none', border: 'none', fontSize: 13, fontWeight: 600, color: '#374151', cursor: 'pointer', fontFamily: 'inherit', padding: '4px 6px', borderRadius: 6 }}
+                style={{ background: 'none', border: 'none', fontSize: 13, fontWeight: 600, color: 'var(--ink-2)', cursor: 'pointer', fontFamily: 'inherit', padding: '4px 6px', borderRadius: 6 }}
               >
-                👤 {deviceName || user.name}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="user" size={16} />{deviceName || user.name}</span>
               </button>
               <button
                 onClick={handleLogout}
                 style={{
-                  background: '#F3F4F6',
+                  background: 'var(--fill)',
                   border: 'none',
-                  borderRadius: 8,
-                  padding: '6px 12px',
+                  borderRadius: 20,
+                  padding: '6px 13px',
                   fontFamily: 'inherit',
                   fontSize: 12,
                   fontWeight: 700,
-                  color: '#6B7280',
+                  color: 'var(--ink-2)',
                   cursor: 'pointer',
                 }}
               >
@@ -1103,14 +1104,14 @@ const toggleBlacklist = async (id, currentStatus) => {
                   alignItems: 'center',
                   gap: 10,
                   padding: isTablet ? '10px' : '9px 12px',
-                  borderRadius: 9,
+                  borderRadius: 12,
                   border: 'none',
                   fontFamily: 'inherit',
                   fontWeight: 600,
-                  fontSize: 13,
+                  fontSize: 14,
                   cursor: 'pointer',
                   background: 'transparent',
-                  color: tab === t.id ? '#2563EB' : '#6B7280',
+                  color: tab === t.id ? 'var(--acc)' : 'var(--ink-2)',
                   textAlign: 'left',
                   justifyContent: isTablet ? 'center' : 'flex-start',
                   position: 'relative',
@@ -1122,7 +1123,7 @@ const toggleBlacklist = async (id, currentStatus) => {
                   <motion.span
                     layoutId="sb-ind"
                     transition={SPRING_SHEET}
-                    style={{ position: 'absolute', inset: 0, background: '#EFF6FF', borderRadius: 9, zIndex: -1 }}
+                    style={{ position: 'absolute', inset: 0, background: 'var(--acc-soft)', borderRadius: 12, zIndex: -1 }}
                   />
                 )}
                 <span style={{ display: 'flex', flexShrink: 0, position: 'relative' }}>
@@ -1149,7 +1150,7 @@ const toggleBlacklist = async (id, currentStatus) => {
             ))}
             <div
               style={{
-                borderTop: '1px solid #F0F0F0',
+                borderTop: '.5px solid var(--line)',
                 margin: '12px 0',
                 paddingTop: 12,
               }}
@@ -1159,10 +1160,10 @@ const toggleBlacklist = async (id, currentStatus) => {
                 title={isTablet ? 'Nueva reserva' : ''}
                 style={{
                   width: '100%',
-                  padding: isTablet ? '10px' : '9px 12px',
-                  background: 'linear-gradient(135deg,#3B82F6,#6366F1)',
+                  padding: isTablet ? '10px' : '10px 12px',
+                  background: 'var(--acc)',
                   border: 'none',
-                  borderRadius: 9,
+                  borderRadius: 12,
                   color: '#fff',
                   fontFamily: 'inherit',
                   fontWeight: 700,
@@ -1172,10 +1173,9 @@ const toggleBlacklist = async (id, currentStatus) => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 6,
-                  boxShadow: '0 2px 8px rgba(99,102,241,.3)',
                 }}
               >
-                +{' '}
+                <Icon name="plus" size={16} strokeWidth={2.5} />
                 <span
                   className="sa"
                   style={{ display: isTablet ? 'none' : 'inline' }}
@@ -1186,7 +1186,7 @@ const toggleBlacklist = async (id, currentStatus) => {
               <QuoteButton
                 onClick={openQuote}
                 compact={isTablet}
-                style={{ width: '100%', marginTop: 8, borderRadius: 9, padding: isTablet ? '9px' : '8px 12px' }}
+                style={{ width: '100%', marginTop: 8, borderRadius: 12, padding: isTablet ? '9px' : '9px 12px' }}
               />
             </div>
             {!isTablet && (
@@ -1197,18 +1197,18 @@ const toggleBlacklist = async (id, currentStatus) => {
                   padding: '8px 12px',
                   background: 'transparent',
                   border: 'none',
-                  borderRadius: 9,
+                  borderRadius: 12,
                   fontFamily: 'inherit',
                   fontWeight: 600,
                   fontSize: 12,
-                  color: '#9CA3AF',
+                  color: 'var(--mut)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
                 }}
               >
-                ↩ Cerrar sesión
+                <Icon name="checkOut" size={15} />Cerrar sesión
               </button>
             )}
           </div>
@@ -1321,8 +1321,10 @@ const toggleBlacklist = async (id, currentStatus) => {
           bottom: 0,
           left: 0,
           right: 0,
-          background: '#fff',
-          borderTop: '1px solid #F0F0F0',
+          background: 'var(--bar)',
+          WebkitBackdropFilter: 'var(--blur)',
+          backdropFilter: 'var(--blur)',
+          borderTop: '.5px solid var(--line)',
           zIndex: 99,
           // Más aire abajo para que los íconos no queden pegados al borde del teléfono (pedido de Gian).
           // Si se cambia, ajustar también el espacio final de .main-content (app-layout.css) y el cartelito verde.
@@ -1356,7 +1358,7 @@ const toggleBlacklist = async (id, currentStatus) => {
               transition={{ duration: 0.32, ease: 'easeOut' }}
               style={{
                 display: 'flex',
-                color: tab === t.id ? '#2563EB' : '#9CA3AF',
+                color: tab === t.id ? 'var(--acc)' : 'var(--mut)',
                 position: 'relative',
                 transition: 'color .2s ease',
               }}
@@ -1370,7 +1372,7 @@ const toggleBlacklist = async (id, currentStatus) => {
               style={{
                 fontSize: 10,
                 fontWeight: 600,
-                color: tab === t.id ? '#2563EB' : '#9CA3AF',
+                color: tab === t.id ? 'var(--acc)' : 'var(--mut)',
                 marginTop: 1,
               }}
             >
@@ -1383,7 +1385,7 @@ const toggleBlacklist = async (id, currentStatus) => {
                   layoutId="bn-ind"
                   className="nav-indicator"
                   transition={SPRING_SHEET}
-                  style={{ width: 20, height: 2.5, background: '#2563EB', borderRadius: 4 }}
+                  style={{ width: 20, height: 2.5, background: 'var(--acc)', borderRadius: 4 }}
                 />
               )}
             </span>
@@ -1531,7 +1533,7 @@ const toggleBlacklist = async (id, currentStatus) => {
         </Backdrop>
       )}</AnimatePresence>
       <AnimatePresence>{quoterOpen && (
-        <Modal key="quoter" title="🧮 Cotizar" onClose={() => setQuoterOpen(false)} isMobile={isMobile} tall>
+        <Modal key="quoter" title="Cotizar" icon="calculator" onClose={() => setQuoterOpen(false)} isMobile={isMobile} tall>
           <Quoter
             allRes={res}
             tarifas={tarifas}
