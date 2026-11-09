@@ -677,7 +677,7 @@ export function Timeline({
                       cursor: hdrDrag ? 'grabbing' : 'cell',
                     }}
                     onDoubleClick={() => {
-                      if (!drag && !hdrDrag) onAddRes(row.prop.id, fmt(d));
+                      if (!drag && !hdrDrag) onAddRes(row.prop.id, fmt(d), row.type === 'room' ? { room: row.room.id } : null);
                     }}
                     onTouchEnd={(e) => {
                       if (drag || hdrDrag) return;
@@ -687,7 +687,7 @@ export function Timeline({
                         n - e.currentTarget._lt < 350
                       ) {
                         e.preventDefault();
-                        onAddRes(row.prop.id, fmt(d));
+                        onAddRes(row.prop.id, fmt(d), row.type === 'room' ? { room: row.room.id } : null);
                         e.currentTarget._lt = 0;
                       } else {
                         e.currentTarget._lt = n;

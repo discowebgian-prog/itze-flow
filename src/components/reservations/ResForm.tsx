@@ -9,12 +9,12 @@ import { Inp } from '../ui/Inp';
 import { RangeCalendar } from '../ui/RangeCalendar';
 import { Sel } from '../ui/Sel';
 import { ROOMS, SOURCES, RS, COUNTRIES, findCountry } from '../../lib/constants';
-import { TODAY, fmt, fmtD, addDays, diffDays, currency } from '../../lib/dates';
-import { lastVisitText, birthdayInStay, birthdayText, birthFromCurp, cleanBirthDate } from '../../lib/guestMessages';
+import { TODAY, fmt, fmtD, addDays, diffDays, currency, parseD } from '../../lib/dates';
+import { lastVisitText, birthdayInStay, birthdayText, cleanBirthDate } from '../../lib/guestMessages';
 import { findConflicts, calcStayTotal, lateCostOf } from '../../lib/reservations';
 import { quoteRoom, pricingMatches, applyQuote } from '../../lib/rates';
 import { QuoteInfo, money } from './QuoteInfo';
-import { listY } from '../Quoter';
+import { listY, Step, QT_CSS, scrollToStep } from '../Quoter';
 import { stayInfo, stayBadge, suggestGuests } from '../../lib/guests';
 import {
   groupOf,
@@ -63,12 +63,12 @@ export function ResForm({
     lateCheckout: '', // hora del late check-out ('16:00') o vacío
     lateCost: '',
     checkIn: prefillDate || fmt(TODAY),
-    checkOut: fmt(addDays(TODAY, 1)),
-    status: 'por_llegar',
+    checkOut: fmt(addDays(prefillDate ? parseD(prefillDate) : TODAY, 1)),
+    status: '', // se elige al cargar (junto con el canal abre el resto del formulario)
     totalAmount: '',
     paid: '',
     paymentMethod: 'efectivo',
-    source: 'Directo-Puerta',
+    source: '', // se elige al cargar (abre el resto del formulario)
     notes: '',
     room: '',
     totalGuests: 1,
@@ -512,6 +512,14 @@ export function ResForm({
     if (isSaving) return;
 
     // --- 1. VALIDACIÓN DE CAMPOS OBLIGATORIOS ---
+    if (!f.status) {
+      setValErr('Elegí el estado de la reserva (Por llegar, Hospedado…).');
+      return;
+    }
+    if (!f.source) {
+      setValErr('Elegí el canal de la reserva.');
+      return;
+    }
     if (!f.guestName || f.guestName.trim() === '') {
       setValErr('Falta el nombre del huésped.');
       return;
@@ -607,11 +615,59 @@ export function ResForm({
     proceed(newBooker ? { ...f, grupoReservante: newBooker } : f, also.length ? { also } : undefined);
   };
 
+  // ── PASO A PASO (como Cotizar) ──
+  // Reserva nueva: primero fechas y habitación; al elegirlas aparecen Estado y canal; al tocar el canal,
+  // el resto (empezando por las fotos del documento, que completan casi todo). Lo que ya apareció no
+  // vuelve a esconderse. Al editar se ve todo de una.
+  const isNew = !initial?.id;
+  const picking = !f.checkOut; // entrada tocada, falta la salida: lo de abajo queda atenuado
+  const roomsDone =
+    nights > 0 && (!isHostel || (multiOn ? selRooms.length > 1 && !!titularRoom : !!f.room));
+  const target = roomsDone ? (f.status && f.source ? 3 : 2) : 1;
+  const [stage, setStage] = useState(() => (isNew ? target : 3));
+  const [glowStep, setGlowStep] = useState(''); // paso recién aparecido: entra con resaltado de una vez
+  const canalRef = useRef(null);
+  const guestRef = useRef(null);
+  useEffect(() => {
+    if (target <= stage) return;
+    setStage(target);
+    setGlowStep(target === 2 ? 'canal' : 'huesped');
+  }, [target]);
+  // Deslizamientos: Estado y canal se ve entero; al tocar el canal, Huésped queda arriba (fotos primero)
+  useEffect(() => {
+    if (!glowStep) return;
+    const t =
+      glowStep === 'canal'
+        ? setTimeout(() => scrollToStep(canalRef, 'nearest'), 250)
+        : setTimeout(() => scrollToStep(guestRef), 350);
+    return () => clearTimeout(t);
+  }, [glowStep]);
+
+  // Qué paso está resuelto (✓ verde): ayuda a no pasar nada por alto
+  const ratesOk = multiOn
+    ? selRooms.length > 0 &&
+      selRooms.every((id) => {
+        const r = roomPricing(id).ratePerNight;
+        return r !== '' && r !== null && r !== undefined;
+      })
+    : f.pricing.ratePerNight !== '' && f.pricing.ratePerNight !== null;
+  const paidOk = multiOn && splitPay ? true : f.paid !== '' && f.paid !== null;
+  const cobroDone = ratesOk && paidOk && !(lateOpen && !f.lateCheckout);
+  const showPersonas = multiOn ? selRooms.length > 0 : ((!isHostel || selRoom) && maxG > 1) || f.companions.length > 0;
+  const personasDone = multiOn || f.companions.every((c) => (c.name || '').trim());
+  // Números de los pasos (sin habitación fuera del hostel, sin Personas si no corresponde)
+  const nums = {};
+  let k = 0;
+  ['fechas', isHostel && 'hab', 'canal', 'huesped', showPersonas && 'personas', 'cobro', 'extras']
+    .filter(Boolean)
+    .forEach((id) => (nums[id] = ++k));
+
   const paidShown = multiOn && splitPay ? groupPaidSplit : f.paid;
   const saldoPendiente = Math.max(0, Number(f.totalAmount || 0) - Number(paidShown || 0));
 
   return (
     <div>
+      <style>{QT_CSS}</style>
       {inGroup && (
         <div
           style={{
@@ -641,19 +697,8 @@ export function ResForm({
         </div>
       )}
 
-      <label
-        style={{
-          display: 'block',
-          fontSize: 11,
-          fontWeight: 700,
-          color: '#888',
-          marginBottom: 6,
-          textTransform: 'uppercase',
-          letterSpacing: 0.4,
-        }}
-      >
-        Fechas de estadía
-      </label>
+      {/* 1 · Fechas */}
+      <Step num={nums.fechas} title="Fechas" done={nights > 0}>
       <RangeCalendar
         checkIn={f.checkIn}
         checkOut={f.checkOut}
@@ -733,20 +778,21 @@ export function ResForm({
         </div>
       )}
 
+      {picking && (
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#1E40AF', marginTop: -4 }}>Ahora tocá la fecha de salida.</div>
+      )}
+      </Step>
+
+      <div
+        aria-hidden={picking}
+        style={{ opacity: picking ? 0.4 : 1, pointerEvents: picking ? 'none' : 'auto', transition: 'opacity .2s' }}
+      >
+      {/* 2 · Habitación (o varias) */}
       {isHostel && (
-        <div style={{ marginBottom: 12 }}>
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: '#888',
-              marginBottom: 6,
-              textTransform: 'uppercase',
-              letterSpacing: 0.4,
-            }}
-          >
-            {multiOn ? 'Habitaciones (elegí varias)' : 'Habitación'}
-          </div>
+        <Step num={nums.hab} title={multiOn ? 'Habitaciones' : 'Habitación'} done={roomsDone}>
+          {multiOn && (
+            <div style={{ fontSize: 12, color: '#6B7280', margin: '-6px 0 8px' }}>Tocá todas las del grupo.</div>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
             {ROOMS.map((r) => {
               const on = multiOn ? selRooms.includes(r.id) : f.room === r.id;
@@ -893,11 +939,21 @@ export function ResForm({
               </div>
             </div>
           )}
-        </div>
+          {multiOn && selRooms.length === 1 && (
+            <div style={{ fontSize: 12, color: '#6B7280', marginTop: 8 }}>Elegí al menos una habitación más.</div>
+          )}
+          {conflicts.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <ConflictWarn conflicts={conflicts} properties={visibleProps} />
+            </div>
+          )}
+        </Step>
       )}
+      {!isHostel && <ConflictWarn conflicts={conflicts} properties={visibleProps} />}
 
-      <ConflictWarn conflicts={conflicts} properties={visibleProps} />
-      
+      {/* 3 · Estado y canal (aparece al elegir fechas y habitación) */}
+      {stage >= 2 && (
+      <Step num={nums.canal} title="Estado y canal" done={!!(f.status && f.source)} glow={glowStep === 'canal'} boxRef={canalRef}>
       <ChipGroup
         label="Estado"
         value={f.status}
@@ -922,6 +978,31 @@ export function ResForm({
             ? { bg: '#FCE7F3', txt: '#9D174D' }
             : { bg: '#D1FAE5', txt: '#065F46' }),
         }))}
+      />
+      {(!f.status || !f.source) && (
+        <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: -4, lineHeight: 1.4 }}>
+          {!f.status && !f.source
+            ? 'Tocá el estado y el canal para seguir.'
+            : !f.status
+            ? 'Tocá el estado para seguir.'
+            : '¿Por dónde llegó la reserva? Tocá el canal para seguir.'}
+          {!f.status && f.checkIn === fmt(TODAY) && ' Si ya está en el hostel, elegí Hospedado.'}
+        </div>
+      )}
+      </Step>
+      )}
+
+      {/* 4 en adelante: aparece al tocar el canal */}
+      {stage >= 3 && (
+      <>
+      {/* 4 · Huésped: primero las fotos del documento (el escáner completa casi todo) */}
+      <Step num={nums.huesped} title="Huésped" done={!!(f.guestName || '').trim()} glow={glowStep === 'huesped'} boxRef={guestRef}>
+      <div ref={docRef} />
+      <IneUploader
+        f={f}
+        onUploadFrente={(url) => sv('url_ine_frente', url)}
+        onUploadDorso={(url) => sv('url_ine_dorso', url)}
+        onScan={applyScan}
       />
 
       <Inp
@@ -1118,19 +1199,12 @@ export function ResForm({
         </div>
       )}
 
-      <div ref={docRef} />
       <CountrySelector
         value={f.guestNationality}
         onChange={(c) => {
           sv('guestNationality', c.code);
           sv('guestPhonePrefix', c.prefix);
         }}
-      />
-      <IneUploader 
-        f={f} 
-        onUploadFrente={(url) => sv('url_ine_frente', url)}
-        onUploadDorso={(url) => sv('url_ine_dorso', url)}
-        onScan={applyScan}
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 10 }}>
@@ -1149,15 +1223,7 @@ export function ResForm({
           onChange={(e) => sv('guestDoc', e.target.value)}
         />
       </div>
-      {/* Fecha de nacimiento (para los cumpleaños): con CURP sale sola; con pasaporte la lee el escáner o se escribe */}
-      {!birthFromCurp(f.guestDoc) && (
-        <Inp
-          label="Fecha de nacimiento (opcional · para el 🎂)"
-          type="date"
-          value={f.birthDate || ''}
-          onChange={(e) => sv('birthDate', e.target.value)}
-        />
-      )}
+      {/* Fecha de nacimiento (para el 🎂): solo automática. Con CURP sale de ahí; con pasaporte la lee el escáner. */}
 
       <div style={{ marginBottom: 12 }}>
         <label
@@ -1209,12 +1275,16 @@ export function ResForm({
         </div>
       </div>
 
-        <Inp
+      <Inp
         label="Email"
         value={f.guestEmail}
         onChange={(e) => sv('guestEmail', e.target.value)}
       />
+      </Step>
 
+      {/* 5 · Personas: cuántos son y acompañantes (en grupo, una tarjeta por habitación) */}
+      {showPersonas && (
+      <Step num={nums.personas} title={multiOn ? 'Personas por habitación' : 'Personas'} done={personasDone}>
       {multiOn && selRooms.length > 0 && (
         <RoomCards
           rooms={selRooms}
@@ -1362,6 +1432,11 @@ export function ResForm({
         </div>
       )}
 
+      </Step>
+      )}
+
+      {/* 6 · Tarifa y pago */}
+      <Step num={nums.cobro} title="Tarifa y pago" done={cobroDone}>
       {/* ── LATE CHECK-OUT: botón chico; al activarlo, hora acordada y costo (se suma al total) ── */}
       <div style={{ marginBottom: lateOpen ? 8 : 14 }}>
         <button
@@ -1415,31 +1490,8 @@ export function ResForm({
         </div>
       )}
 
-      <div
-        style={{
-          marginBottom: 16,
-          background: '#F8FAFC',
-          borderRadius: 10,
-          padding: '16px',
-          border: '1px solid #E5E7EB',
-        }}
-      >
-        <div
-          style={{
-            fontSize: 12,
-            fontWeight: 800,
-            color: '#111',
-            textTransform: 'uppercase',
-            letterSpacing: 0.5,
-            marginBottom: 14,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          💰 Liquidación y Pago
-        </div>
-        
+      <div>
+
         {/* Con varias habitaciones la tarifa va en cada tarjeta (pueden ser de distinto tipo) */}
         <div style={{ display: 'grid', gridTemplateColumns: multiOn ? '1fr' : '1fr 1fr', gap: 10 }}>
           {!multiOn && <Inp
@@ -1768,42 +1820,7 @@ export function ResForm({
         </div>
       </div>
 
-      {/* ── FACTURA: botón chico; al pedir factura se despliega Empresa (opcional).
-             Con nombre de empresa cuenta como Empresa; vacío (persona física) queda Particular ── */}
-      <div style={{ marginBottom: f.requiresInvoice ? 8 : 14 }}>
-        <button
-          type="button"
-          onClick={() => sv('requiresInvoice', !f.requiresInvoice)}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            minHeight: 34,
-            padding: '6px 14px',
-            borderRadius: 20,
-            border: `1.5px solid ${f.requiresInvoice ? '#7C3AED' : '#E5E7EB'}`,
-            background: f.requiresInvoice ? '#EDE9FE' : '#fff',
-            color: f.requiresInvoice ? '#5B21B6' : '#6B7280',
-            fontFamily: 'inherit',
-            fontWeight: f.requiresInvoice ? 800 : 600,
-            fontSize: 12,
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {f.requiresInvoice ? '✓ ' : ''}🧾 Solicita factura
-        </button>
-      </div>
-      {f.requiresInvoice && (
-        <Inp
-          label="🏢 Empresa (opcional)"
-          value={f.company || ''}
-          autoComplete="off"
-          onChange={(e) => sv('company', e.target.value)}
-          placeholder="Nombre (vacío si es persona física)"
-        />
-      )}
-
+      {/* VCC de Booking: va con el pago */}
       {f.source === 'Booking' && (() => {
         const vccOn = f.paymentMethod === 'vcc';
         const toggleVcc = () => {
@@ -1871,6 +1888,46 @@ export function ResForm({
           </div>
         );
       })()}
+      </Step>
+
+      {/* 7 · Factura, notas y PIN (opcional) */}
+      <Step num={nums.extras} title="Factura, notas y PIN" note="opcional" done={!!(f.requiresInvoice || (f.notes || '').trim() || f.pin_acceso)}>
+      {/* ── FACTURA: botón chico; al pedir factura se despliega Empresa (opcional).
+             Con nombre de empresa cuenta como Empresa; vacío (persona física) queda Particular ── */}
+      <div style={{ marginBottom: f.requiresInvoice ? 8 : 14 }}>
+        <button
+          type="button"
+          onClick={() => sv('requiresInvoice', !f.requiresInvoice)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            minHeight: 34,
+            padding: '6px 14px',
+            borderRadius: 20,
+            border: `1.5px solid ${f.requiresInvoice ? '#7C3AED' : '#E5E7EB'}`,
+            background: f.requiresInvoice ? '#EDE9FE' : '#fff',
+            color: f.requiresInvoice ? '#5B21B6' : '#6B7280',
+            fontFamily: 'inherit',
+            fontWeight: f.requiresInvoice ? 800 : 600,
+            fontSize: 12,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {f.requiresInvoice ? '✓ ' : ''}🧾 Solicita factura
+        </button>
+      </div>
+      {f.requiresInvoice && (
+        <Inp
+          label="🏢 Empresa (opcional)"
+          value={f.company || ''}
+          autoComplete="off"
+          onChange={(e) => sv('company', e.target.value)}
+          placeholder="Nombre (vacío si es persona física)"
+        />
+      )}
+
 
       <div style={{ marginBottom: 20 }}>
         <label
@@ -1931,6 +1988,7 @@ export function ResForm({
             🪄 Generar
           </button>
         </div>
+      </Step>
 
         {isGroupNew && (
           <div
@@ -2018,6 +2076,9 @@ export function ResForm({
             </>
           )}
         </button>
+      </div>
+      </>
+      )}
       </div>
 
       <AnimatePresence>{requoteOpen && (

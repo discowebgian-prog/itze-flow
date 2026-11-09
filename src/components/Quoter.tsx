@@ -36,7 +36,7 @@ const personas = (n) => (n === 1 ? '1 persona' : `${n} personas`);
 export { listY } from '../lib/availability';
 
 // Animaciones: entrada de pasos y habitaciones (una debajo de otra) y expansión al tocar
-const QT_CSS = `
+export const QT_CSS = `
 @keyframes qtIn { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
 .qt-in { animation: qtIn .38s cubic-bezier(.2,.8,.2,1) both; }
 /* Resaltado de una vez (Personas al elegir fechas): aro azul que se apaga */
@@ -50,7 +50,7 @@ const QT_CSS = `
 `;
 const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 // Desliza la ventana hasta el paso (arriba de todo, o lo justo para que se vea entero con 'nearest')
-const scrollToStep = (ref, block = 'start') =>
+export const scrollToStep = (ref, block = 'start') =>
   ref.current?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block });
 export const HOSTEL_CAPACITY = ROOMS.reduce((s, r) => s + r.maxGuests, 0);
 
@@ -85,7 +85,8 @@ export function quoteMessage({ checkIn, checkOut, guests, items, total }) {
 }
 
 // Tarjeta de cada paso: número en un círculo (✓ verde cuando el paso está resuelto) y título
-function Step({ num, title, done = false, glow = false, boxRef = undefined, children }) {
+// note: aclaración chica en gris al lado del título (ej. "opcional")
+export function Step({ num, title, done = false, glow = false, boxRef = undefined, note = '', children }) {
   return (
     <section
       ref={boxRef}
@@ -119,6 +120,7 @@ function Step({ num, title, done = false, glow = false, boxRef = undefined, chil
           {done ? '✓' : num}
         </span>
         <span style={{ fontSize: 15, fontWeight: 800, color: '#111' }}>{title}</span>
+        {note && <span style={{ fontSize: 12, fontWeight: 600, color: '#9CA3AF' }}>{note}</span>}
       </div>
       {children}
     </section>
