@@ -77,7 +77,7 @@ export function Modal({ title, onClose, children, isMobile, tall = false, icon =
         >
           <span
             style={{
-              fontWeight: 800,
+              fontWeight: 'var(--w-title)',
               fontSize: 20,
               letterSpacing: '-.01em',
               color: 'var(--ink)',

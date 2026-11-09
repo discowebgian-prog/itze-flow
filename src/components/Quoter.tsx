@@ -120,7 +120,7 @@ export function Step({ num, title, done = false, glow = false, boxRef = undefine
         >
           {done ? <Icon name="tick" size={15} strokeWidth={3} /> : num}
         </span>
-        <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-.01em' }}>{title}</span>
+        <span style={{ fontSize: 16, fontWeight: 'var(--w-title)', color: 'var(--ink)', letterSpacing: '-.01em' }}>{title}</span>
         {note && <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--mut)' }}>{note}</span>}
       </div>
       {children}

@@ -17,7 +17,7 @@ import { Icon } from '../components/ui/Icon';
 // Va afuera de Dashboard para que no se rearme en cada render (si no, las filas repiten la animación de entrada).
 const Group = ({ id = undefined, title, icon, col, children }) => (
   <section id={id} className="ui-card" style={{ padding: '4px 0 6px', marginBottom: 16 }}>
-    <h3 style={{ margin: '14px 16px 6px', fontSize: 18, fontWeight: 800, letterSpacing: '-.01em', color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
+    <h3 style={{ margin: '14px 16px 6px', fontSize: 18, fontWeight: 'var(--w-title)', letterSpacing: '-.01em', color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
       <Icon name={icon} size={20} color={col} strokeWidth={2.2} />
       {title}
     </h3>
@@ -199,7 +199,7 @@ export function Dashboard({
       <style>{dashboardCss}</style>
 
       <div style={{ marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <h2 style={{ margin: '4px 0 0', fontSize: 30, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-.02em', lineHeight: 1.15 }}>
+        <h2 style={{ margin: '4px 0 0', fontSize: 30, fontWeight: 'var(--w-title)', color: 'var(--ink)', letterSpacing: 'var(--ls-title)', lineHeight: 1.15 }}>
           {/* "Buen día, Gian ☀️": tocar el nombre cambia quién usa el aparato */}
           {deviceName && onWho ? (
             <>
@@ -312,7 +312,7 @@ export function Dashboard({
             style={{ '--i': liI }}
           >
             {dot(k.icon, k.col, k.bg, 36)}
-            <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-.02em', marginTop: 10, lineHeight: 1 }}>
+            <div style={{ fontSize: 28, fontWeight: 'var(--w-title)', color: 'var(--ink)', letterSpacing: 'var(--ls-title)', marginTop: 10, lineHeight: 1 }}>
               <CountUp value={k.val} />
             </div>
             <div style={{ fontSize: 13, color: 'var(--mut)', marginTop: 4, fontWeight: 600, lineHeight: 1.25 }}>{k.label}</div>

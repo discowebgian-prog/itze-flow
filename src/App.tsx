@@ -986,7 +986,7 @@ const toggleBlacklist = async (id, currentStatus) => {
             <img src="https://i.postimg.cc/3NDCCVdT/gecko2.png" alt="Itzé" style={{ width: 36, height: 36, objectFit: 'contain' }} />
           </div>
           <div>
-            <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--ink)', letterSpacing: '-.01em' }}>
+            <span style={{ fontWeight: 'var(--w-title)', fontSize: 16, color: 'var(--ink)', letterSpacing: '-.01em' }}>
               Itzé Flow Pro
             </span>
             {isMobile && (
