@@ -396,7 +396,7 @@ export function ResDrawer({
                     borderRadius: 20,
                   }}
                 >
-                  {freq.label}
+                  {ic(freq.icon, 12)}{freq.label}
                 </span>
               )}
               <div

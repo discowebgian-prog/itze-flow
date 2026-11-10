@@ -5,22 +5,23 @@ import { COUNTRIES } from '../../lib/constants';
 import { fmtD } from '../../lib/dates';
 import { guestKey } from '../../lib/guests';
 import { DocLink } from '../ui/DocLink';
+import { Icon, ic } from '../ui/Icon';
+import { Collapse } from '../ui/Motion';
 
 // ── REVISIÓN DE POSIBLES HUÉSPEDES DUPLICADOS ─────────────────────────────────
 // Muestra de a un par por vez. El admin decide: misma persona, son distintas o después.
 
 const card = {
-  background: '#fff',
-  borderRadius: 10,
-  border: '1px solid #E5E7EB',
+  background: 'var(--card)',
+  borderRadius: 'var(--r-item)',
   padding: '12px 14px',
   display: 'flex',
   flexDirection: 'column',
   gap: 6,
   minWidth: 0,
 };
-const rowLabel = { fontSize: 10, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', marginRight: 4 };
-const row = { fontSize: 12, color: '#374151', overflowWrap: 'anywhere' };
+const rowLabel = { fontSize: 10.5, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', marginRight: 4 };
+const row = { fontSize: 13, color: 'var(--ink-2)', overflowWrap: 'anywhere' };
 
 function GuestSide({ g, reservations }) {
   const stays = reservations
@@ -31,10 +32,10 @@ function GuestSide({ g, reservations }) {
   const nat = COUNTRIES.find((c) => c.code === latest.guestNationality);
   return (
     <div style={card}>
-      <div style={{ fontWeight: 800, fontSize: 14, color: '#111' }}>{g.name}</div>
+      <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--ink)' }}>{g.name}</div>
       <div style={row}>
         <span style={rowLabel}>Documento</span>
-        {g.doc ? g.doc : <span style={{ color: '#9CA3AF' }}>Sin documento</span>}
+        {g.doc ? g.doc : <span style={{ color: 'var(--mut)' }}>Sin documento</span>}
       </div>
       {nat && (
         <div style={row}>
@@ -60,19 +61,19 @@ function GuestSide({ g, reservations }) {
         {stays
           .slice(0, 3)
           .map((r) => `${fmtD(r.checkIn)}${r.room ? ' · ' + r.room : ''}`)
-          .join('  |  ')}
+          .join(' · ')}
         {stays.length > 3 ? '  …' : ''}
       </div>
       {withPhoto && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
           {withPhoto.url_ine_frente && (
             <DocLink url={withPhoto.url_ine_frente} style={photoLink}>
-              📷 Doc. frente
+              {ic('camera', 13)}Doc. frente
             </DocLink>
           )}
           {withPhoto.url_ine_dorso && (
             <DocLink url={withPhoto.url_ine_dorso} style={photoLink}>
-              📷 Doc. dorso
+              {ic('camera', 13)}Doc. dorso
             </DocLink>
           )}
         </div>
@@ -82,25 +83,29 @@ function GuestSide({ g, reservations }) {
 }
 
 const photoLink = {
-  fontSize: 11,
+  fontSize: 12.5,
   fontWeight: 700,
-  color: '#1E40AF',
-  background: '#EFF6FF',
-  border: '1px solid #BFDBFE',
-  borderRadius: 6,
-  padding: '4px 8px',
+  color: 'var(--acc)',
+  background: 'var(--acc-soft)',
+  borderRadius: 20,
+  padding: '5px 11px',
   textDecoration: 'none',
 };
 
-const btn = (bg, color, border) => ({
+const btn = (bg, color) => ({
   flex: '1 1 160px',
+  minHeight: 46,
   padding: '11px 14px',
-  borderRadius: 9,
-  border: `1.5px solid ${border}`,
+  borderRadius: 'var(--r-field)',
+  border: 'none',
   background: bg,
   color,
-  fontWeight: 800,
-  fontSize: 13,
+  fontWeight: 700,
+  fontSize: 14.5,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 6,
   fontFamily: 'inherit',
   cursor: 'pointer',
 });
@@ -133,8 +138,8 @@ export function DuplicateReview({ pairs, reservations, decisions, onDecide, onUn
     <div style={{ marginBottom: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#111' }}>Posibles duplicados</h2>
-          <p style={{ margin: '2px 0 0', fontSize: 12, color: '#6B7280' }}>
+          <h2 style={{ margin: 0, fontSize: 26, fontWeight: 'var(--w-title)', color: 'var(--ink)', letterSpacing: 'var(--ls-title)' }}>Posibles duplicados</h2>
+          <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--mut)' }}>
             {current
               ? `Quedan ${pending.length} por revisar${skipped.size ? ` (salteaste ${skipped.size})` : ''}`
               : 'Nada pendiente por ahora'}
@@ -142,15 +147,16 @@ export function DuplicateReview({ pairs, reservations, decisions, onDecide, onUn
         </div>
         <button
           onClick={onClose}
-          style={{ ...btn('#fff', '#374151', '#E5E7EB'), flex: '0 0 auto', padding: '8px 12px', fontSize: 12 }}
+          style={{ ...btn('var(--acc-soft)', 'var(--acc)'), flex: '0 0 auto', minHeight: 36, padding: '7px 14px 7px 10px', fontSize: 14, borderRadius: 20 }}
         >
-          ← Volver
+          <Icon name="chevL" size={17} />
+          Volver
         </button>
       </div>
 
       {current ? (
-        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: 14 }}>
-          <div style={{ marginBottom: 10, fontSize: 12, color: '#475569' }}>
+        <div style={{ background: 'var(--fill)', borderRadius: 'var(--r-card)', padding: 14 }}>
+          <div style={{ marginBottom: 10, fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>
             ¿Son la misma persona?{' '}
             <span
               style={{
@@ -178,16 +184,18 @@ export function DuplicateReview({ pairs, reservations, decisions, onDecide, onUn
             <GuestSide g={current.b} reservations={reservations} />
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button disabled={busy} onClick={() => decide('misma')} style={btn('#ECFDF5', '#065F46', '#10B981')}>
-              ✅ Es la misma persona
+            <button disabled={busy} onClick={() => decide('misma')} style={btn('#16A34A', '#fff')}>
+              <Icon name="check" size={18} />
+              Es la misma persona
             </button>
-            <button disabled={busy} onClick={() => decide('distinta')} style={btn('#FEF2F2', '#991B1B', '#FECACA')}>
-              ❌ Son distintas
+            <button disabled={busy} onClick={() => decide('distinta')} style={btn('var(--card)', 'var(--red)')}>
+              <Icon name="close" size={18} />
+              Son distintas
             </button>
             <button
               disabled={busy}
               onClick={() => setSkipped((s) => new Set(s).add(current.id))}
-              style={{ ...btn('transparent', '#6B7280', 'transparent'), flex: '0 0 auto' }}
+              style={{ ...btn('transparent', 'var(--mut)'), flex: '0 0 auto', fontWeight: 600 }}
             >
               Después
             </button>
@@ -197,10 +205,9 @@ export function DuplicateReview({ pairs, reservations, decisions, onDecide, onUn
         <div
           style={{
             background: '#ECFDF5',
-            border: '1px solid #A7F3D0',
-            borderRadius: 12,
+            borderRadius: 'var(--r-item)',
             padding: 16,
-            fontSize: 13,
+            fontSize: 14,
             color: '#065F46',
             fontWeight: 600,
           }}
@@ -220,37 +227,35 @@ export function DuplicateReview({ pairs, reservations, decisions, onDecide, onUn
               border: 'none',
               padding: 0,
               fontFamily: 'inherit',
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: 700,
-              color: '#2563EB',
+              color: 'var(--acc)',
               cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
             }}
           >
-            {showHistory ? '▾' : '▸'} Decisiones tomadas ({decisions.length})
+            <span style={{ display: 'inline-flex', transform: showHistory ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>
+              <Icon name="chev" size={16} strokeWidth={2.5} />
+            </span>
+            Decisiones tomadas ({decisions.length})
           </button>
-          {showHistory && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+          <Collapse open={showHistory}>
+            <div className="ui-group" style={{ marginTop: 8 }}>
               {[...decisions]
                 .sort((a, b) => String(b.creado_en).localeCompare(String(a.creado_en)))
                 .map((d) => (
                   <div
                     key={d.id}
-                    style={{
-                      background: '#fff',
-                      border: '1px solid #E5E7EB',
-                      borderRadius: 8,
-                      padding: '8px 12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
-                      fontSize: 12,
-                    }}
+                    className="ui-row"
+                    style={{ cursor: 'default', fontSize: 13.5 }}
                   >
-                    <div style={{ flex: 1, minWidth: 0, color: '#374151', overflowWrap: 'anywhere' }}>
+                    <div style={{ flex: 1, minWidth: 0, color: 'var(--ink)', overflowWrap: 'anywhere' }}>
                       {nameOf(d.clave_a)} ↔ {nameOf(d.clave_b)}
-                      <div style={{ fontSize: 11, color: d.decision === 'misma' ? '#059669' : '#B91C1C', fontWeight: 700 }}>
+                      <div style={{ fontSize: 12, color: d.decision === 'misma' ? '#15803D' : 'var(--red)', fontWeight: 700 }}>
                         {d.decision === 'misma' ? 'Misma persona' : 'Son distintas'}
-                        <span style={{ color: '#9CA3AF', fontWeight: 500 }}>
+                        <span style={{ color: 'var(--mut)', fontWeight: 500 }}>
                           {d.decidido_por ? ` · ${d.decidido_por}` : ''}
                           {d.creado_en ? ` · ${fmtD(String(d.creado_en).slice(0, 10))}` : ''}
                         </span>
@@ -260,12 +265,12 @@ export function DuplicateReview({ pairs, reservations, decisions, onDecide, onUn
                       onClick={() => onUndo(d.id)}
                       style={{
                         flexShrink: 0,
-                        padding: '5px 10px',
-                        borderRadius: 6,
-                        border: '1px solid #E5E7EB',
-                        background: '#F9FAFB',
-                        color: '#374151',
-                        fontSize: 11,
+                        padding: '6px 12px',
+                        borderRadius: 20,
+                        border: 'none',
+                        background: 'var(--fill)',
+                        color: 'var(--acc)',
+                        fontSize: 13,
                         fontWeight: 700,
                         fontFamily: 'inherit',
                         cursor: 'pointer',
@@ -276,7 +281,7 @@ export function DuplicateReview({ pairs, reservations, decisions, onDecide, onUn
                   </div>
                 ))}
             </div>
-          )}
+          </Collapse>
         </div>
       )}
     </div>
