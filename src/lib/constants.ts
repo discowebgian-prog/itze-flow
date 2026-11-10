@@ -7,7 +7,6 @@ export const PROPS = [
     id: 'hostel',
     name: 'Itzé Hostel Boutique',
     type: 'hostel',
-    ownerId: 'admin',
     color: 'var(--c-E06C4F)',
     emoji: '🏨',
     rooms: 6,

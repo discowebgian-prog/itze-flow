@@ -28,6 +28,7 @@ import { notify, notifyError, humanError, SAVED, checkInText, checkOutText, dele
 import { WhoAmI } from './components/ui/WhoAmI';
 import { getDeviceName, setDeviceName } from './lib/device';
 import { syncPush, sendPush } from './lib/push';
+import { ROLES, esDueno } from './lib/roles';
 
 
 // ── APP ───────────────────────────────────────────────────────────────────────
@@ -361,7 +362,7 @@ export default function AppMejorada() {
   const tabDirRef = useRef(0);
   if (!user) return <Login onLogin={setUser} />;
 
-  const isAdmin = user.role === 'admin';
+  const isAdmin = esDueno(user);
   // Nombre para anotar quién cargó/eliminó/decidió algo
   const who = deviceName || user.name || 'Usuario desconocido';
   // Numerito rojo de "posibles duplicados" en el menú
@@ -410,10 +411,7 @@ export default function AppMejorada() {
   };
 
   // 2. Definición de permisos y datos
-  const visProps =
-    user.role === 'admin'
-      ? PROPS
-      : PROPS.filter((p) => user.ownedProps.includes(p.id));
+  const visProps = PROPS;
   const visRes = res.filter(
     (r) => visProps.some((p) => p.id === r.propertyId) && !r.deleted
   );
@@ -989,34 +987,18 @@ const toggleBlacklist = async (id, currentStatus) => {
           </div>
           {!isMobile && (
             <>
-              {user.role === 'owner' && (
-                <span
-                  style={{
-                    fontSize: 11,
-                    background: 'var(--c-EDE9FE)',
-                    color: 'var(--c-7C3AED)',
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: 6,
-                  }}
-                >
-                  Propietario
-                </span>
-              )}
-              {user.role === 'admin' && (
-                <span
-                  style={{
-                    fontSize: 11,
-                    background: 'var(--c-DBEAFE)',
-                    color: 'var(--c-1E40AF)',
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: 6,
-                  }}
-                >
-                  Admin
-                </span>
-              )}
+              <span
+                style={{
+                  fontSize: 11,
+                  background: 'var(--c-DBEAFE)',
+                  color: 'var(--c-1E40AF)',
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: 6,
+                }}
+              >
+                {ROLES[user.role] || ''}
+              </span>
             </>
           )}
         </div>

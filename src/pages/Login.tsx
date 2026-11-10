@@ -5,6 +5,7 @@ import { Icon } from '../components/ui/Icon';
 import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { SPRING_POP, SPRING_SHEET } from '../components/ui/Motion';
+import { leerPerfil } from '../lib/roles';
 
 // Entrada por partes: logo, título y tarjeta, uno detrás del otro
 const enter = (delay) => ({
@@ -43,11 +44,28 @@ export function Login({ onLogin }) {
       setErr(net ? 'No hay conexión. Revisá el internet y probá de nuevo.' : 'El correo o la contraseña no coinciden. Probá de nuevo.');
       shake();
     } else if (data.user) {
-      // Usa la primera parte del correo como nombre temporal
-      const nombreUsuario = data.user.email.split('@')[0];
+      // El rol sale de la tabla perfiles (supabase/perfiles.sql); sin perfil no se entra
+      setBusy(true);
+      const { perfil, error: pErr } = await leerPerfil(supabase, data.user.id);
+      setBusy(false);
+      if (!perfil) {
+        await supabase.auth.signOut({ scope: 'local' });
+        setErr(
+          pErr === 'red'
+            ? 'No hay conexión. Revisá el internet y probá de nuevo.'
+            : pErr === 'sin_tabla'
+              ? 'Falta preparar los perfiles en la base (supabase/perfiles.sql). Avisale a Gian.'
+              : 'Este usuario todavía no tiene perfil en Flow. Avisale a Gian.'
+        );
+        shake();
+        return;
+      }
       setOk(true);
       // Un instante para ver el ✓ y pasar a la app (que entra con un fundido)
-      setTimeout(() => onLogin({ id: data.user.id, name: nombreUsuario, role: 'admin' }), 380);
+      setTimeout(
+        () => onLogin({ id: data.user.id, name: perfil.nombre, role: perfil.rol, permisos: perfil.permisos }),
+        380
+      );
     }
   };
 
