@@ -5,6 +5,7 @@ import { ROOMS, srcShort, RS, PS, BLOCK_COLORS, ALERTS, getAlerts } from '../lib
 import { TODAY, fmt, fmtD, addDays, diffDays, parseD, currency, MONTHS, DAYS } from '../lib/dates';
 import { findConflicts, lateHour } from '../lib/reservations';
 import { groupOf } from '../lib/groups';
+import { Icon, ic } from '../components/ui/Icon';
 import { TimelineMobile } from './TimelineMobile';
 import timelineCss from '../styles/timeline.css?raw';
 import { QuoteButton } from '../components/Quoter';
@@ -30,6 +31,46 @@ function roundedShape(pts) {
 }
 
 // ── TIMELINE DESKTOP ──────────────────────────────────────────────────────────
+// "vie 13 nov"
+const dayShort = (d) => parseD(d).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '').replace(',', '').replace(' de ', ' ');
+
+// ── PIEZAS DEL ENCABEZADO (estilo Limpieza) ──
+const TITLE = { margin: 0, fontSize: 30, fontWeight: 'var(--w-title)', color: 'var(--ink)', letterSpacing: 'var(--ls-title)' };
+const ADD_BTN = {
+  display: 'inline-flex', alignItems: 'center', gap: 5, padding: '8px 14px', background: 'var(--acc)', border: 'none',
+  borderRadius: 20, color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit',
+};
+const NAV_BTN = {
+  display: 'inline-flex', alignItems: 'center', gap: 2, padding: '6px 12px', border: 'none', borderRadius: 8,
+  background: 'transparent', cursor: 'pointer', fontSize: 14, fontWeight: 600, fontFamily: 'inherit', color: 'var(--ink)',
+};
+// Lista / Timeline como control segmentado de iPhone
+function ViewSwitch({ view, setView }) {
+  const opt = (v, icon, label) => {
+    const on = view === v;
+    return (
+      <button
+        onClick={() => setView(v)}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, border: 'none',
+          fontFamily: 'inherit', fontWeight: on ? 700 : 600, fontSize: 13.5, cursor: 'pointer',
+          background: on ? 'var(--card)' : 'transparent', color: on ? 'var(--ink)' : 'var(--mut)',
+          boxShadow: on ? '0 1px 3px rgba(0,0,0,.12)' : 'none', transition: 'background .15s',
+        }}
+      >
+        <Icon name={icon} size={15} />
+        {label}
+      </button>
+    );
+  };
+  return (
+    <div style={{ display: 'flex', background: 'var(--fill)', borderRadius: 10, padding: 2, gap: 2 }}>
+      {opt('lista', 'list', 'Lista')}
+      {opt('timeline', 'calendar', 'Timeline')}
+    </div>
+  );
+}
+
 export function Timeline({
   reservations,
   properties,
@@ -70,71 +111,13 @@ export function Timeline({
             flexWrap: 'wrap',
           }}
         >
-          <h2
-            style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#111' }}
-          >
-            Calendario
-          </h2>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <div
-              style={{
-                display: 'flex',
-                background: '#F3F4F6',
-                borderRadius: 9,
-                padding: 3,
-                gap: 2,
-              }}
-            >
-              <button
-                onClick={() => setCalView('lista')}
-                style={{
-                  padding: '5px 12px',
-                  borderRadius: 7,
-                  border: 'none',
-                  fontFamily: 'inherit',
-                  fontWeight: 700,
-                  fontSize: 12,
-                  cursor: 'pointer',
-                  background: '#fff',
-                  color: '#1E40AF',
-                  boxShadow: '0 1px 3px rgba(0,0,0,.1)',
-                }}
-              >
-                📋 Lista
-              </button>
-              <button
-                onClick={() => setCalView('timeline')}
-                style={{
-                  padding: '5px 12px',
-                  borderRadius: 7,
-                  border: 'none',
-                  fontFamily: 'inherit',
-                  fontWeight: 700,
-                  fontSize: 12,
-                  cursor: 'pointer',
-                  background: 'transparent',
-                  color: '#9CA3AF',
-                }}
-              >
-                📅 Timeline
-              </button>
-            </div>
+          <h2 style={TITLE}>Calendario</h2>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <ViewSwitch view="lista" setView={setCalView} />
             {onQuote && <QuoteButton onClick={onQuote} style={{ marginRight: 6, padding: '5px 12px' }} />}
-            <button
-              onClick={() => onAddRes()}
-              style={{
-                padding: '6px 14px',
-                background: '#3B82F6',
-                border: 'none',
-                borderRadius: 8,
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: 13,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-              }}
-            >
-              + Reserva
+            <button onClick={() => onAddRes()} style={ADD_BTN}>
+              <Icon name="plus" size={16} strokeWidth={2.5} />
+              Reserva
             </button>
           </div>
         </div>
@@ -155,10 +138,10 @@ export function Timeline({
   const getCellBg = (d) => {
     const dow = new Date(d).getDay();
     const isPast = parseD(fmt(d)) < parseD(fmt(TODAY));
-    if (fmt(d) === fmt(TODAY)) return '#EFF6FF'; 
-    if (isPast) return '#F3F4F6'; 
+    if (fmt(d) === fmt(TODAY)) return 'var(--acc-soft)'; 
+    if (isPast) return 'var(--bg)'; 
     if (dow === 0 || dow === 6) return '#F5F3FF';
-    return '#fff';
+    return 'var(--card)';
   };
   const rows = [];
   properties.forEach((p) => {
@@ -327,54 +310,8 @@ export function Timeline({
       >
         {/* GRUPO IZQUIERDO: Título y Vistas */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: '#111', letterSpacing: -0.5 }}>
-            Calendario
-          </h2>
-          <div
-            style={{
-              display: 'flex',
-              background: '#F1F5F9',
-              borderRadius: 10,
-              padding: 4,
-              gap: 2,
-            }}
-          >
-            <button
-              onClick={() => setCalView('lista')}
-              style={{
-                padding: '6px 12px',
-                borderRadius: 8,
-                border: 'none',
-                fontFamily: 'inherit',
-                fontWeight: 700,
-                fontSize: 12,
-                cursor: 'pointer',
-                background: 'transparent',
-                color: '#64748B',
-                transition: 'all 0.2s'
-              }}
-            >
-              📋 Lista
-            </button>
-            <button
-              onClick={() => setCalView('timeline')}
-              style={{
-                padding: '6px 12px',
-                borderRadius: 8,
-                border: 'none',
-                fontFamily: 'inherit',
-                fontWeight: 700,
-                fontSize: 12,
-                cursor: 'pointer',
-                background: '#fff',
-                color: '#1E40AF',
-                boxShadow: '0 2px 4px rgba(0,0,0,.04)',
-                transition: 'all 0.2s'
-              }}
-            >
-              📅 Timeline
-            </button>
-          </div>
+          <h2 style={TITLE}>Calendario</h2>
+          <ViewSwitch view="timeline" setView={setCalView} />
         </div>
 
         {/* GRUPO DERECHO: Navegación de Fechas y Acción Principal */}
@@ -390,100 +327,52 @@ export function Timeline({
           <div
             style={{
               display: 'flex',
-              background: '#fff',
-              border: '1px solid #E2E8F0',
+              background: 'var(--fill)',
               borderRadius: 10,
-              overflow: 'hidden',
-              boxShadow: '0 1px 2px rgba(0,0,0,.03)',
+              padding: 2,
+              gap: 2,
             }}
           >
             <button
               onClick={() => setOffset((s) => s - 7)}
-              style={{
-                padding: '8px 14px',
-                border: 'none',
-                borderRight: '1px solid #E2E8F0',
-                background: 'transparent',
-                cursor: 'pointer',
-                fontSize: 13,
-                fontWeight: 600,
-                fontFamily: 'inherit',
-                color: '#475569',
-              }}
-              onMouseOver={(e) => (e.currentTarget.style.background = '#F8FAFC')}
-              onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+              aria-label="7 días antes"
+              style={NAV_BTN}
             >
-              ← 7d
+              <Icon name="chevL" size={16} strokeWidth={2.5} />7d
             </button>
             <button
               onClick={() => {
                 setOffset(-2);
                 document.getElementById('calendario-scroll')?.scrollTo({ left: 0, behavior: 'smooth' });
               }}
-              style={{
-                padding: '8px 16px',
-                border: 'none',
-                borderRight: '1px solid #E2E8F0',
-                background: '#F0F9FF',
-                color: '#2563EB',
-                cursor: 'pointer',
-                fontSize: 13,
-                fontWeight: 800,
-                fontFamily: 'inherit',
-              }}
+              style={{ ...NAV_BTN, background: 'var(--card)', color: 'var(--acc)', fontWeight: 700, boxShadow: '0 1px 3px rgba(0,0,0,.12)' }}
             >
               Hoy
             </button>
             <button
               onClick={() => setOffset((s) => s + 7)}
-              style={{
-                padding: '8px 14px',
-                border: 'none',
-                background: 'transparent',
-                cursor: 'pointer',
-                fontSize: 13,
-                fontWeight: 600,
-                fontFamily: 'inherit',
-                color: '#475569',
-              }}
-              onMouseOver={(e) => (e.currentTarget.style.background = '#F8FAFC')}
-              onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+              aria-label="7 días después"
+              style={NAV_BTN}
             >
-              7d →
+              7d<Icon name="chev" size={16} strokeWidth={2.5} />
             </button>
           </div>
 
           {/* Botón de Acción Principal */}
           {onQuote && <QuoteButton onClick={onQuote} style={{ marginRight: 6, borderRadius: 10 }} />}
-          <button
-            onClick={() => onAddRes()}
-            style={{
-              padding: '8px 16px',
-              background: '#3B82F6',
-              border: 'none',
-              borderRadius: 10,
-              color: '#fff',
-              fontWeight: 700,
-              fontSize: 13,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              boxShadow: '0 2px 6px rgba(59,130,246,.25)',
-              transition: 'transform 0.1s',
-            }}
-            onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.96)')}
-            onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-          >
-            + Reserva
-          </button>
+          <button onClick={() => onAddRes()} style={ADD_BTN}>
+              <Icon name="plus" size={16} strokeWidth={2.5} />
+              Reserva
+            </button>
         </div>
       </div>
       <div
         id="calendario-scroll"  // <--- ¡AGREGAMOS ESTO!
         style={{
           overflowX: 'auto',
-          borderRadius: 12,
-          border: '1px solid #E5E7EB',
-          background: '#fff',
+          borderRadius: 'var(--r-card)',
+          boxShadow: 'var(--shadow)',
+          background: 'var(--card)',
           cursor: drag ? 'grabbing' : hdrDrag ? 'grabbing' : 'grab',
         }}
       >
@@ -503,11 +392,11 @@ export function Timeline({
           <div
             style={{
               display: 'flex',
-              borderBottom: '1px solid #E5E7EB',
+              borderBottom: '1px solid var(--line)',
               position: 'sticky',
               top: 0,
               zIndex: 20,
-              background: '#F9FAFB',
+              background: 'var(--bg)',
               cursor: hdrDrag ? 'grabbing' : 'grab',
               touchAction: 'none',
             }}
@@ -519,12 +408,12 @@ export function Timeline({
                 padding: '8px 14px',
                 fontSize: 13,
                 fontWeight: 800,
-                color: '#374151',
-                borderRight: '1px solid #E5E7EB',
+                color: 'var(--ink-2)',
+                borderRight: '1px solid var(--line)',
                 cursor: 'default',
                 position: 'sticky',
                 left: 0,
-                background: '#F9FAFB',
+                background: 'var(--bg)',
                 zIndex: 30,
               }}
               onMouseDown={(e) => e.stopPropagation()}
@@ -544,7 +433,7 @@ export function Timeline({
                     flexShrink: 0,
                     padding: '5px 2px',
                     textAlign: 'center',
-                    borderRight: '1px solid #F0F0F0',
+                    borderRight: '1px solid var(--line)',
                     background: it ? '#DBEAFE' : getCellBg(d),
                     pointerEvents: 'none',
                   }}
@@ -552,7 +441,7 @@ export function Timeline({
                   <div
                     style={{
                       fontSize: 9,
-                      color: it ? '#1E40AF' : isPast ? '#D1D5DB' : '#9CA3AF',
+                      color: it ? 'var(--acc)' : isPast ? 'var(--handle)' : 'var(--mut)',
                       fontWeight: 700,
                       textTransform: 'uppercase',
                     }}
@@ -564,12 +453,12 @@ export function Timeline({
                       fontSize: 13,
                       fontWeight: it ? 800 : 500,
                       color: it
-                    ? '#1E40AF'
+                    ? 'var(--acc)'
                     : isPast
-                    ? '#9CA3AF'
+                    ? 'var(--mut)'
                     : dow === 0 || dow === 6
                     ? '#8B5CF6' 
-                    : '#374151',
+                    : 'var(--ink-2)',
                     }}
                   >
                     {d.getDate()}
@@ -577,7 +466,7 @@ export function Timeline({
                   <div
                     style={{
                       fontSize: 9,
-                      color: it ? '#1E40AF' : isPast ? '#D1D5DB' : '#9CA3AF',
+                      color: it ? 'var(--acc)' : isPast ? 'var(--handle)' : 'var(--mut)',
                       fontWeight: 700,
                       textTransform: 'uppercase',
                     }}
@@ -605,8 +494,8 @@ export function Timeline({
                 style={{
                   display: 'flex',
                   borderBottom: ilast
-                    ? '2px solid #D1D5DB'
-                    : '1px solid #F0F0F0',
+                    ? '2px solid var(--handle)'
+                    : '1px solid var(--line)',
                   position: 'relative',
                   height: ROW,
                 }}
@@ -618,7 +507,7 @@ export function Timeline({
                     display: 'flex',
                     alignItems: 'center',
                     padding: '0 12px',
-                    borderRight: '1px solid #E5E7EB',
+                    borderRight: '1px solid var(--line)',
                     background: row.type === 'room' ? '#FAFAFA' : '#F3F4F6',
                     zIndex: 25,
                     position: 'sticky',
@@ -639,7 +528,7 @@ export function Timeline({
                           style={{
                             fontSize: 13,
                             fontWeight: 800,
-                            color: '#111',
+                            color: 'var(--ink)',
                           }}
                         >
                           {row.room.name}
@@ -661,7 +550,7 @@ export function Timeline({
                         style={{
                           fontSize: 12,
                           fontWeight: 700,
-                          color: '#111',
+                          color: 'var(--ink)',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -689,7 +578,7 @@ export function Timeline({
                       width: COL,
                       flexShrink: 0,
                       height: '100%',
-                      borderRight: '1px solid #F0F0F0',
+                      borderRight: '1px solid var(--line)',
                       background:
                         fmt(d) === fmt(TODAY) ? '#DBEAFE' : getCellBg(d),
                       cursor: hdrDrag ? 'grabbing' : 'cell',
@@ -723,7 +612,7 @@ export function Timeline({
                       width: ghost.width * COL - 4,
                       borderRadius: 6,
                       background: 'rgba(59,130,246,.2)',
-                      border: '2px dashed #3B82F6',
+                      border: '2px dashed var(--acc)',
                       zIndex: 6,
                       pointerEvents: 'none',
                     }}
@@ -844,7 +733,7 @@ export function Timeline({
                               y={0}
                               width={r.cutLeft ? 6 : 8}
                               height={H}
-                              fill="#1E40AF"
+                              fill="var(--acc)"
                               clipPath={`url(#${cid})`}
                             />
                           )}
@@ -860,8 +749,7 @@ export function Timeline({
                             }}
                             clipPath={`url(#${cid})`}
                           >
-                            {r.source === 'Booking' ? '🔵 ' : ''}
-                            {r.grupoId ? '🔗 ' : ''}
+                                                        {r.grupoId ? ic('link', 11, { marginRight: 3 }) : ''}
                             {r.guestName}
                             {r.companions?.length > 0
                               ? ` +${r.companions.length}`
@@ -883,7 +771,7 @@ export function Timeline({
                           >
                             {fmtD(r.checkIn).slice(0, 5)} al{' '}
                             {fmtD(r.checkOut).slice(0, 5)}
-                            {lateHour(r) ? ` · 🕐 Late ${lateHour(r)}` : ''}
+                            {lateHour(r) ? <> · {ic('clock', 10, { marginRight: 2 })}Late {lateHour(r)}</> : ''}
                           </text>
                         </svg>
                       ) : (
@@ -914,8 +802,7 @@ export function Timeline({
                               lineHeight: '1.2',
                             }}
                           >
-                            {r.source === 'Booking' ? '🔵 ' : ''}
-                            {r.grupoId ? '🔗 ' : ''}
+                                                        {r.grupoId ? ic('link', 11, { marginRight: 3 }) : ''}
                             {r.guestName} ({srcShort(r.source)})
                           </span>
                           <span
@@ -933,7 +820,7 @@ export function Timeline({
                           >
                             {fmtD(r.checkIn).slice(0, 5)} al{' '}
                             {fmtD(r.checkOut).slice(0, 5)}
-                            {lateHour(r) ? ` · 🕐 Late ${lateHour(r)}` : ''}
+                            {lateHour(r) ? <> · {ic('clock', 10, { marginRight: 2 })}Late {lateHour(r)}</> : ''}
                           </span>
                         </div>
                       )}
@@ -977,7 +864,7 @@ export function Timeline({
           style={{
             fontSize: 11,
             fontWeight: 700,
-            color: '#9CA3AF',
+            color: 'var(--mut)',
             textTransform: 'uppercase',
             letterSpacing: 0.4,
           }}
@@ -992,7 +879,7 @@ export function Timeline({
               alignItems: 'center',
               gap: 5,
               fontSize: 11,
-              color: '#374151',
+              color: 'var(--ink-2)',
             }}
           >
             <div
@@ -1010,7 +897,7 @@ export function Timeline({
           style={{
             fontSize: 11,
             fontWeight: 700,
-            color: '#9CA3AF',
+            color: 'var(--mut)',
             textTransform: 'uppercase',
             letterSpacing: 0.4,
           }}
@@ -1025,7 +912,7 @@ export function Timeline({
               alignItems: 'center',
               gap: 5,
               fontSize: 11,
-              color: '#374151',
+              color: 'var(--ink-2)',
             }}
           >
             <div
@@ -1079,13 +966,13 @@ export function Timeline({
             const g = groupOf(reservations, tooltip.r);
             return g.length > 1 ? (
               <div style={{ fontSize: 11, fontWeight: 800, color: '#5EEAD4', marginBottom: 8 }}>
-                🔗 Grupo de {g.length}: {g.map((m) => m.room).filter(Boolean).join(', ')}
+                {ic('link', 12)}Grupo de {g.length}: {g.map((m) => m.room).filter(Boolean).join(', ')}
               </div>
             ) : null;
           })()}
           {lateHour(tooltip.r) && (
             <div style={{ fontSize: 11, fontWeight: 800, color: '#A5B4FC', marginBottom: 8 }}>
-              🕐 Late check-out {lateHour(tooltip.r)}
+              {ic('clock', 12)}Late check-out {lateHour(tooltip.r)}
             </div>
           )}
           {getAlerts(tooltip.r).map((a) => (
@@ -1141,19 +1028,19 @@ export function Timeline({
         >
           <PopCard
             style={{
-              background: '#fff',
-              borderRadius: 16,
+              background: 'var(--card)',
+              borderRadius: 22,
               width: '100%',
               maxWidth: 400,
               boxShadow: '0 24px 64px rgba(0,0,0,.25)',
               overflow: 'hidden',
             }}
           >
-            <div style={{ background: '#1E293B', padding: '18px 22px' }}>
+            <div style={{ padding: '22px 22px 4px', textAlign: 'center' }}>
               <div
                 style={{
-                  fontSize: 11,
-                  color: 'rgba(255,255,255,.5)',
+                  fontSize: 11.5,
+                  color: 'var(--mut)',
                   fontWeight: 700,
                   textTransform: 'uppercase',
                   marginBottom: 4,
@@ -1161,7 +1048,7 @@ export function Timeline({
               >
                 Confirmar cambio
               </div>
-              <div style={{ fontSize: 17, fontWeight: 800, color: '#fff' }}>
+              <div style={{ fontSize: 19, fontWeight: 'var(--w-title)', color: 'var(--ink)' }}>
                 {dConf.guestName}
               </div>
             </div>
@@ -1169,8 +1056,8 @@ export function Timeline({
               {dConf.newCheckIn !== dConf.orig.checkIn && (
                 <div
                   style={{
-                    background: '#F8FAFC',
-                    borderRadius: 10,
+                    background: 'var(--bg)',
+                    borderRadius: 'var(--r-item)',
                     padding: '12px 14px',
                     marginBottom: 14,
                   }}
@@ -1178,7 +1065,7 @@ export function Timeline({
                   <div
                     style={{
                       fontSize: 11,
-                      color: '#9CA3AF',
+                      color: 'var(--mut)',
                       fontWeight: 700,
                       textTransform: 'uppercase',
                       marginBottom: 6,
@@ -1186,9 +1073,9 @@ export function Timeline({
                   >
                     Cambio de fechas
                   </div>
-                  <div style={{ fontSize: 13 }}>
-                    {fmtD(dConf.orig.checkIn)} →{' '}
-                    <b style={{ color: '#1E40AF' }}>{fmtD(newCI)}</b>
+                  <div style={{ fontSize: 14.5 }}>
+                    Entrada {dayShort(dConf.orig.checkIn)} →{' '}
+                    <b style={{ color: 'var(--acc)' }}>{dayShort(newCI)}</b>
                   </div>
                 </div>
               )}
@@ -1196,8 +1083,8 @@ export function Timeline({
                 dConf.newRoom !== dConf.orig.room) && (
                 <div
                   style={{
-                    background: '#F8FAFC',
-                    borderRadius: 10,
+                    background: 'var(--bg)',
+                    borderRadius: 'var(--r-item)',
                     padding: '12px 14px',
                     marginBottom: 14,
                   }}
@@ -1205,7 +1092,7 @@ export function Timeline({
                   <div
                     style={{
                       fontSize: 11,
-                      color: '#9CA3AF',
+                      color: 'var(--mut)',
                       fontWeight: 700,
                       textTransform: 'uppercase',
                       marginBottom: 6,
@@ -1214,9 +1101,9 @@ export function Timeline({
                     Cambio de habitación
                   </div>
                   <div style={{ fontSize: 13 }}>
-                    {dConf.orig.propId} {dConf.orig.room} →{' '}
-                    <b style={{ color: '#1E40AF' }}>
-                      {dConf.newPropId} {dConf.newRoom}
+                    {dConf.orig.room || dConf.orig.propId} →{' '}
+                    <b style={{ color: 'var(--acc)' }}>
+                      {dConf.newRoom || dConf.newPropId}
                     </b>
                   </div>
                 </div>
@@ -1225,8 +1112,7 @@ export function Timeline({
                 <div
                   style={{
                     background: '#FEF2F2',
-                    border: '1px solid #FECACA',
-                    borderRadius: 8,
+                    borderRadius: 12,
                     padding: '10px 12px',
                     marginBottom: 12,
                   }}
@@ -1235,15 +1121,15 @@ export function Timeline({
                     style={{
                       fontWeight: 700,
                       fontSize: 12,
-                      color: '#DC2626',
+                      color: 'var(--red)',
                       marginBottom: 4,
                     }}
                   >
-                    ⚠️ Conflicto en el destino
+                    {ic('warning', 14)}Conflicto en el destino
                   </div>
                   {dConf.dragConflicts.map((r) => (
                     <div key={r.id} style={{ fontSize: 11, color: '#7F1D1D' }}>
-                      {r.guestName} · {fmtD(r.checkIn)} → {fmtD(r.checkOut)}
+                      {r.guestName} · {dayShort(r.checkIn)} → {dayShort(r.checkOut)}
                     </div>
                   ))}
                 </div>
@@ -1253,14 +1139,14 @@ export function Timeline({
                   onClick={() => setDConf(null)}
                   style={{
                     flex: 1,
-                    padding: '11px',
-                    background: '#F3F4F6',
+                    padding: '12px',
+                    background: 'var(--fill)',
                     border: 'none',
-                    borderRadius: 10,
+                    borderRadius: 'var(--r-field)',
                     fontFamily: 'inherit',
-                    fontWeight: 700,
+                    fontWeight: 600,
                     cursor: 'pointer',
-                    color: '#555',
+                    color: 'var(--ink)',
                     fontSize: 14,
                   }}
                 >
@@ -1284,7 +1170,7 @@ export function Timeline({
                       fontSize: 14,
                     }}
                   >
-                    ✓ Confirmar
+                    {ic('tick', 15)}Confirmar
                   </button>
                 )}
               </div>
