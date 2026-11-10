@@ -10,7 +10,13 @@ import { ROOMS } from '../lib/constants';
 import { AnimatePresence } from 'motion/react';
 import { Backdrop, PopCard, CountUp, Collapse } from '../components/ui/Motion';
 import { InfoTip } from '../components/ui/InfoTip';
+import { Icon, ic } from '../components/ui/Icon';
 import { notify, notifyError, financeReading } from '../lib/voice';
+
+// Títulos de sección (estilo Limpieza: grandes, con ícono)
+const H3 = { margin: '0 0 12px', fontSize: 20, fontWeight: 'var(--w-title)', color: 'var(--ink)', letterSpacing: '-.01em', display: 'flex', alignItems: 'center', gap: 8 };
+// "vie 6 nov"
+const shortDay = (d) => (d ? parseD(d).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '').replace(',', '').replace(' de ', ' ') : '');
 
 const PROJECTION_START_DAY = 8; // Antes hay muy pocos días para estimar
 
@@ -20,19 +26,19 @@ const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'jul
 // Título de las flechas de comparación, al pie de cada recuadro
 function CmpTitle({ label }) {
   return (
-    <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px dashed #E2E8F0', fontSize: 9, color: '#64748B', fontWeight: 700, textAlign: 'center' }}>
-      ▲▼ Comparado con el mes anterior <span style={{ fontWeight: 600, color: '#9CA3AF' }}>({label})</span>
+    <div style={{ marginTop: 8, paddingTop: 7, borderTop: '1px solid var(--line)', fontSize: 10.5, color: 'var(--mut)', fontWeight: 600, textAlign: 'center' }}>
+      ▲▼ Comparado con el mes anterior <span style={{ fontWeight: 600, color: 'var(--mut)' }}>({label})</span>
     </div>
   );
 }
 
 // Variación contra el mes anterior: ▲ 12% (verde), ▼ 8% (rojo), = 0% (gris), — sin dato previo
 function Delta({ cur, prev, style = {} }) {
-  if (!prev) return <span title="El mes anterior no tuvo ingresos acá" style={{ fontSize: 9, fontWeight: 700, color: '#9CA3AF', ...style }}>—</span>;
+  if (!prev) return <span title="El mes anterior no tuvo ingresos acá" style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--mut)', ...style }}>—</span>;
   const p = Math.round(((cur - prev) / prev) * 100);
-  const color = p > 0 ? '#059669' : p < 0 ? '#DC2626' : '#6B7280';
+  const color = p > 0 ? '#059669' : p < 0 ? 'var(--red)' : 'var(--mut)';
   return (
-    <span title={`Mes anterior: ${currency(prev)}`} style={{ fontSize: 9, fontWeight: 800, color, whiteSpace: 'nowrap', cursor: 'help', ...style }}>
+    <span title={`Mes anterior: ${currency(prev)}`} style={{ fontSize: 10.5, fontWeight: 800, color, whiteSpace: 'nowrap', cursor: 'help', ...style }}>
       {p > 0 ? '▲' : p < 0 ? '▼' : '='} {Math.abs(p)}%
     </span>
   );
@@ -80,7 +86,7 @@ export function FinancePage({ reservations, allRes, properties, user, restoreRes
     }]).select();
     setGuardandoGasto(false);
     
-    if (error || !data) {
+    if (error || !data?.length) {
       notifyError(error, 'guardar el gasto');
       return;
     }
@@ -414,7 +420,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
       ? { c: '#15803D', bg: '#DCFCE7', bar: '#22C55E', txt: 'Bien encaminado' }
       : p >= 40
       ? { c: '#B45309', bg: '#FEF3C7', bar: '#F59E0B', txt: 'Se puede mejorar' }
-      : { c: '#B91C1C', bg: '#FEE2E2', bar: '#EF4444', txt: 'Muy por debajo' };
+      : { c: '#B91C1C', bg: '#FEE2E2', bar: 'var(--red)', txt: 'Muy por debajo' };
 
   useEffect(() => {
     setTimeout(() => {
@@ -425,55 +431,56 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#111' }}>Finanzas</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+        <h2 style={{ margin: 0, fontSize: 30, fontWeight: 'var(--w-title)', color: 'var(--ink)', letterSpacing: 'var(--ls-title)' }}>Finanzas</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {user?.role === 'admin' && deleted.length > 0 && (
             <button
               onClick={() => setShowTrash((x) => !x)}
               style={{
-                display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
-                background: showTrash ? '#FEF2F2' : '#F3F4F6',
-                border: `1.5px solid ${showTrash ? '#FECACA' : '#E5E7EB'}`,
-                borderRadius: 8, fontFamily: 'inherit', fontWeight: 700, fontSize: 12,
-                cursor: 'pointer', color: showTrash ? '#DC2626' : '#6B7280',
+                display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px',
+                background: showTrash ? '#FEF2F2' : 'var(--fill)', border: 'none',
+                borderRadius: 20, fontFamily: 'inherit', fontWeight: 600, fontSize: 14,
+                cursor: 'pointer', color: showTrash ? 'var(--red)' : 'var(--ink)',
               }}
             >
-              🗑 Papelera {deleted.length > 0 && ( <span style={{ background: '#DC2626', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10 }}>{deleted.length}</span> )}
+              <Icon name="trash" size={16} />
+              Papelera {deleted.length > 0 && ( <span style={{ background: 'var(--red)', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 11, fontWeight: 700 }}>{deleted.length}</span> )}
             </button>
           )}
           <button
             onClick={() => exportToExcel(reservations, properties)}
             style={{
-              display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
-              background: '#ECFDF5', border: '1.5px solid #6EE7B7', borderRadius: 8,
-              fontFamily: 'inherit', fontWeight: 700, fontSize: 12, cursor: 'pointer', color: '#065F46',
+              display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px',
+              background: '#DCFCE7', border: 'none', borderRadius: 20,
+              fontFamily: 'inherit', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#15803D',
             }}
           >
-            📥 Exportar Excel
+            <Icon name="download" size={16} />
+            Exportar Excel
           </button>
         </div>
       </div>
 
       {/* MÓDULO DE EGRESOS */}
-      <div style={{ background: '#fff', borderRadius: 12, padding: '16px 20px', border: '1px solid #E5E7EB', marginBottom: 24, boxShadow: '0 1px 3px rgba(0,0,0,.02)' }}>
-        <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 800, color: '#374151' }}>💸 Módulo de Egresos</h3>
+      <div style={{ background: 'var(--card)', borderRadius: 'var(--r-card)', padding: '16px 18px', marginBottom: 24, boxShadow: 'var(--shadow)' }}>
+        <h3 style={{ ...H3, margin: '0 0 14px' }}><Icon name="wallet" size={20} color="var(--red)" />Egresos</h3>
         <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-start' }}>
           
-          <form onSubmit={handleGuardarGasto} style={{ flex: '1 1 280px', display: 'flex', flexDirection: 'column', gap: 10, background: '#F8FAFC', padding: 14, borderRadius: 10, border: '1px solid #F0F0F0' }}>
+          <form onSubmit={handleGuardarGasto} style={{ flex: '1 1 280px', display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--bg)', padding: 14, borderRadius: 'var(--r-item)' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: 4 }}>Fecha</label>
-                <input type="date" value={formGasto.fecha} onChange={(e) => setFormGasto({ ...formGasto, fecha: e.target.value })} style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 12, fontFamily: 'inherit' }} required />
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 5 }}>Fecha</label>
+                <input type="date" value={formGasto.fecha} onChange={(e) => setFormGasto({ ...formGasto, fecha: e.target.value })} style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--r-field)', border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: 15, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }} required />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: 4 }}>Monto $</label>
-                <input type="number" placeholder="0.00" value={formGasto.monto} onChange={(e) => setFormGasto({ ...formGasto, monto: e.target.value })} style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 12, fontFamily: 'inherit' }} required />
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 5 }}>Monto $</label>
+                <input type="number" placeholder="0.00" value={formGasto.monto} onChange={(e) => setFormGasto({ ...formGasto, monto: e.target.value })} style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--r-field)', border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: 15, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }} required />
               </div>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: 4 }}>Categoría</label>
-              <select value={formGasto.categoria} onChange={(e) => setFormGasto({ ...formGasto, categoria: e.target.value })} style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 12, fontFamily: 'inherit', background: '#fff' }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 5 }}>Categoría</label>
+              <select value={formGasto.categoria} onChange={(e) => setFormGasto({ ...formGasto, categoria: e.target.value })} style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--r-field)', border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: 15, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }}>
                 <option value="Mantenimiento">Mantenimiento</option>
                 <option value="Sueldos">Sueldos</option>
                 <option value="Insumos">Insumos (Limpieza/Desayuno)</option>
@@ -484,38 +491,38 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: 4 }}>Concepto / Notas</label>
-              <input type="text" placeholder="Ej. Pintura pasillo..." value={formGasto.notas} onChange={(e) => setFormGasto({ ...formGasto, notas: e.target.value })} style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 12, fontFamily: 'inherit' }} required />
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 5 }}>Concepto / Notas</label>
+              <input type="text" placeholder="Ej. Pintura pasillo..." value={formGasto.notas} onChange={(e) => setFormGasto({ ...formGasto, notas: e.target.value })} style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--r-field)', border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: 15, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }} required />
             </div>
-            <button disabled={guardandoGasto} type="submit" style={{ marginTop: 4, width: '100%', padding: '10px', background: '#EF4444', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: guardandoGasto ? 'not-allowed' : 'pointer', opacity: guardandoGasto ? 0.7 : 1 }}>
-              {guardandoGasto ? 'Cargando...' : '+ Registrar Gasto'}
+            <button disabled={guardandoGasto} type="submit" style={{ marginTop: 2, width: '100%', minHeight: 46, padding: '11px', background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 'var(--r-field)', fontWeight: 700, fontSize: 15, fontFamily: 'inherit', cursor: guardandoGasto ? 'not-allowed' : 'pointer', opacity: guardandoGasto ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              {guardandoGasto ? 'Guardando…' : <><Icon name="plus" size={18} strokeWidth={2.5} />Registrar gasto</>}
             </button>
           </form>
 
-          <div style={{ flex: '2 1 350px', maxHeight: 240, overflowY: 'auto', paddingRight: 4 }}>
+          <div style={{ flex: '2 1 350px', maxHeight: 300, overflowY: 'auto' }}>
              {gastos.length === 0 ? (
-               <div style={{ textAlign: 'center', color: '#9CA3AF', padding: '40px 0', fontSize: 12 }}>No hay egresos registrados.</div>
+               <div style={{ textAlign: 'center', color: 'var(--mut)', padding: '40px 0', fontSize: 14 }}>Todavía no hay gastos cargados.</div>
              ) : (
-               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+               <div className="ui-group" style={{ boxShadow: 'none', margin: 0, padding: 0 }}>
                  {gastos.map(g => (
-                   <div key={g.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FAFAFA', border: '1px solid #F0F0F0', borderRadius: 8, padding: '10px 12px' }}>
+                   <div key={g.id} className="ui-row" style={{ cursor: 'default', justifyContent: 'space-between', padding: '11px 4px' }}>
                      <div>
                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                         <span style={{ fontSize: 11, fontWeight: 800, color: '#991B1B', background: '#FEE2E2', padding: '2px 6px', borderRadius: 4 }}>{g.categoria}</span>
-                         <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>{fmtD(g.fecha)}</span>
+                         <span style={{ fontSize: 11.5, fontWeight: 700, color: '#991B1B', background: '#FEE2E2', padding: '2px 8px', borderRadius: 20 }}>{g.categoria}</span>
+                         <span style={{ fontSize: 12, color: 'var(--mut)', fontWeight: 500 }}>{shortDay(g.fecha)}</span>
                        </div>
-                       <div style={{ fontSize: 13, fontWeight: 600, color: '#111' }}>{g.notas}</div>
+                       <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ink)' }}>{g.notas}</div>
                      </div>
                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                       <span style={{ fontWeight: 800, color: '#EF4444', fontSize: 14 }}>-{currency(g.monto)}</span>
+                       <span style={{ fontWeight: 700, color: 'var(--red)', fontSize: 15, whiteSpace: 'nowrap' }}>-{currency(g.monto)}</span>
                        {confirmGastoId === g.id ? (
                          <span className="pop-in" style={{ fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                           <button onClick={() => eliminarGasto(g.id)} style={{ background: 'transparent', border: 'none', color: '#DC2626', cursor: 'pointer', fontWeight: 800, fontFamily: 'inherit', fontSize: 12, padding: '2px 4px' }}>Sí, eliminar</button>
-                           <span style={{ color: '#D1D5DB' }}>·</span>
-                           <button onClick={() => setConfirmGastoId(null)} style={{ background: 'transparent', border: 'none', color: '#6B7280', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit', fontSize: 12, padding: '2px 4px' }}>Cancelar</button>
+                           <button onClick={() => eliminarGasto(g.id)} style={{ background: 'transparent', border: 'none', color: 'var(--red)', cursor: 'pointer', fontWeight: 800, fontFamily: 'inherit', fontSize: 12, padding: '2px 4px' }}>Sí, eliminar</button>
+                           <span style={{ color: 'var(--mut)' }}>·</span>
+                           <button onClick={() => setConfirmGastoId(null)} style={{ background: 'transparent', border: 'none', color: 'var(--mut)', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit', fontSize: 12, padding: '2px 4px' }}>Cancelar</button>
                          </span>
                        ) : (
-                         <button aria-label="Eliminar gasto" onClick={() => setConfirmGastoId(g.id)} style={{ background: 'transparent', border: 'none', color: '#9CA3AF', cursor: 'pointer', fontSize: 16, padding: '2px 6px' }}>×</button>
+                         <button aria-label="Eliminar gasto" onClick={() => setConfirmGastoId(g.id)} style={{ background: 'var(--fill)', border: 'none', color: 'var(--mut)', cursor: 'pointer', width: 28, height: 28, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}><Icon name="close" size={15} strokeWidth={2.5} /></button>
                        )}
                      </div>
                    </div>
@@ -526,7 +533,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
         </div>
       </div>
 
-      <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700, color: '#374151' }}>Reporte Mensual (Rendimiento y GOPPAR)</h3>
+      <h3 style={H3}><Icon name="chart" size={20} color="var(--acc)" />Mes a mes</h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: 16, marginBottom: 28 }}>
         {monthlyArray.map((m) => {
           const saldo = m.total - m.paid;
@@ -599,18 +606,20 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
           const oComp = aComp > 0 ? Math.min(100, Math.round((m.rooms.compartidas.nights / aComp)*100)) : 0;
 
           return (
-            <div key={m.key} id={`month-${m.key}`} style={{ background: isCurrent ? '#EFF6FF' : '#fff', borderRadius: 12, padding: '16px', border: isCurrent ? '2px solid #3B82F6' : '1px solid #F0F0F0', boxShadow: isCurrent ? '0 4px 12px rgba(59,130,246,0.15)' : 'none', position: 'relative' }}>
-              {isCurrent && <div style={{ position: 'absolute', top: -10, right: 16, background: '#3B82F6', color: '#fff', fontSize: 10, fontWeight: 800, padding: '4px 10px', borderRadius: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>Mes Actual</div>}
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <div style={{ fontWeight: 800, fontSize: 16, color: isCurrent ? '#1E40AF' : '#111', textTransform: 'capitalize' }}>{m.label}</div>
-                <div style={{ fontSize: 11, color: isCurrent ? '#60A5FA' : '#9CA3AF', fontWeight: 600 }}>{m.count} reservas</div>
+            <div key={m.key} id={`month-${m.key}`} style={{ background: 'var(--card)', borderRadius: 'var(--r-card)', padding: '16px', boxShadow: isCurrent ? 'inset 0 0 0 2px var(--acc), var(--shadow)' : 'var(--shadow)', position: 'relative' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                  <div style={{ fontWeight: 'var(--w-title)', fontSize: 20, color: 'var(--ink)', textTransform: 'capitalize', letterSpacing: '-.01em' }}>{m.label}</div>
+                  {isCurrent && <span style={{ background: 'var(--acc)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, whiteSpace: 'nowrap' }}>Mes actual</span>}
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--mut)', fontWeight: 500, whiteSpace: 'nowrap' }}>{m.count} reservas</div>
               </div>
 
               {/* El mes en palabras (etapa 4 de la voz de Flow): arriba de los números, sin reemplazarlos */}
               {!isFuture && passedDays > 0 && (
-                <div style={{ fontSize: 13, lineHeight: 1.5, color: '#334155', background: isCurrent ? '#fff' : '#F8FAFC', border: `1px solid ${isCurrent ? '#BFDBFE' : '#F0F0F0'}`, borderRadius: 10, padding: '10px 12px', marginBottom: 14 }}>
-                  💬{' '}
+                <div style={{ display: 'flex', gap: 8, fontSize: 13.5, lineHeight: 1.5, color: 'var(--ink)', background: 'var(--acc-soft)', borderRadius: 'var(--r-item)', padding: '11px 13px', marginBottom: 14 }}>
+                  <Icon name="chat" size={17} color="var(--acc)" style={{ flexShrink: 0, marginTop: 2 }} />
+                  <span>
                   {financeReading({
                     name: MONTH_NAMES[parseInt(mStr) - 1],
                     prevName: MONTH_NAMES[pmo - 1],
@@ -621,80 +630,81 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                     profit: netProfit,
                     projected: showProjection ? projectedRevenue : null,
                   })}
+                  </span>
                 </div>
               )}
 
               {/* ── KPI HOTELEROS: OCUPACIÓN Y ADR ── */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
-                <div style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '10px 6px', borderRadius: 8 }}>
-                  <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#64748B', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{isCurrent ? 'Ocupación a hoy' : 'Ocupación'}<InfoTip k="ocupacion" /></div>
-                  <div style={{ fontWeight: 800, fontSize: 14, color: isFuture ? '#9CA3AF' : occPct >= 70 ? '#10B981' : occPct >= 40 ? '#F59E0B' : '#EF4444' }}>{isFuture ? '—' : `${occPct}%`}</div>
-                  <div style={{ fontSize: 9, color: '#9CA3AF', marginTop: 2, fontWeight: 600 }}>Física</div>
+                <div style={{ textAlign: 'center', background: 'var(--bg)', padding: '10px 6px', borderRadius: 'var(--r-item)' }}>
+                  <div style={{ fontSize: 10, color: 'var(--mut)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{isCurrent ? 'Ocupación a hoy' : 'Ocupación'}<InfoTip k="ocupacion" /></div>
+                  <div style={{ fontWeight: 'var(--w-title)', fontSize: 20, color: isFuture ? 'var(--mut)' : occPct >= 70 ? '#10B981' : occPct >= 40 ? '#F59E0B' : 'var(--red)' }}>{isFuture ? '—' : `${occPct}%`}</div>
+                  <div style={{ fontSize: 9, color: 'var(--mut)', marginTop: 2, fontWeight: 600 }}>Física</div>
                 </div>
-                <div title="Tarifa Promedio Diaria" style={{ textAlign: 'center', background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '10px 6px', borderRadius: 8, cursor: 'help' }}>
-                  <div style={{ fontSize: 10, color: isCurrent ? '#1E40AF' : '#64748B', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>ADR<InfoTip k="adr" /></div>
-                  <div style={{ fontWeight: 800, fontSize: 14, color: '#374151' }}><CountUp value={currency(adr)} /></div>
-                  <div style={{ fontSize: 9, color: '#9CA3AF', marginTop: 2, fontWeight: 600 }}>Tarifa Promedio</div>
+                <div title="Tarifa Promedio Diaria" style={{ textAlign: 'center', background: 'var(--bg)', padding: '10px 6px', borderRadius: 'var(--r-item)', cursor: 'help' }}>
+                  <div style={{ fontSize: 10, color: 'var(--mut)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>ADR<InfoTip k="adr" /></div>
+                  <div style={{ fontWeight: 'var(--w-title)', fontSize: 20, color: 'var(--ink)' }}><CountUp value={currency(adr)} /></div>
+                  <div style={{ fontSize: 9, color: 'var(--mut)', marginTop: 2, fontWeight: 600 }}>Tarifa Promedio</div>
                 </div>
               </div>
 
               {(isCurrent || isFuture) && (
-                <div style={{ fontSize: 12, background: isCurrent ? '#DBEAFE' : '#F8FAFC', padding: '8px 12px', borderRadius: 8, marginBottom: 14 }}>
+                <div style={{ fontSize: 12, background: 'var(--bg)', padding: '10px 12px', borderRadius: 'var(--r-item)', marginBottom: 14 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: isCurrent ? '#1E40AF' : '#4B5563', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>Reservado del mes<InfoTip k="proyectado" />:</span>
-                    <span style={{ fontWeight: 800, color: '#111' }}>{bookedPct}% · {currency(m.bookedRevenue)}</span>
+                    <span style={{ color: 'var(--ink-2)', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>Reservado del mes<InfoTip k="proyectado" />:</span>
+                    <span style={{ fontWeight: 800, color: 'var(--ink)' }}>{bookedPct}% · {currency(m.bookedRevenue)}</span>
                   </div>
                   {isCurrent && (
                     <div title="Estimación según el ritmo de Lun-Mié y Jue-Dom hasta hoy" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                      <span style={{ color: '#1E40AF', fontWeight: 700 }}>Proyectado del mes:</span>
+                      <span style={{ color: 'var(--acc)', fontWeight: 700 }}>Proyectado del mes:</span>
                       {showProjection
-                        ? <span style={{ fontWeight: 800, color: '#111' }}>{projectedPct}% · {currency(projectedRevenue)}</span>
-                        : <span style={{ fontSize: 10, fontWeight: 600, color: '#64748B', textAlign: 'right' }}>Disponible desde el día {PROJECTION_START_DAY}</span>}
+                        ? <span style={{ fontWeight: 800, color: 'var(--ink)' }}>{projectedPct}% · {currency(projectedRevenue)}</span>
+                        : <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--mut)', textAlign: 'right' }}>Disponible desde el día {PROJECTION_START_DAY}</span>}
                     </div>
                   )}
                 </div>
               )}
 
               {/* RENTABILIDAD & GOPPAR */}
-              <div style={{ background: '#F8FAFC', borderRadius: 10, padding: 12, border: '1px solid #E5E7EB', marginBottom: 14 }}>
+              <div style={{ background: 'var(--bg)', borderRadius: 'var(--r-item)', padding: 12, marginBottom: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                  <span style={{ color: '#4B5563', fontWeight: 600 }}>{isCurrent ? 'Ingreso a Hoy:' : 'Ingreso Base Real:'}</span>
-                  <span style={{ fontWeight: 800, color: '#111' }}><CountUp value={currency(m.trueRevenue)} /></span>
+                  <span style={{ color: 'var(--ink-2)', fontWeight: 600 }}>{isCurrent ? 'Ingreso a Hoy:' : 'Ingreso Base Real:'}</span>
+                  <span style={{ fontWeight: 800, color: 'var(--ink)' }}><CountUp value={currency(m.trueRevenue)} /></span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #E2E8F0' }}>
-                  <span style={{ color: '#4B5563', fontWeight: 600 }}>Egresos Operativos:</span>
-                  <span style={{ fontWeight: 800, color: '#EF4444' }}>-<CountUp value={currency(m.gastos)} /></span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
+                  <span style={{ color: 'var(--ink-2)', fontWeight: 600 }}>Egresos Operativos:</span>
+                  <span style={{ fontWeight: 800, color: 'var(--red)' }}>-<CountUp value={currency(m.gastos)} /></span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: 11, fontWeight: 800, color: '#047857', background: '#D1FAE5', padding: '2px 8px', borderRadius: 6 }}>GANANCIA NETA</span>
-                  <span style={{ fontWeight: 900, fontSize: 15, color: '#065F46' }}><CountUp value={currency(netProfit)} /></span>
+                  <span style={{ fontWeight: 'var(--w-title)', fontSize: 18, color: '#065F46' }}><CountUp value={currency(netProfit)} /></span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center' }}>Ind. GOPPAR<InfoTip k="goppar" /></span>
-                  <span style={{ fontWeight: 800, fontSize: 12, color: '#3B82F6' }}><CountUp value={currency(goppar)} /></span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center' }}>Ind. GOPPAR<InfoTip k="goppar" /></span>
+                  <span style={{ fontWeight: 800, fontSize: 12, color: 'var(--acc)' }}><CountUp value={currency(goppar)} /></span>
                 </div>
               </div>
 
               {/* ── RENDIMIENTO: REVPAR SEGMENTADO Y GLOBAL ── */}
-              <div style={{ background: '#F8FAFC', borderRadius: 10, padding: '10px 12px', border: '1px solid #E5E7EB', marginBottom: 14 }}>
-                <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ background: 'var(--bg)', borderRadius: 'var(--r-item)', padding: '11px 12px', marginBottom: 14 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center' }}>RevPAR Segmentado<InfoTip k="revpar" /></span>
-                  <span style={{ fontSize: 9, color: '#9CA3AF' }}>Ingreso x Hab.</span>
+                  <span style={{ fontSize: 9, color: 'var(--mut)' }}>Ingreso x Hab.</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
-                  <div style={{ background: '#FFFBEB', border: '1px solid #FEF3C7', padding: '8px 4px', borderRadius: 8, textAlign: 'center' }}>
+                  <div style={{ background: '#FFFBEB', padding: '8px 4px', borderRadius: 12, textAlign: 'center' }}>
                     <div style={{ fontSize: 9, color: '#D97706', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Lun - Mié</div>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: '#92400E' }}><CountUp value={currency(revparEntre)} /></div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: '#92400E' }}><CountUp value={currency(revparEntre)} /></div>
                     {showCmp && <div style={{ marginTop: 2 }}><Delta cur={revparEntre} prev={prev.entre} /></div>}
                   </div>
-                  <div style={{ background: '#F5F3FF', border: '1px solid #EDE9FE', padding: '8px 4px', borderRadius: 8, textAlign: 'center' }}>
+                  <div style={{ background: '#F5F3FF', padding: '8px 4px', borderRadius: 12, textAlign: 'center' }}>
                     <div style={{ fontSize: 9, color: '#7C3AED', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Jue - Dom</div>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: '#5B21B6' }}><CountUp value={currency(revparFinde)} /></div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: '#5B21B6' }}><CountUp value={currency(revparFinde)} /></div>
                     {showCmp && <div style={{ marginTop: 2 }}><Delta cur={revparFinde} prev={prev.finde} /></div>}
                   </div>
-                  <div title="Ingreso por Habitación Disponible" style={{ background: isCurrent ? '#DBEAFE' : '#fff', border: `1px solid ${isCurrent ? '#BFDBFE' : '#E5E7EB'}`, padding: '8px 4px', borderRadius: 8, textAlign: 'center', cursor: 'help' }}>
-                    <div style={{ fontSize: 9, color: isCurrent ? '#1E40AF' : '#4B5563', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Global</div>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: isCurrent ? '#1D4ED8' : '#111' }}><CountUp value={currency(revpar)} /></div>
+                  <div title="Ingreso por Habitación Disponible" style={{ background: 'var(--acc-soft)', padding: '8px 4px', borderRadius: 12, textAlign: 'center', cursor: 'help' }}>
+                    <div style={{ fontSize: 9.5, color: 'var(--acc)', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Global</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--acc)' }}><CountUp value={currency(revpar)} /></div>
                     {showCmp && <div style={{ marginTop: 2 }}><Delta cur={revpar} prev={prev.revpar} /></div>}
                   </div>
                 </div>
@@ -705,42 +715,42 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
               {pot && (pot.pct !== null || pot.missing) && (() => {
                 if (pot.pct === null)
                   return (
-                    <div style={{ background: '#F8FAFC', borderRadius: 10, padding: '10px 12px', border: '1px solid #E5E7EB', marginBottom: 14, fontSize: 11.5, color: '#6B7280' }}>
-                      🎯 Para ver el % del potencial falta el precio de alguna noche: revisá que esté cargada la tarifa Normal en Tarifas.
+                    <div style={{ background: 'var(--bg)', borderRadius: 'var(--r-item)', padding: '11px 12px', marginBottom: 14, fontSize: 11.5, color: 'var(--mut)' }}>
+                      {ic('target', 14)}Para ver el % del potencial falta el precio de alguna noche: revisá que esté cargada la tarifa Normal en Tarifas.
                     </div>
                   );
                 const k = potColor(pot.pct);
                 const dPts = showCmp && potPrev && potPrev.pct !== null && potPrev.earned > 0 ? pot.pct - potPrev.pct : null;
                 const chip = (label, v, title) => (
-                  <span title={title} style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 999, padding: '3px 8px', fontSize: 10.5, color: '#374151', fontWeight: 600, whiteSpace: 'nowrap', cursor: title ? 'help' : 'default' }}>
-                    {label} <b style={{ color: '#111' }}>{v === null ? '—' : <CountUp value={v + '%'} />}</b>
+                  <span title={title} style={{ background: 'var(--card)', borderRadius: 999, padding: '3px 8px', fontSize: 10.5, color: 'var(--ink-2)', fontWeight: 600, whiteSpace: 'nowrap', cursor: title ? 'help' : 'default' }}>
+                    {label} <b style={{ color: 'var(--ink)' }}>{v === null ? '—' : <CountUp value={v + '%'} />}</b>
                   </span>
                 );
                 return (
-                  <div style={{ background: '#F8FAFC', borderRadius: 10, padding: '10px 12px', border: '1px solid #E5E7EB', marginBottom: 14 }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: 8, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center' }}>🎯 % del potencial<InfoTip k="potencial" /></span>
-                      <span style={{ fontSize: 9, color: '#9CA3AF' }}>{isCurrent ? `del 1 al ${passedDays}` : 'mes completo'}</span>
+                  <div style={{ background: 'var(--bg)', borderRadius: 'var(--r-item)', padding: '11px 12px', marginBottom: 14 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', marginBottom: 8, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center' }}>{ic('target', 13, { marginRight: 4 })}% del potencial<InfoTip k="potencial" /></span>
+                      <span style={{ fontSize: 9, color: 'var(--mut)' }}>{isCurrent ? `del 1 al ${passedDays}` : 'mes completo'}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ fontSize: 26, fontWeight: 900, color: k.c, minWidth: 64, lineHeight: 1 }}>
+                      <div style={{ fontSize: 28, fontWeight: 'var(--w-title)', color: k.c, minWidth: 64, lineHeight: 1 }}>
                         <CountUp value={pot.pct + '%'} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ height: 8, background: '#E5E7EB', borderRadius: 99, overflow: 'hidden' }}>
+                        <div style={{ height: 8, background: 'var(--line)', borderRadius: 99, overflow: 'hidden' }}>
                           <div style={{ width: `${Math.min(100, pot.pct)}%`, height: '100%', background: k.bar, borderRadius: 99, transition: 'width .8s cubic-bezier(.32,.72,0,1)' }} />
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, gap: 6 }}>
                           <span style={{ fontSize: 10.5, fontWeight: 800, color: k.c, background: k.bg, borderRadius: 999, padding: '1px 7px' }}>{k.txt}</span>
                           {dPts !== null && (
-                            <span title={`Mes anterior (${cmpLabel}): ${potPrev.pct}%`} style={{ fontSize: 9.5, fontWeight: 800, color: dPts > 0 ? '#16A34A' : dPts < 0 ? '#DC2626' : '#9CA3AF', cursor: 'help' }}>
+                            <span title={`Mes anterior (${cmpLabel}): ${potPrev.pct}%`} style={{ fontSize: 9.5, fontWeight: 800, color: dPts > 0 ? '#16A34A' : dPts < 0 ? 'var(--red)' : 'var(--mut)', cursor: 'help' }}>
                               {dPts > 0 ? '▲' : dPts < 0 ? '▼' : '='} {Math.abs(dPts)} pts vs mes anterior
                             </span>
                           )}
                         </div>
                       </div>
                     </div>
-                    <div style={{ fontSize: 11.5, color: '#4B5563', marginTop: 8, lineHeight: 1.45 }}>
+                    <div style={{ fontSize: 11.5, color: 'var(--ink-2)', marginTop: 8, lineHeight: 1.45 }}>
                       Ingresaron <b>{currency(pot.earned)}</b> de <b>{currency(pot.possible)}</b> posibles si todas las habitaciones se vendían cada noche al precio del tarifario.
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
@@ -754,62 +764,62 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
               })()}
 
               {/* DESGLOSE DE INVENTARIO */}
-              <div style={{ background: '#F8FAFC', borderRadius: 10, padding: '10px 12px', border: '1px solid #E5E7EB', marginBottom: 14 }}>
-                <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center' }}>Segmentación Física<InfoTip k="segmentacion" /></div>
+              <div style={{ background: 'var(--bg)', borderRadius: 'var(--r-item)', padding: '11px 12px', marginBottom: 14 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center' }}>Segmentación Física<InfoTip k="segmentacion" /></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4, alignItems: 'center' }}>
-                  <span style={{ color: '#4B5563', fontWeight: 600 }}>Habitaciones 1, 2, 3 y 5</span>
-                  <div style={{ textAlign: 'right' }}><span style={{ color: oComp > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}><CountUp value={oComp + '%'} /></span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rComp)}</span>{showCmp && <Delta cur={rComp} prev={prev.comp} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
+                  <span style={{ color: 'var(--ink-2)', fontWeight: 600 }}>Habitaciones 1, 2, 3 y 5</span>
+                  <div style={{ textAlign: 'right' }}><span style={{ color: oComp > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}><CountUp value={oComp + '%'} /></span><span style={{ fontWeight: 700, color: 'var(--ink)' }}>{currency(rComp)}</span>{showCmp && <Delta cur={rComp} prev={prev.comp} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4, alignItems: 'center' }}>
-                  <span style={{ color: '#4B5563', fontWeight: 600 }}>Habitación 4</span>
-                  <div style={{ textAlign: 'right' }}><span style={{ color: oKing > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}><CountUp value={oKing + '%'} /></span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rKing)}</span>{showCmp && <Delta cur={rKing} prev={prev.king} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
+                  <span style={{ color: 'var(--ink-2)', fontWeight: 600 }}>Habitación 4</span>
+                  <div style={{ textAlign: 'right' }}><span style={{ color: oKing > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}><CountUp value={oKing + '%'} /></span><span style={{ fontWeight: 700, color: 'var(--ink)' }}>{currency(rKing)}</span>{showCmp && <Delta cur={rKing} prev={prev.king} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, alignItems: 'center' }}>
-                  <span style={{ color: '#4B5563', fontWeight: 600 }}>Habitación 6</span>
-                  <div style={{ textAlign: 'right' }}><span style={{ color: oMat > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}><CountUp value={oMat + '%'} /></span><span style={{ fontWeight: 700, color: '#111' }}>{currency(rMat)}</span>{showCmp && <Delta cur={rMat} prev={prev.mat} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
+                  <span style={{ color: 'var(--ink-2)', fontWeight: 600 }}>Habitación 6</span>
+                  <div style={{ textAlign: 'right' }}><span style={{ color: oMat > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}><CountUp value={oMat + '%'} /></span><span style={{ fontWeight: 700, color: 'var(--ink)' }}>{currency(rMat)}</span>{showCmp && <Delta cur={rMat} prev={prev.mat} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
                 </div>
                 {showCmp && <CmpTitle label={cmpLabel} />}
               </div>
 
               {/* FLUJO DE CAJA (FACTURADO) */}
-              <div style={{ borderTop: '1px dashed #CBD5E1', paddingTop: 12 }}>
+              <div style={{ borderTop: '1px solid var(--line)', paddingTop: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 12 }}>
-                  <span style={{ color: '#6B7280', fontWeight: 600 }}>Flujo Facturado:</span>
-                  <span style={{ fontWeight: 700, color: '#111' }}>{currency(m.total)}</span>
+                  <span style={{ color: 'var(--mut)', fontWeight: 600 }}>Flujo Facturado:</span>
+                  <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{currency(m.total)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 12 }}>
-                  <span style={{ color: '#6B7280', fontWeight: 600 }}>Cobrado:</span>
+                  <span style={{ color: 'var(--mut)', fontWeight: 600 }}>Cobrado:</span>
                   <span style={{ fontWeight: 700, color: '#10B981' }}>{currency(m.paid)}</span>
                 </div>
-                <div style={{ height: 4, background: '#F3F4F6', borderRadius: 4, marginBottom: 8 }}>
+                <div style={{ height: 4, background: 'var(--bg)', borderRadius: 4, marginBottom: 8 }}>
                   <div style={{ height: '100%', background: '#10B981', borderRadius: 4, width: `${pct}%` }} />
                 </div>
               </div>
 
               {/* ── REVENUE INTELLIGENCE (IA) ── */}
-              <div style={{ borderTop: '1px dashed #CBD5E1', paddingTop: 14, marginTop: 14 }}>
+              <div style={{ borderTop: '1px solid var(--line)', paddingTop: 14, marginTop: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: '#4F46E5', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    ✨ Asesor Estratégico IA
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#4F46E5', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name="sparkles" size={15} />Asesor estratégico IA
                   </div>
                   {!aiInsights[m.key] ? (
                     <button
                       onClick={() => analizarRevenue(m, { pot: pot && pot.pct !== null ? pot : null, trueRevenue: Math.round(m.trueRevenue), bookedRevenue: Math.round(m.bookedRevenue), bookedPct, projectedPct, projectedRevenue, gastos: m.gastos, occPct, adr, revpar, goppar, revparEntre, revparFinde, oMat, oKing, oComp, prevCmp: showCmp ? { label: cmpLabel, revpar: prev.revpar, entre: prev.entre, finde: prev.finde } : null })}
                       disabled={analyzingMonth === m.key}
                       style={{
-                        background: '#EEF2FF', border: '1px solid #C7D2FE', color: '#4F46E5', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: analyzingMonth === m.key ? 'wait' : 'pointer', opacity: analyzingMonth === m.key ? 0.7 : 1
+                        background: '#EEF2FF', border: 'none', color: '#4F46E5', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: analyzingMonth === m.key ? 'wait' : 'pointer', opacity: analyzingMonth === m.key ? 0.7 : 1
                       }}
                     >
-                      {analyzingMonth === m.key ? 'Analizando...' : 'Generar Diagnóstico'}
+                      {analyzingMonth === m.key ? 'Analizando…' : 'Generar diagnóstico'}
                     </button>
                   ) : (
                     <button
                     onClick={() => setInsightModal({ title: `Diagnóstico de ${m.label}`, content: aiInsights[m.key], monthKey: m.key })}
                       style={{
-                        background: '#4F46E5', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 4px rgba(79,70,229,.3)'
+                        background: '#4F46E5', border: 'none', color: '#fff', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6
                       }}
                     >
-                      📖 Leer Diagnóstico
+                      <Icon name="book" size={15} />Leer diagnóstico
                     </button>
                   )}
                 </div>
@@ -819,7 +829,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
         })}
       </div>
 
-      <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700, color: '#374151' }}>Totales por Propiedad</h3>
+      <h3 style={H3}><Icon name="building" size={20} color="var(--acc)" />Totales por propiedad</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 28 }}>
         {properties.map((prop) => {
           const pRes = reservations.filter((r) => r.propertyId === prop.id && r.status !== 'cancelada');
@@ -827,21 +837,21 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
           const paid = pRes.reduce((s, r) => s + r.paid, 0);
           const pct = total > 0 ? Math.round((paid / total) * 100) : 0;
           return (
-            <div key={prop.id} style={{ background: '#fff', borderRadius: 12, padding: '18px 20px', border: '1px solid #F0F0F0' }}>
+            <div key={prop.id} style={{ background: 'var(--card)', borderRadius: 'var(--r-card)', padding: '16px 18px', boxShadow: 'var(--shadow)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                  <span style={{ fontSize: 22 }}>{prop.emoji}</span>
+                  <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--acc-soft)', color: 'var(--acc)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="building" size={20} /></span>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: '#111' }}>{prop.name}</div>
-                    <div style={{ fontSize: 11, color: '#9CA3AF' }}>{pRes.length} reservas históricas</div>
+                    <div style={{ fontWeight: 700, fontSize: 15.5, color: 'var(--ink)' }}>{prop.name}</div>
+                    <div style={{ fontSize: 12.5, color: 'var(--mut)' }}>{pRes.length} reservas en total</div>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 800, fontSize: 17, color: '#111' }}><CountUp value={currency(total)} /></div>
-                  <div style={{ fontSize: 11, color: total - paid > 0 ? '#EF4444' : '#10B981' }}>Pendiente: {currency(total - paid)}</div>
+                  <div style={{ fontWeight: 'var(--w-title)', fontSize: 20, color: 'var(--ink)' }}><CountUp value={currency(total)} /></div>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: total - paid > 0 ? 'var(--red)' : '#15803D' }}>Pendiente: {currency(total - paid)}</div>
                 </div>
               </div>
-              <div style={{ height: 6, background: '#F3F4F6', borderRadius: 4 }}>
+              <div style={{ height: 6, background: 'var(--bg)', borderRadius: 4 }}>
                 <div style={{ height: '100%', background: prop.color, borderRadius: 4, width: pct + '%', transition: 'width .3s' }} />
               </div>
             </div>
@@ -849,42 +859,45 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
         })}
       </div>
 
-      <h3 id="seccion-saldos-pendientes" style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700, color: '#374151' }}>Huéspedes con saldos pendientes</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <h3 id="seccion-saldos-pendientes" style={H3}><Icon name="money" size={20} color="var(--red)" />Saldos pendientes</h3>
+      <div className="ui-group">
         {pending.map((r, liI) => {
           const prop = properties.find((p) => p.id === r.propertyId);
           return (
-            <div className="li-in" key={r.id} onClick={() => onGoTo && onGoTo('abrir_reserva', r)} style={{ '--i': liI, background: '#fff', borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #F0F0F0', cursor: 'pointer' }}>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 13, color: '#111' }}>{r.guestName}</div>
-                <div style={{ fontSize: 11, color: '#9CA3AF' }}>{prop?.name} · CI: {fmtD(r.checkIn)}</div>
+            <div className="li-in ui-row" key={r.id} onClick={() => onGoTo && onGoTo('abrir_reserva', r)} style={{ '--i': liI, justifyContent: 'space-between' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 15.5, color: 'var(--ink)' }}>{r.guestName}</div>
+                <div style={{ fontSize: 12.5, color: 'var(--mut)' }}>{r.room ? `${r.room} · ` : ''}{shortDay(r.checkIn)} → {shortDay(r.checkOut)}</div>
               </div>
-              <div style={{ fontWeight: 800, color: '#EF4444', fontSize: 16 }}>{currency(r.totalAmount - r.paid)}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                <div style={{ fontWeight: 700, color: 'var(--red)', fontSize: 16 }}>{currency(r.totalAmount - r.paid)}</div>
+                <span style={{ color: 'var(--handle)', display: 'inline-flex' }}><Icon name="chev" size={18} strokeWidth={2.5} /></span>
+              </div>
             </div>
           );
         })}
-        {pending.length === 0 && <div style={{ textAlign: 'center', color: '#D1D5DB', padding: 30, fontSize: 13 }}>✅ Sin saldos pendientes</div>}
+        {pending.length === 0 && <div style={{ textAlign: 'center', color: '#15803D', padding: 24, fontSize: 14, fontWeight: 600 }}>{ic('check', 16)}Nadie debe nada</div>}
       </div>
 
       {/* ── POP-UP DEL DIAGNÓSTICO IA ── */}
       <AnimatePresence>{insightModal && (
         <Backdrop key="insight" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <PopCard style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 500, display: 'flex', flexDirection: 'column', maxHeight: '85vh', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.3)' }}>
+          <PopCard style={{ background: 'var(--card)', borderRadius: 22, width: '100%', maxWidth: 500, display: 'flex', flexDirection: 'column', maxHeight: '85vh', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.3)' }}>
             
             {/* ENCABEZADO FIJO */}
-            <div style={{ background: '#EEF2FF', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #C7D2FE', flexShrink: 0 }}>
-              <div style={{ fontSize: 16, fontWeight: 900, color: '#312E81', display: 'flex', alignItems: 'center', gap: 8 }}>
-                ✨ {insightModal.title}
+            <div style={{ background: '#EEF2FF', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+              <div style={{ fontSize: 17, fontWeight: 'var(--w-title)', color: '#312E81', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Icon name="sparkles" size={19} />{insightModal.title}
               </div>
-              <button onClick={() => setInsightModal(null)} style={{ background: 'transparent', border: 'none', fontSize: 24, cursor: 'pointer', color: '#4F46E5', lineHeight: 1 }}>×</button>
+              <button aria-label="Cerrar" onClick={() => setInsightModal(null)} style={{ background: 'rgba(79,70,229,.12)', border: 'none', width: 30, height: 30, borderRadius: '50%', cursor: 'pointer', color: '#4F46E5', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}><Icon name="close" size={16} strokeWidth={2.5} /></button>
             </div>
             
                         {/* ÁREA DE LECTURA CON SCROLL BLINDADO */}
-            <div style={{ padding: '24px 20px', overflowY: 'auto', WebkitOverflowScrolling: 'touch', fontSize: 14, color: '#374151', lineHeight: 1.6, whiteSpace: 'pre-wrap', flex: 1 }}>
+            <div style={{ padding: '24px 20px', overflowY: 'auto', WebkitOverflowScrolling: 'touch', fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.6, whiteSpace: 'pre-wrap', flex: 1 }}>
               {insightModal.content}
 
               {(chatMessages[insightModal.monthKey] || []).slice(2).map((msg, i) => (
-                <div key={i} style={{ marginTop: 16, paddingTop: 16, borderTop: '1px dashed #E5E7EB' }}>
+                <div key={i} style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--line)' }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: msg.role === 'user' ? '#4F46E5' : '#059669', textTransform: 'uppercase', marginBottom: 4 }}>
                     {msg.role === 'user' ? 'Tu pregunta' : 'Respuesta'}
                   </div>
@@ -893,14 +906,14 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
               ))}
 
               {chatLoading && (
-                <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px dashed #E5E7EB', color: '#9CA3AF', fontStyle: 'italic' }}>
-                  Pensando...
+                <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--line)', color: 'var(--mut)', fontStyle: 'italic' }}>
+                  Pensando…
                 </div>
               )}
             </div>
 
             {/* PIE DE PÁGINA FIJO */}
-            <div style={{ padding: '16px 20px', borderTop: '1px solid #F0F0F0', background: '#F8FAFC', flexShrink: 0 }}>
+            <div style={{ padding: '16px 20px', borderTop: '1px solid var(--line)', background: 'var(--bg)', flexShrink: 0 }}>
               <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                 <input
                   type="text"
@@ -908,18 +921,18 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !chatLoading) enviarPregunta(); }}
-                  style={{ flex: 1, padding: '10px 12px', borderRadius: 8, border: '1px solid #CBD5E1', fontSize: 13, fontFamily: 'inherit' }}
+                  style={{ flex: 1, minWidth: 0, padding: '10px 12px', borderRadius: 'var(--r-field)', border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: 15, fontFamily: 'inherit', outline: 'none' }}
                 />
                 <button
                   onClick={enviarPregunta}
                   disabled={chatLoading || !chatInput.trim()}
-                  style={{ background: '#4F46E5', color: '#fff', padding: '10px 16px', borderRadius: 8, border: 'none', fontWeight: 700, cursor: chatLoading ? 'wait' : 'pointer', fontSize: 13, opacity: (chatLoading || !chatInput.trim()) ? 0.6 : 1 }}
+                  style={{ background: '#4F46E5', color: '#fff', padding: '10px 16px', borderRadius: 'var(--r-field)', border: 'none', fontWeight: 700, fontFamily: 'inherit', cursor: chatLoading ? 'wait' : 'pointer', fontSize: 14, opacity: (chatLoading || !chatInput.trim()) ? 0.6 : 1 }}
                 >
                   Preguntar
                 </button>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <button onClick={() => setInsightModal(null)} style={{ background: 'transparent', color: '#6B7280', padding: '8px 16px', borderRadius: 8, border: '1px solid #E5E7EB', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+                <button onClick={() => setInsightModal(null)} style={{ background: 'var(--fill)', color: 'var(--ink)', padding: '9px 18px', borderRadius: 'var(--r-field)', border: 'none', fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', fontSize: 14 }}>
                   Cerrar
                 </button>
               </div>
