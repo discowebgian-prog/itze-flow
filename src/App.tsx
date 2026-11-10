@@ -29,6 +29,7 @@ import { WhoAmI } from './components/ui/WhoAmI';
 import { getDeviceName, setDeviceName } from './lib/device';
 import { syncPush, sendPush } from './lib/push';
 import { ROLES, esDueno } from './lib/roles';
+import { EquipoHome } from './pages/EquipoHome';
 
 
 // ── APP ───────────────────────────────────────────────────────────────────────
@@ -90,7 +91,8 @@ export default function AppMejorada() {
   // 1. CARGA DE DATOS Y VIGILANTE DE INICIO
   // Espera al login: con RLS activo, sin sesión la base no devuelve datos.
   useEffect(() => {
-    if (!user?.id) return undefined;
+    // El equipo no carga reservas, tarifas ni decisiones: su vista llega aparte (EquipoHome)
+    if (!user?.id || !esDueno(user)) return undefined;
 
     const fetchReservas = async () => {
       const { data, error } = await supabase
@@ -341,10 +343,12 @@ export default function AppMejorada() {
   // Quién usa este aparato (Gian / Marce): se pregunta la primera vez y se recuerda acá
   const [deviceName, setDeviceNameState] = useState(getDeviceName);
   const [whoOpen, setWhoOpen] = useState(false);
-  whoRef.current = deviceName || user?.name || '';
+  // El equipo firma con el nombre de su perfil (Mary), no con el del aparato
+  whoRef.current = (esDueno(user) ? deviceName : '') || user?.name || '';
   // Avisos con la app cerrada: renueva la suscripción de este aparato con su nombre
   useEffect(() => {
-    if (user?.id && deviceName) syncPush(deviceName);
+    // Por ahora solo los dueños reciben avisos (los del equipo llegan en el paso 7)
+    if (user?.id && esDueno(user) && deviceName) syncPush(deviceName);
   }, [user?.id, deviceName]);
   // Desde el aviso de cumpleaños de Inicio: qué huésped resaltar en Huéspedes › Cumpleaños
   const [guestFocus, setGuestFocus] = useState(null);
@@ -361,6 +365,8 @@ export default function AppMejorada() {
   const prevTabRef = useRef(tab);
   const tabDirRef = useRef(0);
   if (!user) return <Login onLogin={setUser} />;
+  // Equipo (y staff, sin uso todavía): no ve nada del resto de Flow
+  if (!esDueno(user)) return <EquipoHome user={user} onLogout={handleLogout} />;
 
   const isAdmin = esDueno(user);
   // Nombre para anotar quién cargó/eliminó/decidió algo
@@ -435,10 +441,8 @@ export default function AppMejorada() {
     tabDirRef.current = ix(tab) > ix(prevTabRef.current) ? 1 : -1;
     prevTabRef.current = tab;
   }
-  const TABS =
-    user.role === 'staff'
-      ? TABS_ALL.filter((t) => t.id !== 'finanzas')
-      : TABS_ALL;
+  // Solo los dueños llegan hasta acá (el equipo ve EquipoHome): menú completo
+  const TABS = TABS_ALL;
 
   // Funciones operativas restauradas
   // queue: reservas que siguen después de guardar esta (cambio de habitación desde Cotizar)

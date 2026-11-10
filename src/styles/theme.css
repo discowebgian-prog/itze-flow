@@ -1,7 +1,7 @@
 /* ── ESTILO DE FLOW: todo en un solo lugar ─────────────────────────────────────
    Misma estética que Itzé Limpieza (tipo iPhone: letra redondeada del sistema, fondo gris claro,
    tarjetas blancas muy redondeadas, hojas que suben desde abajo), con el azul de Flow.
-   La sección Limpieza (más adelante) usa el naranja de Limpieza con --acc-limpieza.
+   La sección Equipo (más adelante) usa el naranja de Itzé Limpieza con --acc-limpieza.
    Colores con significado (canales, estados, grupos, late check-out) siguen en constants.ts.
    El modo oscuro se suma en el paso 3 redefiniendo estas mismas variables. */
 :root {

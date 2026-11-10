@@ -509,3 +509,11 @@ export function pastStartText(ci, now = nowMerida()) {
     line: `Ojo: la entrada es ${when} (${dayNum(ci)} de ${mes(ci)}).`,
   };
 }
+
+// ── Equipo (rol equipo, paso 4 de roles) ──
+// Pantalla del equipo mientras su sección se arma (pasos 5 a 9 del plan de estilo y fusión)
+export const EQUIPO_PRONTO = {
+  title: 'Tu espacio en Flow ya está listo',
+  body: 'Muy pronto vas a ver acá tus habitaciones del día, tareas e insumos. Mientras tanto, seguí usando Itzé Limpieza como siempre :)',
+  logout: 'Cerrar sesión',
+};
