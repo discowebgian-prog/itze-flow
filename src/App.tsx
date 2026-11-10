@@ -17,7 +17,6 @@ import { Dashboard } from './pages/Dashboard';
 import { FinancePage } from './pages/FinancePage';
 import { GuestsPage } from './pages/GuestsPage';
 import { Login } from './pages/Login';
-import { PropertiesPage } from './pages/PropertiesPage';
 import { RatesPage } from './pages/RatesPage';
 import { ResList } from './pages/ResList';
 import { Timeline } from './pages/Timeline';
@@ -316,21 +315,6 @@ export default function AppMejorada() {
   const [ciModal, setCiModal] = useState(null);
   const [coModal, setCoModal] = useState(null);
   const [propStatus, setPropStatus] = useState({});
-  const [notes, setNotes] = useState({});
-  // Estado dinámico para el Checklist Editable por propiedad
-  const [checklists, setChecklists] = useState({
-    hostel: {
-      items: [
-        'Cambio de sábanas y toallas',
-        'Limpieza profunda de baño',
-        'Barrido y trapeado de pisos',
-        'Vaciado de basureros',
-        'Reposición de papel y amenidades',
-        'Revisión de luces y aire acondicionado'
-      ],
-      checked: {} // Guarda las tareas que ya se completaron (índice: true/false)
-    }
-  });
   const [calView, setCalView] = useState('timeline');
   const [prefill, setPrefill] = useState({});
   const [calOffset, setCalOffset] = useState(-2);  
@@ -442,7 +426,8 @@ export default function AppMejorada() {
     { id: 'dashboard', label: 'Inicio', icon: 'home' },
     { id: 'calendario', label: 'Calendario', icon: 'calendar' },
     { id: 'reservas', label: 'Reservas', icon: 'list' },
-    { id: 'propiedades', label: 'Propiedades', icon: 'building' },
+    // Propiedades se sacó del menú (10 nov 2026): sus tareas y notas competían con Itzé Limpieza
+    // y no se guardaban. Vuelve como ficha de cada propiedad cuando haya más de una (ver decisiones).
     { id: 'huespedes', label: 'Huéspedes', icon: 'users' },
     { id: 'finanzas', label: 'Finanzas', icon: 'finance' },
     { id: 'tarifas', label: 'Tarifas', icon: 'tag' },
@@ -1259,20 +1244,6 @@ const toggleBlacklist = async (id, currentStatus) => {
               onView={(r) => setDrawer(r)}
               onAdd={openAdd}
               onQuote={openQuote}
-            />
-          )}
-          {tab === 'propiedades' && (
-            <PropertiesPage
-              properties={visProps}
-              reservations={visRes}
-              notes={notes}
-              setNotes={setNotes}
-              checklists={checklists}
-              setChecklists={setChecklists}
-              propStatus={propStatus}
-              setPropStatus={setPropStatus}
-              initProp={initProp}
-              onGoTo={goTo}
             />
           )}
           {tab === 'huespedes' && (
