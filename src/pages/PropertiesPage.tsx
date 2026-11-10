@@ -2,6 +2,7 @@
 // @ts-nocheck
 import { useState } from 'react';
 import { PS } from '../lib/constants';
+import { Icon, ic } from '../components/ui/Icon';
 
 // ── PROPERTIES PAGE (NOTAS Y CHECKLIST DE TAREAS - DISEÑO PREMIUM) ───────────
 export function PropertiesPage({
@@ -70,97 +71,69 @@ export function PropertiesPage({
     });
   };
 
+  const card = { background: 'var(--card)', borderRadius: 'var(--r-card)', boxShadow: 'var(--shadow)', padding: '16px 16px 14px' };
+  const seg = (on) => ({
+    flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', fontFamily: 'inherit', fontWeight: on ? 700 : 600,
+    fontSize: 14, cursor: 'pointer', background: on ? 'var(--card)' : 'transparent', color: on ? 'var(--ink)' : 'var(--mut)',
+    boxShadow: on ? '0 1px 3px rgba(0,0,0,.12)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+    transition: 'background .15s',
+  });
+
   return (
     <div>
-      <h2
-        style={{
-          margin: '0 0 16px',
-          fontSize: 20,
-          fontWeight: 800,
-          color: '#111',
-        }}
-      >
+      <h2 style={{ margin: '0 0 14px', fontSize: 30, fontWeight: 'var(--w-title)', color: 'var(--ink)', letterSpacing: 'var(--ls-title)' }}>
         Propiedades
       </h2>
-      
-      {/* Selector superior de Propiedades */}
-      <div
-        style={{
-          display: 'flex',
-          gap: 8,
-          overflowX: 'auto',
-          marginBottom: 18,
-          paddingBottom: 4,
-        }}
-      >
-        {properties.map((p, liI) => (
-          <button className="li-in"
-            key={p.id}
-            onClick={() => {
-              setAp(p.id);
-              setSub('notas'); 
-            }}
-            style={{ '--i': liI,
-              flexShrink: 0,
-              padding: '7px 14px',
-              borderRadius: 20,
-              border: `1.5px solid ${ap === p.id ? p.color : '#E5E7EB'}`,
-              background: ap === p.id ? p.color + '18' : '#fff',
-              fontFamily: 'inherit',
-              fontWeight: 700,
-              fontSize: 12,
-              cursor: 'pointer',
-              color: ap === p.id ? '#111' : '#9CA3AF',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {p.emoji} {p.name}
-          </button>
-        ))}
-      </div>
+
+      {/* Selector de propiedad (solo si hay más de una) */}
+      {properties.length > 1 && (
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 14, paddingBottom: 2 }}>
+          {properties.map((p, liI) => {
+            const on = ap === p.id;
+            return (
+              <button
+                className="li-in ui-pill"
+                key={p.id}
+                onClick={() => {
+                  setAp(p.id);
+                  setSub('notas');
+                }}
+                style={{
+                  '--i': liI, flexShrink: 0, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  background: on ? 'var(--acc)' : 'var(--fill)', color: on ? '#fff' : 'var(--ink)',
+                }}
+              >
+                <Icon name="building" size={15} />
+                {p.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {prop && (
         <>
-          {/* Encabezado Principal */}
-          <div
-            style={{
-              background: '#fff',
-              borderRadius: 12,
-              padding: '16px 20px',
-              marginBottom: 14,
-              border: '1px solid #F0F0F0',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <span style={{ fontSize: 28 }}>{prop.emoji}</span>
-              <div>
-                <div style={{ fontWeight: 800, fontSize: 17, color: '#111' }}>
-                  {prop.name}
-                </div>
-                <div style={{ fontSize: 12, color: '#9CA3AF', textTransform: 'capitalize' }}>
-                  {prop.type}
-                </div>
+          {/* Encabezado de la propiedad */}
+          <div style={{ ...card, marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', minWidth: 0 }}>
+              <span style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--acc-soft)', color: 'var(--acc)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon name="building" size={22} />
+              </span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 'var(--w-title)', fontSize: 18, color: 'var(--ink)' }}>{prop.name}</div>
+                <div style={{ fontSize: 13, color: 'var(--mut)', textTransform: 'capitalize' }}>{prop.type}</div>
               </div>
             </div>
-            
+
             <select
               value={propStatus[ap] || 'libre'}
-              onChange={(e) =>
-                setPropStatus((s) => ({ ...s, [ap]: e.target.value }))
-              }
+              onChange={(e) => setPropStatus((s) => ({ ...s, [ap]: e.target.value }))}
               style={{
-                fontSize: 12,
-                fontWeight: 700,
+                fontSize: 13, fontWeight: 700,
                 color: PS[propStatus[ap]]?.color || '#10B981',
                 background: PS[propStatus[ap]]?.bg || '#D1FAE5',
-                border: 'none',
-                borderRadius: 8,
-                padding: '6px 10px',
-                fontFamily: 'inherit',
-                cursor: 'pointer',
+                border: 'none', borderRadius: 20, padding: '7px 12px', fontFamily: 'inherit', cursor: 'pointer', flexShrink: 0,
               }}
             >
               {Object.entries(PS).map(([k, v]) => (
@@ -171,320 +144,180 @@ export function PropertiesPage({
             </select>
           </div>
 
-          {/* ── NUEVO REDISEÑO DE BOTONES: CONTROL SEGMENTADO MODERNO (PULSE/iOS STYLE) ── */}
-          <div 
-            style={{ 
-              display: 'flex', 
-              background: '#E2E8F0', 
-              borderRadius: 12, 
-              padding: 4, 
-              gap: 4, 
-              marginBottom: 16 
-            }}
-          >
-            <button
-              onClick={() => setSub('notas')}
-              style={{
-                flex: 1,
-                padding: '10px 16px',
-                borderRadius: 9,
-                border: 'none',
-                fontFamily: 'inherit',
-                fontWeight: 700,
-                fontSize: 13,
-                cursor: 'pointer',
-                background: sub === 'notas' ? '#fff' : 'transparent',
-                color: sub === 'notas' ? '#1E293B' : '#64748B',
-                boxShadow: sub === 'notas' ? '0 2px 6px rgba(0,0,0,.06)' : 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                transition: 'all 0.2s ease'
-              }}
-            >
-              📝 Notas Internas
+          {/* Notas / Tareas: control segmentado de iPhone */}
+          <div style={{ display: 'flex', background: 'var(--fill)', borderRadius: 10, padding: 2, gap: 2, marginBottom: 14 }}>
+            <button onClick={() => setSub('notas')} style={seg(sub === 'notas')}>
+              <Icon name="edit" size={15} />
+              Notas
             </button>
-            <button
-              onClick={() => setSub('tareas')}
-              style={{
-                flex: 1,
-                padding: '10px 16px',
-                borderRadius: 9,
-                border: 'none',
-                fontFamily: 'inherit',
-                fontWeight: 700,
-                fontSize: 13,
-                cursor: 'pointer',
-                background: sub === 'tareas' ? '#fff' : 'transparent',
-                color: sub === 'tareas' ? '#1E293B' : '#64748B',
-                boxShadow: sub === 'tareas' ? '0 2px 6px rgba(0,0,0,.06)' : 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                transition: 'all 0.2s ease'
-              }}
-            >
-              📋 Tareas Operativas
+            <button onClick={() => setSub('tareas')} style={seg(sub === 'tareas')}>
+              <Icon name="list" size={15} />
+              Tareas{items.length > 0 ? ` (${done}/${items.length})` : ''}
             </button>
           </div>
 
           {/* VISTA: NOTAS */}
           {sub === 'notas' && (
-            <div
-              style={{
-                background: '#fff',
-                borderRadius: 12,
-                padding: 20,
-                border: '1px solid #F0F0F0',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: '#374151' }}>
-                  Notas internas de la propiedad
-                </div>
+            <div style={card}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <div style={{ fontWeight: 'var(--w-title)', fontSize: 18, color: 'var(--ink)' }}>Notas internas</div>
                 <button
                   onClick={() => setEditNote((x) => !x)}
                   style={{
-                    background: '#F3F4F6',
-                    border: 'none',
-                    borderRadius: 8,
-                    padding: '5px 12px',
-                    fontFamily: 'inherit',
-                    fontWeight: 700,
-                    fontSize: 12,
-                    cursor: 'pointer',
-                    color: '#555',
+                    background: editNote ? 'var(--fill)' : 'var(--acc-soft)', border: 'none', borderRadius: 20, padding: '7px 14px',
+                    fontFamily: 'inherit', fontWeight: 700, fontSize: 13.5, cursor: 'pointer',
+                    color: editNote ? 'var(--ink)' : 'var(--acc)', display: 'inline-flex', alignItems: 'center', gap: 5,
                   }}
                 >
-                  {editNote ? 'Cerrar' : '✏️ Editar'}
+                  <Icon name={editNote ? 'close' : 'edit'} size={14} />
+                  {editNote ? 'Cerrar' : 'Editar'}
                 </button>
               </div>
               {editNote ? (
                 <div>
                   <textarea
                     value={notes[ap] || ''}
-                    onChange={(e) =>
-                      setNotes((n) => ({ ...n, [ap]: e.target.value }))
-                    }
+                    onChange={(e) => setNotes((n) => ({ ...n, [ap]: e.target.value }))}
                     rows={8}
                     style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1.5px solid #E5E7EB',
-                      borderRadius: 8,
-                      fontSize: 13,
-                      fontFamily: 'inherit',
-                      outline: 'none',
-                      resize: 'vertical',
-                      boxSizing: 'border-box',
+                      width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 'var(--r-field)',
+                      background: 'var(--card)', color: 'var(--ink)', fontSize: 15, lineHeight: 1.5, fontFamily: 'inherit',
+                      outline: 'none', resize: 'vertical', boxSizing: 'border-box',
                     }}
                   />
                   <button
                     onClick={() => setEditNote(false)}
                     style={{
-                      marginTop: 8,
-                      background: '#3B82F6',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: 8,
-                      padding: '9px 18px',
-                      fontFamily: 'inherit',
-                      fontWeight: 700,
-                      cursor: 'pointer',
+                      marginTop: 10, width: '100%', minHeight: 46, background: 'var(--acc)', color: '#fff', border: 'none',
+                      borderRadius: 'var(--r-field)', fontFamily: 'inherit', fontWeight: 700, fontSize: 15, cursor: 'pointer',
                     }}
                   >
-                    Guardar Notas
+                    Guardar notas
                   </button>
                 </div>
               ) : (
                 <pre
                   style={{
-                    margin: 0,
-                    fontFamily: 'inherit',
-                    fontSize: 13,
-                    color: '#374151',
-                    whiteSpace: 'pre-wrap',
-                    lineHeight: 1.7,
+                    margin: 0, fontFamily: 'inherit', fontSize: 15, color: notes[ap] ? 'var(--ink)' : 'var(--mut)',
+                    whiteSpace: 'pre-wrap', lineHeight: 1.6, background: 'var(--bg)', borderRadius: 'var(--r-item)', padding: '12px 14px',
                   }}
                 >
-                  {notes[ap] || 'Sin notas registradas para esta propiedad.'}
+                  {notes[ap] || 'Todavía no hay notas para esta propiedad.'}
                 </pre>
               )}
             </div>
           )}
 
-          {/* VISTA: TAREAS OPERATIVAS (CHECKLIST EDITABLE) */}
+          {/* VISTA: TAREAS (checklist editable) */}
           {sub === 'tareas' && (
-            <div
-              style={{
-                background: '#fff',
-                borderRadius: 12,
-                padding: 20,
-                border: '1px solid #F0F0F0',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={card}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: '#374151' }}>
-                    Control de Tareas Operativas
-                  </div>
-                  <div style={{ fontSize: 11, color: '#9CA3AF' }}>
-                    {done}/{items.length} completados
+                  <div style={{ fontWeight: 'var(--w-title)', fontSize: 18, color: 'var(--ink)' }}>Tareas</div>
+                  <div style={{ fontSize: 13, color: 'var(--mut)' }}>
+                    {items.length === 0 ? 'Sin tareas' : done === items.length ? 'Todas hechas' : `${done} de ${items.length} hechas`}
                   </div>
                 </div>
-                <button
-                  onClick={() => setChecklists((c) => ({ ...c, [ap]: { items: items, checked: {} } }))}
-                  style={{
-                    background: '#FEF2F2',
-                    color: '#DC2626',
-                    border: 'none',
-                    borderRadius: 8,
-                    padding: '5px 12px',
-                    fontFamily: 'inherit',
-                    fontWeight: 700,
-                    fontSize: 12,
-                    cursor: 'pointer',
-                  }}
-                >
-                  ↺ Desmarcar Todo
-                </button>
+                {done > 0 && (
+                  <button
+                    onClick={() => setChecklists((c) => ({ ...c, [ap]: { items: items, checked: {} } }))}
+                    style={{
+                      background: 'var(--fill)', color: 'var(--ink)', border: 'none', borderRadius: 20, padding: '7px 14px',
+                      fontFamily: 'inherit', fontWeight: 600, fontSize: 13.5, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5,
+                    }}
+                  >
+                    <Icon name="repeat" size={14} />
+                    Desmarcar todo
+                  </button>
+                )}
               </div>
 
-              {/* Barra de Progreso */}
-              <div
-                style={{
-                  height: 5,
-                  background: '#F3F4F6',
-                  borderRadius: 4,
-                  marginBottom: 20,
-                }}
-              >
-                <div
-                  style={{
-                    height: '100%',
-                    background: '#10B981',
-                    borderRadius: 4,
-                    width: items.length > 0 ? Math.round((done / items.length) * 100) + '%' : '0%',
-                    transition: 'width .3s',
-                  }}
-                />
-              </div>
+              {items.length > 0 && (
+                <div style={{ height: 6, background: 'var(--fill)', borderRadius: 4, marginBottom: 14, overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      height: '100%', background: '#34C759', borderRadius: 4,
+                      width: Math.round((done / items.length) * 100) + '%', transition: 'width .3s',
+                    }}
+                  />
+                </div>
+              )}
 
-              {/* Formulario para agregar ítems */}
-              <form onSubmit={handleAddItem} style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-                <input 
+              {/* Agregar tarea */}
+              <form onSubmit={handleAddItem} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                <input
                   type="text"
                   value={newItemText}
                   onChange={(e) => setNewItemText(e.target.value)}
-                  placeholder="Ej: Comprar bombilla para baño P1..."
+                  placeholder="Ej: Comprar foco para el baño de P1"
                   style={{
-                    flex: 1,
-                    padding: '9px 12px',
-                    border: '1.5px solid #E5E7EB',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    outline: 'none'
+                    flex: 1, minWidth: 0, padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 'var(--r-field)',
+                    background: 'var(--card)', color: 'var(--ink)', fontSize: 15, fontFamily: 'inherit', outline: 'none',
                   }}
                 />
                 <button
                   type="submit"
+                  aria-label="Agregar tarea"
                   style={{
-                    padding: '9px 14px',
-                    background: '#10B981',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 8,
-                    fontWeight: 700,
-                    fontSize: 12,
-                    cursor: 'pointer'
+                    width: 44, height: 44, flexShrink: 0, background: 'var(--acc)', color: '#fff', border: 'none', borderRadius: '50%',
+                    cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0,
                   }}
                 >
-                  + Ítem
+                  <Icon name="plus" size={20} strokeWidth={2.5} />
                 </button>
               </form>
 
-              {/* Lista de tareas */}
+              {/* Lista de tareas tipo iPhone */}
               {items.map((item, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '10px 0',
-                    borderBottom: '1px solid #F9FAFB',
-                    gap: 12
-                  }}
-                >
-                  <div
+                <div key={i} className="ui-row" style={{ cursor: 'default', gap: 12, padding: '11px 2px' }}>
+                  <button
+                    type="button"
+                    aria-label={checked[i] ? 'Marcar como pendiente' : 'Marcar como hecha'}
+                    onClick={() => setChecklists((c) => ({
+                          ...c,
+                          [ap]: { items: items, checked: { ...checked, [i]: !checked[i] } },
+                        }))}
                     style={{
-                      width: 20,
-                      height: 20,
-                      borderRadius: 5,
-                      border: `1.5px solid ${checked[i] ? '#10B981' : '#D1D5DB'}`,
-                      background: checked[i] ? '#10B981' : '#fff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                      cursor: 'pointer'
+                      width: 24, height: 24, borderRadius: '50%', padding: 0, flexShrink: 0, cursor: 'pointer',
+                      border: `2px solid ${checked[i] ? '#34C759' : 'var(--handle)'}`,
+                      background: checked[i] ? '#34C759' : 'transparent', color: '#fff',
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     }}
-                    onClick={() =>
-                      setChecklists((c) => ({
-                        ...c,
-                        [ap]: {
-                          items: items,
-                          checked: { ...checked, [i]: !checked[i] }
-                        }
-                      }))
-                    }
                   >
-                    {checked[i] && <span style={{ color: '#fff', fontSize: 12, fontWeight: 800 }}>✓</span>}
-                  </div>
-                  
+                    {checked[i] && <Icon name="tick" size={14} strokeWidth={3.5} />}
+                  </button>
+
                   <span
                     style={{
-                      flex: 1,
-                      fontSize: 13,
-                      color: checked[i] ? '#D1D5DB' : '#374151',
+                      flex: 1, fontSize: 15, cursor: 'pointer',
+                      color: checked[i] ? 'var(--mut)' : 'var(--ink)',
                       textDecoration: checked[i] ? 'line-through' : 'none',
-                      cursor: 'pointer'
                     }}
-                    onClick={() =>
-                      setChecklists((c) => ({
-                        ...c,
-                        [ap]: {
-                          items: items,
-                          checked: { ...checked, [i]: !checked[i] }
-                        }
-                      }))
-                    }
+                    onClick={() => setChecklists((c) => ({
+                          ...c,
+                          [ap]: { items: items, checked: { ...checked, [i]: !checked[i] } },
+                        }))}
                   >
                     {item}
                   </span>
 
                   <button
                     type="button"
+                    aria-label="Borrar tarea"
                     onClick={() => handleRemoveItem(i)}
                     style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#EF4444',
-                      cursor: 'pointer',
-                      fontSize: 14,
-                      fontWeight: 700,
-                      padding: '0 6px',
+                      background: 'var(--fill)', border: 'none', color: 'var(--mut)', cursor: 'pointer',
+                      width: 28, height: 28, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0,
                     }}
                   >
-                    ×
+                    <Icon name="close" size={14} strokeWidth={2.5} />
                   </button>
                 </div>
               ))}
 
               {items.length === 0 && (
-                <div style={{ textAlign: 'center', color: '#9CA3AF', padding: '20px 0', fontSize: 12 }}>
-                  No hay tareas en el checklist. ¡Agrega una arriba!
+                <div style={{ textAlign: 'center', color: 'var(--mut)', padding: '18px 0 6px', fontSize: 14 }}>
+                  No hay tareas. Escribí una arriba y tocá +.
                 </div>
               )}
             </div>
