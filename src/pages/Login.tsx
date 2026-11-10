@@ -1,6 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 import { useState } from 'react';
+import { Icon } from '../components/ui/Icon';
 import { motion, AnimatePresence, useAnimationControls } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { SPRING_POP, SPRING_SHEET } from '../components/ui/Motion';
@@ -66,18 +67,18 @@ export function Login({ onLogin }) {
       shake();
     } else {
       setRecoverySent(true);
-      setTimeout(() => setRecoverySent(false), 5000);
+      setTimeout(() => setRecoverySent(false), 8000);
     }
   };
 
   const si = {
     width: '100%',
     padding: '11px 14px',
-    background: 'rgba(255,255,255,.1)',
-    border: '1px solid rgba(255,255,255,.2)',
-    borderRadius: 10,
-    color: '#fff',
-    fontSize: 14,
+    background: 'var(--fill)',
+    border: '1px solid transparent',
+    borderRadius: 'var(--r-field)',
+    color: 'var(--ink)',
+    fontSize: 16,
     fontFamily: 'inherit',
     outline: 'none',
     boxSizing: 'border-box',
@@ -88,7 +89,7 @@ export function Login({ onLogin }) {
     <div
       style={{
         minHeight: '100vh',
-        background: '#0F172A',
+        background: 'var(--bg)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -114,18 +115,18 @@ export function Login({ onLogin }) {
           <motion.h1
             {...enter(0.12)}
             style={{
-              color: '#fff',
-              fontSize: 26,
-              fontWeight: 800,
+              color: 'var(--ink)',
+              fontSize: 30,
+              fontWeight: 'var(--w-title)',
               margin: '0 0 4px',
-              letterSpacing: -0.5,
+              letterSpacing: 'var(--ls-title)',
             }}
           >
             Itzé Flow
           </motion.h1>
           <motion.p
             {...enter(0.18)}
-            style={{ color: 'rgba(255,255,255,.45)', margin: 0, fontSize: 13 }}
+            style={{ color: 'var(--mut)', margin: 0, fontSize: 15 }}
           >
             Sistema de gestión de reservas
           </motion.p>
@@ -134,16 +135,16 @@ export function Login({ onLogin }) {
         <motion.div
           animate={card}
           style={{
-            background: 'rgba(255,255,255,.06)',
-            border: '1px solid rgba(255,255,255,.1)',
-            borderRadius: 16,
-            padding: 28,
+            background: 'var(--card)',
+            borderRadius: 'var(--r-card)',
+            boxShadow: 'var(--shadow)',
+            padding: '24px 22px 18px',
           }}
         >
           <label
             style={{
               display: 'block',
-              color: 'rgba(255,255,255,.5)',
+              color: 'var(--mut)',
               fontSize: 11,
               fontWeight: 700,
               textTransform: 'uppercase',
@@ -151,18 +152,22 @@ export function Login({ onLogin }) {
               marginBottom: 6,
             }}
           >
-            Usuario
+            Correo
           </label>
           <input
+            type="email"
+            inputMode="email"
+            autoComplete="username"
+            autoCapitalize="none"
             value={uid}
             onChange={(e) => setUid(e.target.value)}
-            placeholder="Usuario"
+            placeholder="tu@correo.com"
             style={si}
           />
           <label
             style={{
               display: 'block',
-              color: 'rgba(255,255,255,.5)',
+              color: 'var(--mut)',
               fontSize: 11,
               fontWeight: 700,
               textTransform: 'uppercase',
@@ -174,6 +179,7 @@ export function Login({ onLogin }) {
           </label>
           <input
             type="password"
+            autoComplete="current-password"
             value={pw}
             onChange={(e) => setPw(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && go()}
@@ -189,8 +195,9 @@ export function Login({ onLogin }) {
                 exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.2 }}
                 style={{
-                  color: '#FCA5A5',
-                  fontSize: 12,
+                  color: 'var(--red)',
+                  fontSize: 13.5,
+                  fontWeight: 600,
                   margin: '0 0 10px',
                   textAlign: 'center',
                   overflow: 'hidden',
@@ -205,10 +212,10 @@ export function Login({ onLogin }) {
             disabled={busy}
             style={{
               width: '100%',
-              padding: '12px',
-              background: ok ? '#10B981' : '#3B82F6',
+              padding: '13px',
+              background: ok ? '#34C759' : 'var(--acc)',
               border: 'none',
-              borderRadius: 10,
+              borderRadius: 'var(--r-field)',
               color: '#fff',
               fontSize: 15,
               fontWeight: 700,
@@ -219,12 +226,13 @@ export function Login({ onLogin }) {
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
-              minHeight: 44,
+              minHeight: 48,
+              transition: 'background .2s',
             }}
           >
             {ok ? (
               <motion.span initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={SPRING_POP}>
-                ✓ ¡Hola!
+                <Icon name="tick" size={18} strokeWidth={3} style={{ verticalAlign: '-0.2em', marginRight: 4 }} />¡Hola!
               </motion.span>
             ) : busy ? (
               <>
@@ -241,7 +249,7 @@ export function Login({ onLogin }) {
           </button>
           
           {/* SECCIÓN: RECUPERACIÓN DE DATOS */}
-          <div style={{ marginTop: 24, textAlign: 'center', height: 40 }}>
+          <div style={{ marginTop: 18, textAlign: 'center', minHeight: 40 }}>
             <AnimatePresence mode="wait" initial={false}>
             {recoverySent ? (
               <motion.div
@@ -251,16 +259,17 @@ export function Login({ onLogin }) {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
                 style={{
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  border: '1px solid rgba(16, 185, 129, 0.2)',
-                  color: '#34D399',
-                  padding: '10px',
-                  borderRadius: 8,
-                  fontSize: 12,
+                  background: '#DCFCE7',
+                  color: '#15803D',
+                  padding: '10px 12px',
+                  borderRadius: 'var(--r-field)',
+                  fontSize: 13.5,
                   fontWeight: 600,
+                  lineHeight: 1.4,
                 }}
               >
-                ✓ Los datos fueron enviados a itzehostel@gmail.com
+                <Icon name="check" size={15} style={{ verticalAlign: '-0.2em', marginRight: 5 }} />
+                Te mandamos el enlace a {uid.trim()}. Revisá el correo (también el spam).
               </motion.div>
             ) : (
               <motion.button
@@ -273,15 +282,15 @@ export function Login({ onLogin }) {
                 style={{
                   background: 'transparent',
                   border: 'none',
-                  color: 'rgba(255,255,255,.4)',
-                  fontSize: 12,
+                  color: 'var(--acc)',
+                  fontSize: 14,
                   fontWeight: 600,
                   cursor: 'pointer',
-                  textDecoration: 'underline',
+                  padding: 8,
                   fontFamily: 'inherit',
                 }}
               >
-                Olvidé mis datos de ingreso
+                Olvidé mi contraseña
               </motion.button>
             )}
             </AnimatePresence>
