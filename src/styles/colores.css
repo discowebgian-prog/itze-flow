@@ -1,0 +1,49 @@
+/* ── COLORES SUELTOS DE LAS PANTALLAS, CON SU VERSIÓN OSCURA (modo oscuro, paso 3) ──────────────
+   Cada color que antes estaba escrito a mano en una pantalla (#FEF3C7) ahora es var(--c-FEF3C7):
+   en claro vale exactamente lo mismo; en oscuro, lo de abajo. Para un color nuevo, mejor usar las
+   variables de theme.css; si hace falta uno con significado (ámbar, verde…), sumarlo en los dos bloques. */
+:root {
+  --c-0F172A: #0F172A;
+  --c-111111: #111111;
+  --c-111827: #111827;
+  --c-1E293B: #1E293B;
+  --c-374151: #374151;
+  --c-475569: #475569;
+  --c-4B5563: #4B5563;
+  --c-64748B: #64748B;
+  --c-6B7280: #6B7280;
+  --c-888888: #888888;
+  --c-9CA3AF: #9CA3AF;
+  --c-C4C4C4: #C4C4C4;
+  --c-CBD5E1: #CBD5E1;
+  --c-D1D5DB: #D1D5DB;
+  --c-E5E7EB: #E5E7EB;
+  --c-F1F5F9: #F1F5F9;
+  --c-F3F4F6: #F3F4F6;
+  --c-F8FAFC: #F8FAFC;
+  --c-FAFAFA: #FAFAFA;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-0F172A: #F2F2F7;
+    --c-111111: #F2F2F7;
+    --c-111827: #F2F2F7;
+    --c-1E293B: #F2F2F7;
+    --c-374151: #D1D1D6;
+    --c-475569: #AEAEB2;
+    --c-4B5563: #AEAEB2;
+    --c-64748B: #98989D;
+    --c-6B7280: #98989D;
+    --c-888888: #98989D;
+    --c-9CA3AF: #7C7C82;
+    --c-C4C4C4: #48484A;
+    --c-CBD5E1: #48484A;
+    --c-D1D5DB: #48484A;
+    --c-E5E7EB: #38383A;
+    --c-F1F5F9: #2C2C2E;
+    --c-F3F4F6: #2C2C2E;
+    --c-F8FAFC: #232325;
+    --c-FAFAFA: #232325;
+  }
+}

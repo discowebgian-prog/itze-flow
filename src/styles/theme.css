@@ -39,6 +39,36 @@
   /* barras translúcidas (arriba y menú de abajo) */
   --bar: rgba(255, 255, 255, .82);
   --blur: saturate(180%) blur(20px);
+
+  /* aro de los campos al escribir */
+  --ring: rgba(37, 99, 235, .22);
+
+  color-scheme: light dark; /* campos, almanaques y barras de desplazamiento del navegador según el tema */
+}
+
+/* ── MODO OSCURO (paso 3): automático según el teléfono, mismos colores que Itzé Limpieza ──
+   Los colores sueltos de las pantallas están en colores.css (var(--c-HEX)) con su versión oscura. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --card: #1C1C1E;
+    --ink: #FFFFFF;
+    --ink-2: #D1D1D6;
+    --mut: #8E8E93;
+    --line: #38383A;
+    --fill: rgba(120, 120, 128, .24);
+    --handle: #48484A;
+
+    --acc: #0A84FF;       /* azul de iPhone en oscuro, como Limpieza */
+    --acc-soft: rgba(10, 132, 255, .18);
+    --acc-limpieza: #FF7A3D;
+    --ok: #30D158;
+    --red: #FF453A;
+
+    --shadow: none;
+    --bar: rgba(22, 22, 24, .78);
+    --ring: rgba(10, 132, 255, .35);
+  }
 }
 
 /* Sin la letra redondeada (Windows, Android, Chrome en Mac) la letra del sistema en 800 se ve tosca */
@@ -53,7 +83,7 @@ html.no-rounded { --w-title: 700; --ls-title: -.01em; }
 /* Campo que se está escribiendo: aro azul suave (los campos no tenían ninguna señal al tocarlos) */
 input:not([type=checkbox]):not([type=radio]):not([type=range]):focus,
 select:focus,
-textarea:focus { box-shadow: 0 0 0 3px rgba(37, 99, 235, .22); }
+textarea:focus { box-shadow: 0 0 0 3px var(--ring); }
 
 /* Listas tipo iPhone (Reservas y las próximas pantallas): tarjeta con título y filas separadas por línea fina */
 .ui-group { background: var(--card); border-radius: var(--r-card); box-shadow: var(--shadow); padding: 4px 0 6px; margin-bottom: 16px; }

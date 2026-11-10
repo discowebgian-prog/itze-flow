@@ -229,7 +229,7 @@ export function stayInfo(allRes, res, decisions = []) {
 export function stayBadge(info) {
   if (!info) return null;
   if (info.number === 1) {
-    return { label: 'Primera estancia', icon: 'sparkles', color: '#475569', bg: '#F1F5F9' };
+    return { label: 'Primera estancia', icon: 'sparkles', color: 'var(--c-475569)', bg: 'var(--c-F1F5F9)' };
   }
   const f = freqBadge(info.number);
   return { label: `${info.number}ª estancia · ${f.label}`, icon: f.icon, color: f.color, bg: f.bg };

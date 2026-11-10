@@ -508,7 +508,7 @@ export function Timeline({
                     alignItems: 'center',
                     padding: '0 12px',
                     borderRight: '1px solid var(--line)',
-                    background: row.type === 'room' ? '#FAFAFA' : '#F3F4F6',
+                    background: row.type === 'room' ? 'var(--c-FAFAFA)' : 'var(--c-F3F4F6)',
                     zIndex: 25,
                     position: 'sticky',
                     left: 0,
@@ -536,7 +536,7 @@ export function Timeline({
                         <span
                           style={{
                             fontSize: 10,
-                            color: '#C4C4C4',
+                            color: 'var(--c-C4C4C4)',
                             fontWeight: 600,
                           }}
                         >
@@ -934,7 +934,7 @@ export function Timeline({
             left: Math.min(tooltip.x + 12, window.innerWidth - 220),
             top: Math.max(tooltip.y - 10, 8),
             zIndex: 500,
-            background: '#1E293B',
+            background: 'var(--c-1E293B)',
             borderRadius: 10,
             padding: '10px 14px',
             boxShadow: '0 8px 32px rgba(0,0,0,.35)',

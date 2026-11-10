@@ -1409,7 +1409,7 @@ const toggleBlacklist = async (id, currentStatus) => {
         >
           <PopCard
             style={{
-              background: '#fff',
+              background: 'var(--card)',
               borderRadius: 16,
               maxWidth: 360,
               width: '100%',
@@ -1434,12 +1434,12 @@ const toggleBlacklist = async (id, currentStatus) => {
               )}
             </div>
             <div style={{ padding: '18px 22px' }}>
-              <p style={{ margin: '0 0 20px', fontSize: 13, color: '#374151' }}>
+              <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--c-374151)' }}>
                 {deleteText(res.find((x) => x.id === modal.id)).detail}
               </p>
               {modal.groupIds && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-374151)' }}>
                     🔗 Esta habitación es parte de un grupo de {modal.groupIds.length}.
                   </div>
                   <button
@@ -1468,13 +1468,13 @@ const toggleBlacklist = async (id, currentStatus) => {
                   style={{
                     flex: 1,
                     padding: '10px',
-                    background: '#F3F4F6',
+                    background: 'var(--c-F3F4F6)',
                     border: 'none',
                     borderRadius: 8,
                     fontFamily: 'inherit',
                     fontWeight: 600,
                     cursor: 'pointer',
-                    color: '#374151',
+                    color: 'var(--c-374151)',
                   }}
                 >
                   Cancelar
@@ -1586,7 +1586,7 @@ const toggleBlacklist = async (id, currentStatus) => {
         >
           <PopCard
             style={{
-              background: '#fff',
+              background: 'var(--card)',
               borderRadius: 16,
               maxWidth: 380,
               width: '100%',
@@ -1612,10 +1612,10 @@ const toggleBlacklist = async (id, currentStatus) => {
                 const t = checkInText(ciModal);
                 return (
                   <>
-                    <p style={{ fontSize: 14, color: '#374151', marginBottom: 6 }}>
+                    <p style={{ fontSize: 14, color: 'var(--c-374151)', marginBottom: 6 }}>
                       ¿Confirmás el ingreso de <b>{t.who}</b>{t.where}?
                     </p>
-                    <p style={{ fontSize: 12, color: '#6B7280', marginBottom: t.warn ? 10 : 20 }}>{t.detail}</p>
+                    <p style={{ fontSize: 12, color: 'var(--c-6B7280)', marginBottom: t.warn ? 10 : 20 }}>{t.detail}</p>
                     {t.warn && (
                       <p style={{ fontSize: 12, color: '#92400E', background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 8, padding: '7px 10px', margin: '0 0 18px', fontWeight: 600 }}>
                         💰 {t.warn}
@@ -1630,13 +1630,13 @@ const toggleBlacklist = async (id, currentStatus) => {
                   style={{
                     flex: 1,
                     padding: '10px',
-                    background: '#F3F4F6',
+                    background: 'var(--c-F3F4F6)',
                     border: 'none',
                     borderRadius: 8,
                     fontFamily: 'inherit',
                     fontWeight: 600,
                     cursor: 'pointer',
-                    color: '#4B5563',
+                    color: 'var(--c-4B5563)',
                   }}
                 >
                   Cancelar
@@ -1679,7 +1679,7 @@ const toggleBlacklist = async (id, currentStatus) => {
         >
           <PopCard
             style={{
-              background: '#fff',
+              background: 'var(--card)',
               borderRadius: 16,
               maxWidth: 380,
               width: '100%',
@@ -1705,10 +1705,10 @@ const toggleBlacklist = async (id, currentStatus) => {
                 const t = checkOutText(coModal);
                 return (
                   <>
-                    <p style={{ fontSize: 14, color: '#374151', marginBottom: 6 }}>
+                    <p style={{ fontSize: 14, color: 'var(--c-374151)', marginBottom: 6 }}>
                       ¿Confirmás la salida de <b>{t.who}</b>{t.where}?
                     </p>
-                    <p style={{ fontSize: 12, color: '#6B7280', marginBottom: t.warn ? 10 : 20 }}>{t.detail}</p>
+                    <p style={{ fontSize: 12, color: 'var(--c-6B7280)', marginBottom: t.warn ? 10 : 20 }}>{t.detail}</p>
                     {t.warn && (
                       <p style={{ fontSize: 12, color: '#92400E', background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 8, padding: '7px 10px', margin: '0 0 18px', fontWeight: 600 }}>
                         💰 {t.warn}
@@ -1723,13 +1723,13 @@ const toggleBlacklist = async (id, currentStatus) => {
                   style={{
                     flex: 1,
                     padding: '10px',
-                    background: '#F3F4F6',
+                    background: 'var(--c-F3F4F6)',
                     border: 'none',
                     borderRadius: 8,
                     fontFamily: 'inherit',
                     fontWeight: 600,
                     cursor: 'pointer',
-                    color: '#4B5563',
+                    color: 'var(--c-4B5563)',
                   }}
                 >
                   Cancelar

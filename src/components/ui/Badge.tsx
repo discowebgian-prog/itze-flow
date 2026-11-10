@@ -5,7 +5,7 @@ import { RS } from '../../lib/constants';
 // ── SMALL COMPONENTS ──────────────────────────────────────────────────────────
 export const Badge = ({ status, large }) => {
   // EL SALVAVIDAS: Si el estado no existe en la lista, le pone un color gris por defecto y muestra el nombre en lugar de explotar.
-  const s = RS[status] || { bg: '#F3F4F6', txt: '#6B7280', label: status || 'Desconocido' };
+  const s = RS[status] || { bg: 'var(--c-F3F4F6)', txt: 'var(--c-6B7280)', label: status || 'Desconocido' };
   
   return (
     <span

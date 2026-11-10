@@ -68,12 +68,12 @@ export const srcShort = (v) => SOURCES.find((s) => s.value === v)?.short || v;
 
 export const srcLabel = (v) => SOURCES.find((s) => s.value === v)?.label || v;
 
-export const srcColor = (v) => SOURCES.find((s) => s.value === v)?.color || '#888';
+export const srcColor = (v) => SOURCES.find((s) => s.value === v)?.color || 'var(--c-888888)';
 
 export const RS = {
   por_llegar: { bg: '#DBEAFE', txt: '#1E40AF', label: 'Por llegar' },
   hospedado: { bg: '#D1FAE5', txt: '#065F46', label: 'Hospedado' },
-  finalizada: { bg: '#F3F4F6', txt: '#6B7280', label: 'Finalizada' },
+  finalizada: { bg: 'var(--c-F3F4F6)', txt: 'var(--c-6B7280)', label: 'Finalizada' },
   cancelada: { bg: '#FEE2E2', txt: '#991B1B', label: 'Cancelada' },
 };
 
@@ -85,7 +85,7 @@ export const PS = {
 export const BLOCK_COLORS = {
   por_llegar: { bg: '#3B82F6', text: '#fff' },
   hospedado: { bg: '#10B981', text: '#fff' },
-  finalizada: { bg: '#9CA3AF', text: '#fff' },
+  finalizada: { bg: 'var(--c-9CA3AF)', text: '#fff' },
   cancelada: { bg: '#F87171', text: '#fff' },
 };
 

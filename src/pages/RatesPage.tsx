@@ -49,7 +49,7 @@ const todayStr = () => fmt(TODAY);
 function statusOf(p) {
   if (isNormal(p)) return null;
   const t = todayStr();
-  if (p.hasta < t) return { label: 'Terminado', bg: '#F3F4F6', txt: 'var(--mut)' };
+  if (p.hasta < t) return { label: 'Terminado', bg: 'var(--c-F3F4F6)', txt: 'var(--mut)' };
   if (p.desde > t) return { label: 'Próximo', bg: '#E0F2FE', txt: '#0369A1' };
   return { label: 'Vigente hoy', bg: '#DCFCE7', txt: '#15803D' };
 }
