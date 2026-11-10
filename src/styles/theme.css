@@ -10,6 +10,7 @@
 
   /* fondos y textos */
   --bg: #F2F2F7;          /* fondo de la app y de las hojas */
+  --inset: #F2F2F7;       /* recuadros grises DENTRO de una tarjeta (en claro igual al fondo; en oscuro un gris un poco más claro que la tarjeta) */
   --card: #FFFFFF;        /* tarjetas, campos, menús */
   --ink: #1C1C1E;         /* texto principal */
   --ink-2: #3A3A3C;       /* texto secundario fuerte */
@@ -52,6 +53,7 @@
   :root {
     --bg: #000000;
     --card: #1C1C1E;
+    --inset: #2C2C2E;
     --ink: #FFFFFF;
     --ink-2: #D1D1D6;
     --mut: #8E8E93;
@@ -70,6 +72,9 @@
     --ring: rgba(10, 132, 255, .35);
   }
 }
+
+/* Sin margen del navegador alrededor (antes del login se veía un marco blanco, en oscuro gris) */
+html, body { margin: 0; background: var(--bg); }
 
 /* Sin la letra redondeada (Windows, Android, Chrome en Mac) la letra del sistema en 800 se ve tosca */
 html.no-rounded { --w-title: 700; --ls-title: -.01em; }

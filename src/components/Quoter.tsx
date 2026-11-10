@@ -448,7 +448,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
     height: 44,
     borderRadius: '50%',
     border: 'none',
-    background: disabled ? 'var(--bg)' : 'var(--fill)',
+    background: disabled ? 'var(--inset)' : 'var(--fill)',
     color: disabled ? 'var(--handle)' : 'var(--acc)',
     fontSize: 24,
     fontWeight: 600,
@@ -709,7 +709,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                   className="qt-in"
                   style={{
                     animationDelay: `${idx * 60}ms`,
-                    background: g ? 'var(--acc-soft)' : isOpen ? 'var(--card)' : 'var(--bg)',
+                    background: g ? 'var(--acc-soft)' : isOpen ? 'var(--card)' : 'var(--inset)',
                     borderRadius: 'var(--r-item)',
                     overflow: 'hidden',
                     boxShadow: g
@@ -930,7 +930,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                     animationDelay: `${(freeRooms.length + idx) * 60}ms`,
                     padding: '8px 14px',
                     borderRadius: 'var(--r-field)',
-                    background: 'var(--bg)',
+                    background: 'var(--inset)',
                     opacity: 0.75,
                     fontSize: 12.5,
                     color: 'var(--mut)',
@@ -950,7 +950,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
           {/* 4 · Cotización */}
           {items.length > 0 && (
             <Step num={4} title="Cotización" done={done} boxRef={quoteRef}>
-              <div style={{ background: 'var(--bg)', borderRadius: 'var(--r-item)', overflow: 'hidden' }}>
+              <div style={{ background: 'var(--inset)', borderRadius: 'var(--r-item)', overflow: 'hidden' }}>
                 {items.map((it) => (
                   <div key={it.key} style={{ padding: '11px 14px', borderBottom: '1px solid var(--line)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>

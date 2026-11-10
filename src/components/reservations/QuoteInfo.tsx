@@ -17,7 +17,7 @@ export function QuoteInfo({ q, matches, onUse }) {
   if (!q) return null;
   if (q.missing) {
     return (
-      <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--mut)', background: 'var(--bg)', borderRadius: 'var(--r-field)', padding: '8px 11px' }}>
+      <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--mut)', background: 'var(--inset)', borderRadius: 'var(--r-field)', padding: '8px 11px' }}>
         {ic('calculator', 13)}Esta habitación no tiene precio cargado en Tarifas para esas fechas. Escribí la tarifa a mano.
       </div>
     );
@@ -29,7 +29,7 @@ export function QuoteInfo({ q, matches, onUse }) {
         marginTop: 8,
         padding: '9px 12px',
         borderRadius: 'var(--r-field)',
-        background: matches ? 'var(--acc-soft)' : 'var(--bg)',
+        background: matches ? 'var(--acc-soft)' : 'var(--inset)',
         fontSize: 12,
         color: 'var(--ink-2)',
         lineHeight: 1.5,

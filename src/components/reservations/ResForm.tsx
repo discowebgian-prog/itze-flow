@@ -954,7 +954,7 @@ export function ResForm({
                               padding: '2px 9px',
                               borderRadius: 14,
                               border: `1px solid ${on ? GROUP_COLORS.txt : 'var(--handle)'}`,
-                              background: on ? GROUP_COLORS.txt : 'var(--card)',
+                              background: on ? GROUP_COLORS.solid : 'var(--card)',
                               color: on ? '#fff' : 'var(--mut)',
                               fontFamily: 'inherit',
                               fontWeight: 600,
@@ -967,7 +967,7 @@ export function ResForm({
                               padding: '4px 12px',
                               borderRadius: 20,
                               border: `1.5px solid ${on ? GROUP_COLORS.txt : 'var(--line)'}`,
-                              background: on ? GROUP_COLORS.txt : 'var(--card)',
+                              background: on ? GROUP_COLORS.solid : 'var(--card)',
                               color: on ? '#fff' : 'var(--ink-2)',
                               fontFamily: 'inherit',
                               fontWeight: 800,
@@ -1423,7 +1423,7 @@ export function ResForm({
                 gap: 6,
                 marginBottom: 10,
                 padding: 10,
-                background: 'var(--bg)',
+                background: 'var(--inset)',
                 borderRadius: 'var(--r-item)',
               }}
             >
@@ -1649,7 +1649,7 @@ export function ResForm({
                   marginBottom: 8,
                   alignItems: 'center',
                   padding: '8px 10px 8px 12px',
-                  background: a.bonificada ? 'var(--c-F0FDF4)' : 'var(--bg)',
+                  background: a.bonificada ? 'var(--c-F0FDF4)' : 'var(--inset)',
                   borderRadius: 'var(--r-field)',
                 }}
               >
@@ -1813,7 +1813,7 @@ export function ResForm({
                 padding: '5px 14px',
                 borderRadius: 20,
                 border: `1.5px solid ${GROUP_COLORS.txt}`,
-                background: splitPay ? GROUP_COLORS.txt : 'var(--card)',
+                background: splitPay ? GROUP_COLORS.solid : 'var(--card)',
                 fontFamily: 'inherit',
                 fontSize: 12,
                 fontWeight: 800,
@@ -1910,7 +1910,7 @@ export function ResForm({
               alignItems: 'center',
               gap: 10,
               padding: '10px 14px',
-              background: vccOn ? 'var(--acc-soft)' : 'var(--bg)',
+              background: vccOn ? 'var(--acc-soft)' : 'var(--inset)',
               borderRadius: 'var(--r-item)',
               boxShadow: vccOn ? 'inset 0 0 0 1.5px var(--acc)' : 'none',
               cursor: 'pointer',
@@ -2176,7 +2176,7 @@ export function ResForm({
                 return (
                   <div
                     key={x.m.id}
-                    style={{ padding: '8px 0', borderBottom: '1px solid var(--bg)', fontSize: 12.5, color: 'var(--ink-2)' }}
+                    style={{ padding: '8px 0', borderBottom: '1px solid var(--inset)', fontSize: 12.5, color: 'var(--ink-2)' }}
                   >
                     <div style={{ fontWeight: 800, color: 'var(--ink)' }}>
                       {x.m.room}
@@ -2253,7 +2253,7 @@ export function ResForm({
             }}
           >
             <PopCard style={{ background: 'var(--card)', borderRadius: 22, maxWidth: 380, width: '100%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.25)' }}>
-              <div style={{ background: GROUP_COLORS.txt, padding: '16px 22px' }}>
+              <div style={{ background: GROUP_COLORS.solid, padding: '16px 22px' }}>
                 <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>{ic('link', 17)}¿Aplicar a todo el grupo?</div>
               </div>
               <div style={{ padding: '18px 22px' }}>
@@ -2287,7 +2287,7 @@ export function ResForm({
                   <button
                     type="button"
                     onClick={applyToGroup}
-                    style={{ ...btn, background: GROUP_COLORS.txt, color: '#fff', border: 'none' }}
+                    style={{ ...btn, background: GROUP_COLORS.solid, color: '#fff', border: 'none' }}
                   >
                     {onlyPerson ? 'Sí, pasarlos' : `Todo el grupo (${members.length} habitaciones)`}
                   </button>
@@ -2534,7 +2534,7 @@ function ReadBox({ label, value }) {
           borderRadius: 'var(--r-field)',
           fontSize: 13,
           fontWeight: 800,
-          background: 'var(--bg)',
+          background: 'var(--inset)',
           color: 'var(--ink)',
           minHeight: 36,
           boxSizing: 'border-box',
@@ -2595,7 +2595,7 @@ function RoomCards({ rooms, alloc, setA, titularRoom, titularName, roomTotal, sp
             key={id}
             style={{
               boxShadow: isTit && isGroup ? `inset 0 0 0 1.5px ${GROUP_COLORS.border}` : 'none',
-              background: 'var(--bg)',
+              background: 'var(--inset)',
               borderRadius: 'var(--r-item)',
               padding: 12,
               marginBottom: 10,
@@ -2611,7 +2611,7 @@ function RoomCards({ rooms, alloc, setA, titularRoom, titularName, roomTotal, sp
                   style={{
                     padding: '4px 10px',
                     borderRadius: 20,
-                    background: GROUP_COLORS.txt,
+                    background: GROUP_COLORS.solid,
                     color: '#fff',
                     fontWeight: 700,
                     fontSize: 11,

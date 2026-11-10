@@ -4,6 +4,8 @@
    variables de theme.css; si hace falta uno con significado (ámbar, verde…), sumarlo en los dos bloques. */
 :root {
   --tip: #1E293B; /* ventanita oscura del calendario */
+  --grupo-fuerte: #0F766E; /* botones del grupo con letra blanca */
+  --late-fuerte: #3730A3; /* botones del late check-out con letra blanca */
   --c-003580: #003580;
   --c-0284C7: #0284C7;
   --c-0369A1: #0369A1;
@@ -112,6 +114,8 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --tip: #3A3A3C;
+    --grupo-fuerte: #0D9488;
+    --late-fuerte: #4F46E5;
     --c-003580: #8BB4EE;
     --c-0284C7: #0284C7;
     --c-0369A1: #8BCBEE;
@@ -140,14 +144,14 @@
     --c-4338CA: #8D86DF;
     --c-475569: #AEAEB2;
     --c-4B5563: #AEAEB2;
-    --c-4F46E5: #4F46E5;
+    --c-4F46E5: #6366F1;
     --c-5B21B6: #B38FEB;
     --c-5EEAD4: #278677;
     --c-64748B: #98989D;
     --c-6B7280: #98989D;
     --c-6D28D9: #A77DE8;
     --c-78350F: #EEAF8B;
-    --c-7C3AED: #7C3AED;
+    --c-7C3AED: #8B5CF6;
     --c-7F1D1D: #E69393;
     --c-86EFAC: #27864A;
     --c-888888: #98989D;
@@ -175,7 +179,7 @@
     --c-D97706: #D97706;
     --c-DB2777: #DB2777;
     --c-DBEAFE: #182D49;
-    --c-DC2626: #DC2626;
+    --c-DC2626: #EF4444;
     --c-DCFCE7: #184929;
     --c-DDD6FE: #342673;
     --c-E06C4F: #E06C4F;

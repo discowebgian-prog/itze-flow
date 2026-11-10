@@ -168,7 +168,7 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
 
   // ── Fila de precios de un período (vista) ──
   const priceTable = (p) => (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.6fr) repeat(3, minmax(0,1fr))', rowGap: 8, columnGap: 8, fontSize: 13.5, alignItems: 'center', background: 'var(--bg)', borderRadius: 'var(--r-item)', padding: '10px 12px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.6fr) repeat(3, minmax(0,1fr))', rowGap: 8, columnGap: 8, fontSize: 13.5, alignItems: 'center', background: 'var(--inset)', borderRadius: 'var(--r-item)', padding: '10px 12px' }}>
       <div />
       <div style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--c-D97706)', textTransform: 'uppercase', textAlign: 'right' }}>Lun–Mié</div>
       <div style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--c-7C3AED)', textTransform: 'uppercase', textAlign: 'right' }}>Jue–Dom</div>
@@ -445,7 +445,7 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
           </div>
         </Collapse>
 
-        <div style={{ marginTop: 12, background: 'var(--bg)', borderRadius: 'var(--r-item)', padding: '2px 12px 10px' }}>
+        <div style={{ marginTop: 12, background: 'var(--inset)', borderRadius: 'var(--r-item)', padding: '2px 12px 10px' }}>
           {selPeriod ? (
             ROOM_TYPES.map((ty) => {
               const n = nightPrice(selDay, ty.id, periods);

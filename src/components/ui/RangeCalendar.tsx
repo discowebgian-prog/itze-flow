@@ -215,7 +215,7 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows 
           fontSize: 13,
           fontWeight: 600,
           color: 'var(--mut)',
-          background: 'var(--bg)',
+          background: 'var(--inset)',
           padding: '9px 12px',
           borderRadius: 'var(--r-field)',
         }}

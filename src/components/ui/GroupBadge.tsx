@@ -4,7 +4,7 @@
 // Marca las reservas que son parte de un grupo (varias habitaciones de un titular).
 import { Icon } from './Icon';
 
-export const GROUP_COLORS = { bg: 'var(--c-CCFBF1)', txt: 'var(--c-0F766E)', border: 'var(--c-5EEAD4)' };
+export const GROUP_COLORS = { bg: 'var(--c-CCFBF1)', txt: 'var(--c-0F766E)', border: 'var(--c-5EEAD4)', solid: 'var(--grupo-fuerte)' }; // solid = fondo de botones con letra blanca
 
 export function GroupBadge({ r, size = 11, count }) {
   if (!r || !r.grupoId) return null;

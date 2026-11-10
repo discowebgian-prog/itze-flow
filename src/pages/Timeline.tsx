@@ -396,7 +396,7 @@ export function Timeline({
               position: 'sticky',
               top: 0,
               zIndex: 20,
-              background: 'var(--bg)',
+              background: 'var(--inset)',
               cursor: hdrDrag ? 'grabbing' : 'grab',
               touchAction: 'none',
             }}
@@ -413,7 +413,7 @@ export function Timeline({
                 cursor: 'default',
                 position: 'sticky',
                 left: 0,
-                background: 'var(--bg)',
+                background: 'var(--inset)',
                 zIndex: 30,
               }}
               onMouseDown={(e) => e.stopPropagation()}
@@ -1056,7 +1056,7 @@ export function Timeline({
               {dConf.newCheckIn !== dConf.orig.checkIn && (
                 <div
                   style={{
-                    background: 'var(--bg)',
+                    background: 'var(--inset)',
                     borderRadius: 'var(--r-item)',
                     padding: '12px 14px',
                     marginBottom: 14,
@@ -1083,7 +1083,7 @@ export function Timeline({
                 dConf.newRoom !== dConf.orig.room) && (
                 <div
                   style={{
-                    background: 'var(--bg)',
+                    background: 'var(--inset)',
                     borderRadius: 'var(--r-item)',
                     padding: '12px 14px',
                     marginBottom: 14,

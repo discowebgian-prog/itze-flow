@@ -510,8 +510,8 @@ export function ResDrawer({
                         minHeight: 32,
                         padding: '4px 12px',
                         borderRadius: 8,
-                        border: `1.5px solid ${here ? GROUP_COLORS.txt : GROUP_COLORS.border}`,
-                        background: here ? GROUP_COLORS.txt : 'var(--card)',
+                        border: `1.5px solid ${here ? GROUP_COLORS.solid : GROUP_COLORS.border}`,
+                        background: here ? GROUP_COLORS.solid : 'var(--card)',
                         color: here ? '#fff' : GROUP_COLORS.txt,
                         fontFamily: 'inherit',
                         fontWeight: 800,
@@ -696,7 +696,7 @@ export function ResDrawer({
                       flex: 2,
                       minHeight: 42,
                       fontSize: 13,
-                      background: addRoom && addRate !== '' ? GROUP_COLORS.txt : 'var(--c-99D5CC)',
+                      background: addRoom && addRate !== '' ? GROUP_COLORS.solid : 'var(--c-99D5CC)',
                       color: '#fff',
                     }}
                   >
@@ -843,7 +843,7 @@ export function ResDrawer({
                     flex: 2,
                     minHeight: 40,
                     fontSize: 13,
-                    background: lh ? LATE_COLORS.txt : 'var(--c-C7D2FE)',
+                    background: lh ? LATE_COLORS.solid : 'var(--c-C7D2FE)',
                     color: '#fff',
                     cursor: lh ? 'pointer' : 'default',
                   }}
@@ -1145,7 +1145,7 @@ export function ResDrawer({
                 <button
                   type="button"
                   onClick={() => openPay('group')}
-                  style={{ ...mainBtn, minHeight: 34, padding: '4px 14px', fontSize: 12, background: GROUP_COLORS.txt, color: '#fff', whiteSpace: 'nowrap' }}
+                  style={{ ...mainBtn, minHeight: 34, padding: '4px 14px', fontSize: 12, background: GROUP_COLORS.solid, color: '#fff', whiteSpace: 'nowrap' }}
                 >
                   <Icon name="link" size={16} />Cobrar saldo del grupo
                 </button>
