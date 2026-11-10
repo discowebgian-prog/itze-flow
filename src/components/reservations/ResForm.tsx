@@ -12,7 +12,7 @@ import { ROOMS, SOURCES, RS, COUNTRIES, findCountry } from '../../lib/constants'
 import { TODAY, fmt, fmtD, addDays, diffDays, currency, parseD } from '../../lib/dates';
 import { lastVisitText, birthdayInStay, birthdayText, cleanBirthDate } from '../../lib/guestMessages';
 import { findConflicts, calcStayTotal, lateCostOf } from '../../lib/reservations';
-import { freeStayText } from '../../lib/voice';
+import { freeStayText, nowMerida, pastStartText } from '../../lib/voice';
 import { quoteRoom, pricingMatches, applyQuote } from '../../lib/rates';
 import { QuoteInfo, money } from './QuoteInfo';
 import { listY, Step, QT_CSS, scrollToStep } from '../Quoter';
@@ -352,6 +352,7 @@ export function ResForm({
   // Cómo estaba el pago antes de tildar "VCC cobrada", para poder destildar
   const vccPrev = useRef(null);
   const [confModal, setConfModal] = useState(null);
+  const [pastAsk, setPastAsk] = useState(null); // entrada antes de hoy: pedir OK antes de guardar
   const [isSaving, setIsSaving] = useState(false);
   const [valErr, setValErr] = useState(''); 
 
@@ -509,7 +510,12 @@ export function ResForm({
     } else go();
   };
 
-  const handleSave = () => {
+  // Entrada antes de hoy: solo cuenta en reservas nuevas o si se cambió la fecha de entrada
+  // (al editar una estadía en curso, que la entrada sea pasada es lo normal)
+  const todayStr = fmt(nowMerida());
+  const startsInPast = !!f.checkIn && f.checkIn < todayStr && (!initial?.id || f.checkIn !== initial.checkIn);
+
+  const handleSave = (skipPast = false) => {
     if (isSaving) return;
 
     // --- 1. VALIDACIÓN DE CAMPOS OBLIGATORIOS ---
@@ -563,6 +569,12 @@ export function ResForm({
 
     setValErr(''); // Si todo está bien, limpiamos el error
     // --------------------------------------------
+
+    // Entrada antes de hoy (reserva nueva o fecha de entrada cambiada): se puede, pero pide OK
+    if (startsInPast && !skipPast) {
+      setPastAsk(true);
+      return;
+    }
 
     if (multiOn) {
       const rows = buildRooms();
@@ -720,6 +732,26 @@ export function ResForm({
           sv('checkOut', co);
         }}
       />
+
+      {/* Entrada antes de hoy: aviso suave acá; al guardar se pide confirmar */}
+      {startsInPast && (
+        <div
+          className="pop-in"
+          style={{
+            marginTop: 10,
+            fontSize: 13,
+            fontWeight: 600,
+            color: '#92400E',
+            background: '#FFFBEB',
+            borderRadius: 'var(--r-field)',
+            padding: '9px 12px',
+            lineHeight: 1.4,
+          }}
+        >
+          {ic('warning', 14)}
+          {pastStartText(f.checkIn).line}
+        </div>
+      )}
 
       {/* Grupo con fechas nuevas: aviso si el tarifario da distinto (Ver abre la explicación) */}
       {groupDatesChanged && requoteDiff.length > 0 && (
@@ -2083,7 +2115,7 @@ export function ResForm({
           Cancelar
         </button>
         <button
-          onClick={handleSave}
+          onClick={() => handleSave()}
           disabled={isSaving}
           style={{
             flex: 2,
@@ -2275,6 +2307,53 @@ export function ResForm({
                     style={{ ...btn, background: 'none', color: 'var(--mut)', border: 'none', fontWeight: 600 }}
                   >
                     {ic('chevL', 15)}Volver al formulario
+                  </button>
+                </div>
+              </div>
+            </PopCard>
+          </Backdrop>
+        );
+      })()}</AnimatePresence>
+
+      <AnimatePresence>{pastAsk && (() => {
+        const t = pastStartText(f.checkIn);
+        const btn = {
+          flex: 1,
+          padding: '12px',
+          border: 'none',
+          borderRadius: 'var(--r-field)',
+          fontFamily: 'inherit',
+          fontWeight: 700,
+          fontSize: 14.5,
+          cursor: 'pointer',
+        };
+        return (
+          <Backdrop key="pastAsk"
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          >
+            <PopCard
+              style={{ background: 'var(--card)', borderRadius: 22, maxWidth: 360, width: '100%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.25)' }}
+            >
+              <div style={{ padding: '22px 22px 18px', textAlign: 'center' }}>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#FEF3C7', color: '#B45309', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                  <Icon name="cal" size={24} />
+                </div>
+                <div style={{ fontSize: 17, fontWeight: 'var(--w-title)', color: 'var(--ink)', marginBottom: 6 }}>{t.title}</div>
+                <p style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.45, margin: '0 0 6px' }}>{t.body}</p>
+                <p style={{ fontSize: 13, color: 'var(--mut)', lineHeight: 1.45, margin: '0 0 18px' }}>{t.hint}</p>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button type="button" onClick={() => setPastAsk(null)} style={{ ...btn, background: 'var(--fill)', color: 'var(--ink)' }}>
+                    Corregir fecha
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPastAsk(null);
+                      handleSave(true);
+                    }}
+                    style={{ ...btn, background: 'var(--acc)', color: '#fff' }}
+                  >
+                    Sí, guardar
                   </button>
                 </div>
               </div>
