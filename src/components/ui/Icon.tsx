@@ -6,6 +6,7 @@ import {
   Package, Megaphone, Eye, Sparkles, Coffee, Zap, ThumbsUp, Droplet, Smile, Calendar, BedDouble, Key, KeyRound,
   ArrowUpRight, ArrowDownLeft, User, Circle, ChevronRight, ChevronLeft, Link, Cake, Clock, Camera, Gift, Bell, Shuffle, Wallet,
   Briefcase, Star, Receipt, Target, CreditCard, Search, WandSparkles, ChartColumn, Inbox, Banknote,
+  Download, BookOpen, MessageSquareText, Send,
 } from 'lucide-react';
 
 // ── ÍCONOS ────────────────────────────────────────────────────────────────────
@@ -14,6 +15,10 @@ import {
 // Para sumar uno: elegirlo en lucide.dev, importarlo arriba y darle un nombre acá.
 // Los emojis quedan solo en mensajes para el huésped (WhatsApp, cumpleaños), no en botones ni títulos.
 const ICONS = {
+  download: Download,
+  book: BookOpen,
+  chat: MessageSquareText,
+  send: Send,
   // menú
   home: House,
   calendar: CalendarDays,
