@@ -84,3 +84,9 @@ export const Icon = ({ name, size = 20, color = 'currentColor', strokeWidth = 2,
   if (!C) return null;
   return <C size={size} color={color} strokeWidth={strokeWidth} style={{ flexShrink: 0, ...style }} aria-hidden="true" />;
 };
+
+// Ícono dentro de un texto (botones, títulos, avisos): alineado con la letra y con un espacio a la derecha.
+// Uso: <span>{ic('camera')}Foto frente</span>
+export const ic = (name, size = 15, style = undefined) => (
+  <Icon name={name} size={size} style={{ verticalAlign: '-0.18em', marginRight: 5, ...style }} />
+);

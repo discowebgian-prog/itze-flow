@@ -494,3 +494,18 @@ export const freeStayText = (r) => {
   if (p.discountType !== 'noche_gratis') return 'Sin cargo';
   return (Number(p.discountValue) || 0) > 1 ? 'Noches gratis' : 'Noche gratis';
 };
+
+// ── RESERVA QUE EMPIEZA ANTES DE HOY ──────────────────────────────────────────
+// Se puede cargar (a veces queda algo sin cargar), pero se avisa y hay que confirmar (pedido de Gian).
+// "La entrada es de ayer" / "La entrada es de hace 5 días" + cuándo
+export function pastStartText(ci, now = nowMerida()) {
+  const today = fmt(now);
+  const n = Math.round((parseD(today) - parseD(ci)) / 86400000);
+  const when = n === 1 ? 'de ayer' : `de hace ${n} días`;
+  return {
+    title: `La entrada es ${when}`,
+    body: `Estás cargando una estadía que empezó el ${dayNum(ci)} de ${mes(ci)}, antes de hoy.`,
+    hint: 'Si es algo que quedó sin cargar, seguí. Si no, corregí la fecha de entrada.',
+    line: `Ojo: la entrada es ${when} (${dayNum(ci)} de ${mes(ci)}).`,
+  };
+}

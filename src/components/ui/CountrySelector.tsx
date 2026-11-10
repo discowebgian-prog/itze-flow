@@ -27,7 +27,7 @@ export function CountrySelector({ value, onChange }) {
           display: 'block',
           fontSize: 11,
           fontWeight: 700,
-          color: '#888',
+          color: 'var(--mut)',
           marginBottom: 4,
           textTransform: 'uppercase',
           letterSpacing: 0.4,
@@ -50,7 +50,7 @@ export function CountrySelector({ value, onChange }) {
         style={{
           width: '100%',
           padding: '9px 12px',
-          border: '1.5px solid #E5E7EB',
+          border: '1.5px solid var(--line)',
           borderRadius: 8,
           fontSize: 13,
           fontFamily: 'inherit',
@@ -70,8 +70,8 @@ export function CountrySelector({ value, onChange }) {
             top: '100%',
             left: 0,
             right: 0,
-            background: '#fff',
-            border: '1.5px solid #E5E7EB',
+            background: 'var(--card)',
+            border: '1.5px solid var(--line)',
             borderRadius: 8,
             zIndex: 200,
             boxShadow: '0 8px 24px rgba(0,0,0,.12)',
@@ -101,10 +101,10 @@ export function CountrySelector({ value, onChange }) {
               onMouseOut={(e) => (e.currentTarget.style.background = '#fff')}
             >
               <span style={{ fontSize: 18 }}>{c.flag}</span>
-              <span style={{ flex: 1, fontWeight: 600, color: '#111' }}>
+              <span style={{ flex: 1, fontWeight: 600, color: 'var(--ink)' }}>
                 {c.name}
               </span>
-              <span style={{ color: '#9CA3AF', fontSize: 12 }}>{c.prefix}</span>
+              <span style={{ color: 'var(--mut)', fontSize: 12 }}>{c.prefix}</span>
             </div>
           ))}
         </motion.div>

@@ -1,10 +1,11 @@
 /* eslint-disable */
 // @ts-nocheck
 import { currency } from '../../lib/dates';
+import { ic } from '../ui/Icon';
 
 // ── DESGLOSE DEL COTIZADOR ────────────────────────────────────────────────────
 // Muestra cómo sale la tarifa noche por noche según el tarifario.
-// "🧮 Del tarifario" si la tarifa cargada coincide; "✏️ A mano" si no, con el botón para volver.
+// "Del tarifario" (calculadora) si la tarifa cargada coincide; "A mano" (lápiz) si no, con el botón para volver.
 // Monto con centavos solo si los tiene ($ 992.50)
 export const money = (n) =>
   Number.isInteger(Number(n))
@@ -16,8 +17,8 @@ export function QuoteInfo({ q, matches, onUse }) {
   if (!q) return null;
   if (q.missing) {
     return (
-      <div style={{ marginTop: 8, fontSize: 11.5, color: '#6B7280', background: '#F9FAFB', border: '1px dashed #D1D5DB', borderRadius: 8, padding: '7px 10px' }}>
-        🧮 Esta habitación no tiene precio cargado en Tarifas para esas fechas. Escribí la tarifa a mano.
+      <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--mut)', background: 'var(--bg)', borderRadius: 'var(--r-field)', padding: '8px 11px' }}>
+        {ic('calculator', 13)}Esta habitación no tiene precio cargado en Tarifas para esas fechas. Escribí la tarifa a mano.
       </div>
     );
   }
@@ -26,32 +27,31 @@ export function QuoteInfo({ q, matches, onUse }) {
     <div
       style={{
         marginTop: 8,
-        padding: '8px 10px',
-        borderRadius: 8,
-        background: matches ? '#EFF6FF' : '#F9FAFB',
-        border: `1px solid ${matches ? '#BFDBFE' : '#E5E7EB'}`,
-        fontSize: 11.5,
-        color: '#374151',
+        padding: '9px 12px',
+        borderRadius: 'var(--r-field)',
+        background: matches ? 'var(--acc-soft)' : 'var(--bg)',
+        fontSize: 12,
+        color: 'var(--ink-2)',
         lineHeight: 1.5,
       }}
     >
-      <div style={{ fontWeight: 800, color: matches ? '#1D4ED8' : '#6B7280', marginBottom: 2 }}>
-        {matches ? '🧮 Del tarifario' : '✏️ A mano'}
+      <div style={{ fontWeight: 800, color: matches ? 'var(--acc)' : 'var(--mut)', marginBottom: 2 }}>
+        {matches ? <>{ic('calculator', 13)}Del tarifario</> : <>{ic('edit', 13)}A mano</>}
       </div>
       {q.lines.map((l) => (
         <div key={l.key} style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 700 }}>
             {noches(l.count)} × {currency(l.price)}
           </span>
-          <span style={{ color: '#6B7280' }}>
+          <span style={{ color: 'var(--mut)' }}>
             {l.periodName}
             {l.dayLabel ? ` · ${l.dayLabel}` : ''}
           </span>
         </div>
       ))}
-      <div style={{ borderTop: '1px dashed #CBD5E1', marginTop: 4, paddingTop: 4 }}>
+      <div style={{ borderTop: '1px solid rgba(60,60,67,.12)', marginTop: 4, paddingTop: 4 }}>
         {noches(q.nights)} = <b>{currency(q.base)}</b>
-        {q.varied && <span style={{ color: '#6B7280' }}> · promedio {money(q.avg)}/noche</span>}
+        {q.varied && <span style={{ color: 'var(--mut)' }}> · promedio {money(q.avg)}/noche</span>}
       </div>
       {q.extraGuests > 0 && (
         <div>
@@ -61,25 +61,25 @@ export function QuoteInfo({ q, matches, onUse }) {
       )}
       {!matches && onUse && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-          <span style={{ color: '#1D4ED8', fontWeight: 600 }}>
+          <span style={{ color: 'var(--acc)', fontWeight: 600 }}>
             Según el tarifario: {money(q.avg)} por noche ({currency(q.total)} en total)
           </span>
           <button
             type="button"
             onClick={onUse}
             style={{
-              padding: '5px 10px',
-              background: '#fff',
-              border: '1.5px solid #2563EB',
-              color: '#2563EB',
-              borderRadius: 7,
+              padding: '6px 12px',
+              background: 'var(--acc)',
+              border: 'none',
+              color: '#fff',
+              borderRadius: 20,
               fontWeight: 700,
-              fontSize: 11.5,
+              fontSize: 12,
               cursor: 'pointer',
               fontFamily: 'inherit',
             }}
           >
-            ↺ Usar tarifario
+            {ic('repeat', 12)}Usar tarifario
           </button>
         </div>
       )}

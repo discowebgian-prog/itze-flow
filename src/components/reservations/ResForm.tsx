@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { IneUploader } from './IneUploader';
 import { ConflictWarn } from '../ui/ConflictWarn';
 import { CountrySelector } from '../ui/CountrySelector';
-import { Icon } from '../ui/Icon';
+import { Icon, ic } from '../ui/Icon';
 import { Inp } from '../ui/Inp';
 import { RangeCalendar } from '../ui/RangeCalendar';
 import { Sel } from '../ui/Sel';
@@ -12,7 +12,7 @@ import { ROOMS, SOURCES, RS, COUNTRIES, findCountry } from '../../lib/constants'
 import { TODAY, fmt, fmtD, addDays, diffDays, currency, parseD } from '../../lib/dates';
 import { lastVisitText, birthdayInStay, birthdayText, cleanBirthDate } from '../../lib/guestMessages';
 import { findConflicts, calcStayTotal, lateCostOf } from '../../lib/reservations';
-import { freeStayText } from '../../lib/voice';
+import { freeStayText, nowMerida, pastStartText } from '../../lib/voice';
 import { quoteRoom, pricingMatches, applyQuote } from '../../lib/rates';
 import { QuoteInfo, money } from './QuoteInfo';
 import { listY, Step, QT_CSS, scrollToStep } from '../Quoter';
@@ -352,6 +352,7 @@ export function ResForm({
   // Cómo estaba el pago antes de tildar "VCC cobrada", para poder destildar
   const vccPrev = useRef(null);
   const [confModal, setConfModal] = useState(null);
+  const [pastAsk, setPastAsk] = useState(null); // entrada antes de hoy: pedir OK antes de guardar
   const [isSaving, setIsSaving] = useState(false);
   const [valErr, setValErr] = useState(''); 
 
@@ -509,7 +510,12 @@ export function ResForm({
     } else go();
   };
 
-  const handleSave = () => {
+  // Entrada antes de hoy: solo cuenta en reservas nuevas o si se cambió la fecha de entrada
+  // (al editar una estadía en curso, que la entrada sea pasada es lo normal)
+  const todayStr = fmt(nowMerida());
+  const startsInPast = !!f.checkIn && f.checkIn < todayStr && (!initial?.id || f.checkIn !== initial.checkIn);
+
+  const handleSave = (skipPast = false) => {
     if (isSaving) return;
 
     // --- 1. VALIDACIÓN DE CAMPOS OBLIGATORIOS ---
@@ -563,6 +569,12 @@ export function ResForm({
 
     setValErr(''); // Si todo está bien, limpiamos el error
     // --------------------------------------------
+
+    // Entrada antes de hoy (reserva nueva o fecha de entrada cambiada): se puede, pero pide OK
+    if (startsInPast && !skipPast) {
+      setPastAsk(true);
+      return;
+    }
 
     if (multiOn) {
       const rows = buildRooms();
@@ -691,9 +703,9 @@ export function ResForm({
           }}
         >
           <div style={{ fontSize: 12.5, fontWeight: 800, color: GROUP_COLORS.txt }}>
-            🔗 Grupo de {booker?.name} · {members.map((m) => m.room).filter(Boolean).join(' · ')}
+            {ic('link', 14)}Grupo de {booker?.name} · {members.map((m) => m.room).filter(Boolean).join(' · ')}
           </div>
-          <div style={{ fontSize: 11.5, color: '#4B5563', marginTop: 4, lineHeight: 1.4 }}>
+          <div style={{ fontSize: 11.5, color: 'var(--ink-2)', marginTop: 4, lineHeight: 1.4 }}>
             {isTitRoom
               ? `Estás editando ${initial.room}, la habitación del titular.`
               : `Estás editando ${initial.room}. Los datos de la persona se guardan solo en esta habitación.`}
@@ -721,6 +733,26 @@ export function ResForm({
         }}
       />
 
+      {/* Entrada antes de hoy: aviso suave acá; al guardar se pide confirmar */}
+      {startsInPast && (
+        <div
+          className="pop-in"
+          style={{
+            marginTop: 10,
+            fontSize: 13,
+            fontWeight: 600,
+            color: '#92400E',
+            background: '#FFFBEB',
+            borderRadius: 'var(--r-field)',
+            padding: '9px 12px',
+            lineHeight: 1.4,
+          }}
+        >
+          {ic('warning', 14)}
+          {pastStartText(f.checkIn).line}
+        </div>
+      )}
+
       {/* Grupo con fechas nuevas: aviso si el tarifario da distinto (Ver abre la explicación) */}
       {groupDatesChanged && requoteDiff.length > 0 && (
         <div
@@ -739,13 +771,13 @@ export function ResForm({
             fontWeight: 600,
           }}
         >
-          <span>🧮 Con las fechas nuevas, el tarifario tiene otro precio</span>
+          <span>{ic('calculator', 14)}Con las fechas nuevas, el tarifario tiene otro precio</span>
           <button
             type="button"
             onClick={() => setRequoteOpen(true)}
             style={{
               padding: '4px 12px',
-              background: '#fff',
+              background: 'var(--card)',
               border: '1.5px solid #D97706',
               color: '#B45309',
               borderRadius: 7,
@@ -768,22 +800,22 @@ export function ResForm({
             gap: 8,
             margin: '-4px 0 12px',
             padding: '8px 10px',
-            background: '#EFF6FF',
+            background: 'var(--acc-soft)',
             border: '1px solid #BFDBFE',
             borderRadius: 8,
             fontSize: 12,
-            color: '#1D4ED8',
+            color: 'var(--acc)',
             fontWeight: 600,
           }}
         >
           <span>
-            ✓ Listo, {listY(requotedRooms)} {requotedRooms.length === 1 ? 'queda' : 'quedan'} con el precio del tarifario. Se
+            {ic('tick', 14)}Listo, {listY(requotedRooms)} {requotedRooms.length === 1 ? 'queda' : 'quedan'} con el precio del tarifario. Se
             guarda al tocar Guardar.
           </span>
           <button
             type="button"
             onClick={undoRequote}
-            style={{ background: 'none', border: 'none', color: '#6B7280', fontSize: 12, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', fontFamily: 'inherit' }}
+            style={{ background: 'none', border: 'none', color: 'var(--mut)', fontSize: 12, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', fontFamily: 'inherit' }}
           >
             Deshacer
           </button>
@@ -791,7 +823,7 @@ export function ResForm({
       )}
 
       {picking && (
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#1E40AF', marginTop: -4 }}>Ahora tocá la fecha de salida.</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--acc)', marginTop: -4 }}>Ahora tocá la fecha de salida.</div>
       )}
       </Step>
 
@@ -803,7 +835,7 @@ export function ResForm({
       {isHostel && (
         <Step num={nums.hab} title={multiOn ? 'Habitaciones' : 'Habitación'} done={roomsDone} boxRef={roomRef}>
           {multiOn && (
-            <div style={{ fontSize: 12, color: '#6B7280', margin: '-6px 0 8px' }}>Tocá todas las del grupo.</div>
+            <div style={{ fontSize: 12, color: 'var(--mut)', margin: '-6px 0 8px' }}>Tocá todas las del grupo.</div>
           )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
             {ROOMS.map((r) => {
@@ -811,7 +843,7 @@ export function ResForm({
               // Ocupada en estas fechas (se puede elegir igual: aparece el aviso de conflicto)
               const busy =
                 findConflicts(allRes, f.propertyId, r.id, f.checkIn, f.checkOut, initial?.id).length > 0;
-              const border = on ? (busy ? '#DC2626' : '#3B82F6') : '#E5E7EB';
+              const ring = busy ? 'var(--red)' : 'var(--acc)';
               return (
                 <button
                   key={r.id}
@@ -824,31 +856,36 @@ export function ResForm({
                     sv('totalGuests', 1);
                   }}
                   style={{
-                    padding: '7px 4px',
-                    borderRadius: 10,
-                    border: `${on ? 2 : 1.5}px solid ${border}`,
-                    background: on ? (busy ? '#FEF2F2' : '#EFF6FF') : busy ? '#F3F4F6' : '#fff',
+                    padding: '8px 4px',
+                    borderRadius: 'var(--r-field)',
+                    border: 'none',
+                    boxShadow: on ? `inset 0 0 0 2px ${ring}` : 'none',
+                    background: on ? (busy ? '#FEF2F2' : 'var(--acc-soft)') : 'var(--fill)',
                     fontFamily: 'inherit',
                     cursor: 'pointer',
                     lineHeight: 1.2,
-                    opacity: busy && !on ? 0.75 : 1,
+                    opacity: busy && !on ? 0.6 : 1,
                   }}
                 >
                   <div
                     style={{
-                      fontSize: 15,
-                      fontWeight: 800,
-                      color: on ? (busy ? '#B91C1C' : '#1E40AF') : busy ? '#9CA3AF' : '#374151',
+                      fontSize: 16,
+                      fontWeight: 700,
+                      color: on ? (busy ? 'var(--red)' : 'var(--acc)') : 'var(--ink)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 3,
                     }}
                   >
-                    {on ? '✓ ' : ''}
+                    {on && <Icon name="tick" size={14} strokeWidth={3} />}
                     {r.name}
                   </div>
                   <div
                     style={{
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: busy ? 700 : 500,
-                      color: busy ? (on ? '#B91C1C' : '#9CA3AF') : '#9CA3AF',
+                      color: busy && on ? 'var(--red)' : 'var(--mut)',
                     }}
                   >
                     {busy ? 'Ocupada' : `hasta ${r.maxGuests}`}
@@ -870,7 +907,7 @@ export function ResForm({
                 padding: '5px 12px',
                 borderRadius: 20,
                 border: `1.5px ${multi ? 'solid' : 'dashed'} ${multi ? GROUP_COLORS.txt : GROUP_COLORS.border}`,
-                background: multi ? GROUP_COLORS.bg : '#fff',
+                background: multi ? GROUP_COLORS.bg : 'var(--card)',
                 color: GROUP_COLORS.txt,
                 fontFamily: 'inherit',
                 fontWeight: multi ? 800 : 700,
@@ -878,7 +915,8 @@ export function ResForm({
                 cursor: 'pointer',
               }}
             >
-              {multi ? '✓ 🔗 Varias habitaciones' : '🔗 Reservar varias habitaciones'}
+              {ic(multi ? 'tick' : 'link', 14)}
+              {multi ? 'Varias habitaciones' : 'Reservar varias habitaciones'}
             </button>
           )}
 
@@ -915,9 +953,9 @@ export function ResForm({
                               minHeight: 26,
                               padding: '2px 9px',
                               borderRadius: 14,
-                              border: `1px solid ${on ? GROUP_COLORS.txt : '#D1D5DB'}`,
+                              border: `1px solid ${on ? GROUP_COLORS.txt : 'var(--handle)'}`,
                               background: on ? GROUP_COLORS.txt : '#fff',
-                              color: on ? '#fff' : '#6B7280',
+                              color: on ? '#fff' : 'var(--mut)',
                               fontFamily: 'inherit',
                               fontWeight: 600,
                               fontSize: 11,
@@ -928,9 +966,9 @@ export function ResForm({
                               minHeight: 36,
                               padding: '4px 12px',
                               borderRadius: 20,
-                              border: `1.5px solid ${on ? GROUP_COLORS.txt : '#E5E7EB'}`,
+                              border: `1.5px solid ${on ? GROUP_COLORS.txt : 'var(--line)'}`,
                               background: on ? GROUP_COLORS.txt : '#fff',
-                              color: on ? '#fff' : '#374151',
+                              color: on ? '#fff' : 'var(--ink-2)',
                               fontFamily: 'inherit',
                               fontWeight: 800,
                               fontSize: 13,
@@ -938,13 +976,13 @@ export function ResForm({
                             }
                       }
                     >
-                      {on && id !== 'none' ? '★ ' : ''}
-                      {id === 'none' ? (on ? '✓ Ninguna (no se aloja)' : 'Ninguna (no se aloja)') : id}
+                      {on && id !== 'none' ? ic('star', 13) : ''}
+                      {id === 'none' ? (on ? <>{ic('tick', 12)}Ninguna (no se aloja)</> : 'Ninguna (no se aloja)') : id}
                     </button>
                   );
                 })}
               </div>
-              <div style={{ fontSize: 11, color: '#6B7280', marginTop: 6 }}>
+              <div style={{ fontSize: 11, color: 'var(--mut)', marginTop: 6 }}>
                 {titularRoom === 'none'
                   ? 'Quien reserva no se aloja (ej. una empresa): en todas las habitaciones el contacto se carga al llegar.'
                   : 'En las demás, el contacto de cada habitación se carga al llegar.'}
@@ -952,7 +990,7 @@ export function ResForm({
             </div>
           )}
           {multiOn && selRooms.length === 1 && (
-            <div style={{ fontSize: 12, color: '#6B7280', marginTop: 8 }}>Elegí al menos una habitación más.</div>
+            <div style={{ fontSize: 12, color: 'var(--mut)', marginTop: 8 }}>Elegí al menos una habitación más.</div>
           )}
           {conflicts.length > 0 && (
             <div style={{ marginTop: 10 }}>
@@ -985,14 +1023,14 @@ export function ResForm({
           value: s.value,
           label: s.short || s.label,
           ...(s.value === 'Booking'
-            ? { bg: '#DBEAFE', txt: '#1E40AF' }
+            ? { bg: '#DBEAFE', txt: 'var(--acc)' }
             : s.value === 'Redes'
             ? { bg: '#FCE7F3', txt: '#9D174D' }
             : { bg: '#D1FAE5', txt: '#065F46' }),
         }))}
       />
       {(!f.status || !f.source) && (
-        <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: -4, lineHeight: 1.4 }}>
+        <div style={{ fontSize: 12.5, color: 'var(--mut)', marginTop: -4, lineHeight: 1.4 }}>
           {!f.status && !f.source
             ? 'Tocá el estado y el canal para seguir.'
             : !f.status
@@ -1052,7 +1090,7 @@ export function ResForm({
               <div
                 key={s.key}
                 style={{
-                  background: '#fff',
+                  background: 'var(--card)',
                   border: `1px solid ${s.blacklisted ? '#FECACA' : '#E0F2FE'}`,
                   borderRadius: 8,
                   padding: '8px 10px',
@@ -1063,18 +1101,18 @@ export function ResForm({
                 }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#111' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>
                     {c ? c.flag + ' ' : ''}{s.data.guestName}
                     {s.blacklisted && (
-                      <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 800, color: '#fff', background: '#DC2626', padding: '2px 6px', borderRadius: 10 }}>
+                      <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 800, color: '#fff', background: 'var(--red)', padding: '2px 6px', borderRadius: 10 }}>
                         LISTA NEGRA
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: 'var(--mut)', marginTop: 2 }}>
                     {s.visits} {s.visits === 1 ? 'visita' : 'visitas'} · última {fmtD(s.lastStay)}
                     {s.lastRoom ? ` · ${s.lastRoom}` : ''}
-                    {ph ? ` · 📱 …${ph.slice(-4)}` : ''}
+                    {ph ? ` · tel. …${ph.slice(-4)}` : ''}
                     {s.data.guestDoc ? ` · ${s.data.guestDocType || 'Doc'} …${String(s.data.guestDoc).slice(-4)}` : ''}
                   </div>
                 </div>
@@ -1134,7 +1172,7 @@ export function ResForm({
             padding: '6px 10px',
           }}
         >
-          <span style={{ flex: 1 }}>✓ Se cargaron los datos de su estancia anterior. Revisá que sigan vigentes.</span>
+          <span style={{ flex: 1 }}>{ic('tick', 13)}Se cargaron los datos de su estancia anterior. Revisá que sigan vigentes.</span>
           <button
             type="button"
             onClick={undoGuest}
@@ -1169,7 +1207,7 @@ export function ResForm({
             {stayTag.label}
           </span>
           {stay.last && lastVisitText(stay) && (
-            <span style={{ fontSize: 11.5, color: '#6B7280' }}>{lastVisitText(stay)}</span>
+            <span style={{ fontSize: 11.5, color: 'var(--mut)' }}>{lastVisitText(stay)}</span>
           )}
         </div>
       )}
@@ -1189,20 +1227,20 @@ export function ResForm({
       {matchBlacklist && (
         <div style={{ background: '#FEF2F2', border: '1.5px solid #FECACA', borderRadius: 10, padding: '12px 16px', marginBottom: 16 }}>
           <div style={{ color: '#991B1B', fontWeight: 800, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
-            ⚠️ Alerta de Lista Negra
+            {ic('warning', 13)}Alerta de Lista Negra
           </div>
           <div style={{ color: '#7F1D1D', fontSize: 12, marginBottom: 10, lineHeight: 1.4 }}>
             El sistema detectó un huésped marcado como "No Grato" con el mismo nombre y nacionalidad. Verificá si es la misma persona:
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             {matchBlacklist.url_ine_frente && (
-              <DocLink url={matchBlacklist.url_ine_frente} style={{ fontSize: 11, background: '#DC2626', color: '#fff', padding: '6px 12px', borderRadius: 6, textDecoration: 'none', fontWeight: 700 }}>
-                📷 ID Frente
+              <DocLink url={matchBlacklist.url_ine_frente} style={{ fontSize: 11, background: 'var(--red)', color: '#fff', padding: '6px 12px', borderRadius: 6, textDecoration: 'none', fontWeight: 700 }}>
+                {ic('camera', 13)}ID Frente
               </DocLink>
             )}
             {matchBlacklist.url_ine_dorso && (
-              <DocLink url={matchBlacklist.url_ine_dorso} style={{ fontSize: 11, background: '#DC2626', color: '#fff', padding: '6px 12px', borderRadius: 6, textDecoration: 'none', fontWeight: 700 }}>
-                📷 ID Dorso
+              <DocLink url={matchBlacklist.url_ine_dorso} style={{ fontSize: 11, background: 'var(--red)', color: '#fff', padding: '6px 12px', borderRadius: 6, textDecoration: 'none', fontWeight: 700 }}>
+                {ic('camera', 13)}ID Dorso
               </DocLink>
             )}
             {!matchBlacklist.url_ine_frente && !matchBlacklist.url_ine_dorso && (
@@ -1246,7 +1284,7 @@ export function ResForm({
             display: 'block',
             fontSize: 11,
             fontWeight: 700,
-            color: '#888',
+            color: 'var(--mut)',
             marginBottom: 4,
             textTransform: 'uppercase',
             letterSpacing: 0.4,
@@ -1260,9 +1298,11 @@ export function ResForm({
             onChange={(e) => sv('guestPhonePrefix', e.target.value)}
             style={{
               width: 72,
-              padding: '9px 12px',
-              border: '1.5px solid #E5E7EB',
-              borderRadius: 8,
+              padding: '10px 12px',
+              border: '1px solid var(--line)',
+              borderRadius: 'var(--r-field)',
+              background: 'var(--card)',
+              color: 'var(--ink)',
               fontSize: 13,
               fontFamily: 'inherit',
               outline: 'none',
@@ -1277,9 +1317,11 @@ export function ResForm({
             onChange={(e) => sv('guestPhone', e.target.value)}
             style={{
               flex: 1,
-              padding: '9px 12px',
-              border: '1.5px solid #E5E7EB',
-              borderRadius: 8,
+              padding: '10px 12px',
+              border: '1px solid var(--line)',
+              borderRadius: 'var(--r-field)',
+              background: 'var(--card)',
+              color: 'var(--ink)',
               fontSize: 13,
               fontFamily: 'inherit',
               outline: 'none',
@@ -1322,7 +1364,7 @@ export function ResForm({
               display: 'block',
               fontSize: 11,
               fontWeight: 700,
-              color: '#888',
+              color: 'var(--mut)',
               marginBottom: 6,
               textTransform: 'uppercase',
               letterSpacing: 0.4,
@@ -1337,16 +1379,17 @@ export function ResForm({
                 type="button"
                 onClick={() => setTotalGuests(n)}
                 style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 8,
-                  border: `2px solid ${f.totalGuests === n ? '#3B82F6' : '#E5E7EB'}`,
-                  background: f.totalGuests === n ? '#EFF6FF' : '#fff',
+                  width: 42,
+                  height: 42,
+                  borderRadius: 'var(--r-field)',
+                  border: 'none',
+                  boxShadow: f.totalGuests === n ? 'inset 0 0 0 2px var(--acc)' : 'none',
+                  background: f.totalGuests === n ? 'var(--acc-soft)' : 'var(--fill)',
                   fontFamily: 'inherit',
                   fontWeight: 700,
-                  fontSize: 14,
+                  fontSize: 16,
                   cursor: 'pointer',
-                  color: f.totalGuests === n ? '#1E40AF' : '#6B7280',
+                  color: f.totalGuests === n ? 'var(--acc)' : 'var(--ink-2)',
                 }}
               >
                 {n}
@@ -1363,7 +1406,7 @@ export function ResForm({
               display: 'block',
               fontSize: 11,
               fontWeight: 700,
-              color: '#888',
+              color: 'var(--mut)',
               marginBottom: 8,
               textTransform: 'uppercase',
               letterSpacing: 0.4,
@@ -1380,16 +1423,15 @@ export function ResForm({
                 gap: 6,
                 marginBottom: 10,
                 padding: 10,
-                background: '#F9FAFB',
-                border: '1px solid #EEF0F2',
-                borderRadius: 10,
+                background: 'var(--bg)',
+                borderRadius: 'var(--r-item)',
               }}
             >
               <div
                 style={{
                   fontSize: 11,
                   fontWeight: 700,
-                  color: '#6B7280',
+                  color: 'var(--mut)',
                 }}
               >
                 Acompañante {i + 1}
@@ -1408,9 +1450,11 @@ export function ResForm({
                 style={{
                   width: '100%',
                   minWidth: 0,
-                  padding: '9px 12px',
-                  border: '1.5px solid #E5E7EB',
-                  borderRadius: 8,
+                  padding: '10px 12px',
+                  border: '1px solid var(--line)',
+                  borderRadius: 'var(--r-field)',
+                  background: 'var(--card)',
+                  color: 'var(--ink)',
                   fontSize: 13,
                   fontFamily: 'inherit',
                   outline: 'none',
@@ -1433,9 +1477,11 @@ export function ResForm({
                 style={{
                   width: '100%',
                   minWidth: 0,
-                  padding: '9px 12px',
-                  border: '1.5px solid #E5E7EB',
-                  borderRadius: 8,
+                  padding: '10px 12px',
+                  border: '1px solid var(--line)',
+                  borderRadius: 'var(--r-field)',
+                  background: 'var(--card)',
+                  color: 'var(--ink)',
                   fontSize: 13,
                   fontFamily: 'inherit',
                   outline: 'none',
@@ -1461,21 +1507,21 @@ export function ResForm({
             display: 'inline-flex',
             alignItems: 'center',
             gap: 6,
-            minHeight: 34,
-            padding: '6px 14px',
+            minHeight: 36,
+            padding: '7px 14px',
             borderRadius: 20,
             // Con color también apagado para que se vea; activado va lleno como la etiqueta
-            border: `1.5px solid ${lateOpen ? '#4F46E5' : '#A5B4FC'}`,
+            border: 'none',
             background: lateOpen ? '#4F46E5' : '#EEF2FF',
             color: lateOpen ? '#fff' : '#4338CA',
             fontFamily: 'inherit',
-            fontWeight: lateOpen ? 800 : 700,
-            fontSize: 12,
+            fontWeight: 700,
+            fontSize: 14,
             cursor: 'pointer',
             whiteSpace: 'nowrap',
           }}
         >
-          {lateOpen ? '✓ ' : ''}🕐 Late check-out{f.lateCheckout ? ` · ${f.lateCheckout}` : ''}
+          {ic(lateOpen ? 'tick' : 'clock', 14, { marginRight: 0 })}Late check-out{f.lateCheckout ? ` · ${f.lateCheckout}` : ''}
         </button>
       </div>
       {lateOpen && (
@@ -1483,7 +1529,7 @@ export function ResForm({
           style={{
             marginBottom: 14,
             padding: 12,
-            borderRadius: 10,
+            borderRadius: 'var(--r-item)',
             background: '#F5F7FF',
             border: `1px solid ${LATE_COLORS.border}`,
           }}
@@ -1497,7 +1543,7 @@ export function ResForm({
             }}
             onCost={(c) => sv('lateCost', c)}
           />
-          <div style={{ fontSize: 11, color: '#6B7280', marginTop: 8 }}>
+          <div style={{ fontSize: 11, color: 'var(--mut)', marginTop: 8 }}>
             {isGroupNew
               ? 'Se aplica a todas las habitaciones; el costo es por habitación y se suma a cada una.'
               : 'El costo se suma solo al Total a cobrar.'}
@@ -1581,12 +1627,12 @@ export function ResForm({
         )}
 
         {addlCount > 0 && (
-          <div style={{ marginTop: 8, borderTop: '1px dashed #E5E7EB', paddingTop: 8 }}>
+          <div style={{ marginTop: 8, borderTop: '1px dashed var(--line)', paddingTop: 8 }}>
             <div
               style={{
                 fontSize: 11,
                 fontWeight: 700,
-                color: '#6B7280',
+                color: 'var(--mut)',
                 textTransform: 'uppercase',
                 marginBottom: 8,
               }}
@@ -1602,13 +1648,12 @@ export function ResForm({
                   gap: 8,
                   marginBottom: 8,
                   alignItems: 'center',
-                  padding: '8px 10px',
-                  background: a.bonificada ? '#F0FDF4' : '#fff',
-                  borderRadius: 8,
-                  border: `1px solid ${a.bonificada ? '#86EFAC' : '#E5E7EB'}`,
+                  padding: '8px 10px 8px 12px',
+                  background: a.bonificada ? '#F0FDF4' : 'var(--bg)',
+                  borderRadius: 'var(--r-field)',
                 }}
               >
-                <div style={{ fontSize: 12, fontWeight: 600 }}>Persona {i + 1}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>Persona {i + 1}</div>
                 <input
                   type="number"
                   value={a.ratePerNight === 0 ? '' : a.ratePerNight}
@@ -1621,10 +1666,12 @@ export function ResForm({
                   }}
                   placeholder="$/noche"
                   style={{
-                    padding: '7px 9px',
-                    border: '1.5px solid #E5E7EB',
-                    borderRadius: 7,
-                    fontSize: 12,
+                    padding: '8px 10px',
+                    border: '1px solid var(--line)',
+                    borderRadius: 10,
+                    background: 'var(--card)',
+                    color: 'var(--ink)',
+                    fontSize: 13,
                     fontFamily: 'inherit',
                     outline: 'none',
                     boxSizing: 'border-box',
@@ -1640,19 +1687,20 @@ export function ResForm({
                 >
                   <div
                     style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: 4,
-                      border: `2px solid ${a.bonificada ? '#22C55E' : '#D1D5DB'}`,
-                      background: a.bonificada ? '#22C55E' : '#fff',
+                      width: 20,
+                      height: 20,
+                      borderRadius: '50%',
+                      border: `2px solid ${a.bonificada ? '#22C55E' : 'var(--handle)'}`,
+                      background: a.bonificada ? '#22C55E' : 'var(--card)',
+                      color: '#fff',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    {a.bonificada && <span style={{ color: '#fff', fontSize: 11, fontWeight: 800 }}>✓</span>}
+                    {a.bonificada && <Icon name="tick" size={12} strokeWidth={3.5} />}
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: a.bonificada ? '#15803D' : '#9CA3AF' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: a.bonificada ? '#15803D' : 'var(--mut)' }}>
                     Bonif.
                   </span>
                 </div>
@@ -1661,7 +1709,7 @@ export function ResForm({
           </div>
         )}
 
-        <hr style={{ border: 'none', borderTop: '1px dashed #D1D5DB', margin: '16px 0 14px' }} />
+        <hr style={{ border: 'none', borderTop: '1px solid var(--line)', margin: '16px 0 14px' }} />
 
         {(() => {
           // Botones rápidos de cobro: 50% (redondeado al peso) y Total (100%).
@@ -1708,7 +1756,7 @@ export function ResForm({
                     display: 'block',
                     fontSize: 11,
                     fontWeight: 700,
-                    color: '#888',
+                    color: 'var(--mut)',
                     marginBottom: 4,
                     textTransform: 'uppercase',
                     letterSpacing: 0.4,
@@ -1765,7 +1813,7 @@ export function ResForm({
                 padding: '5px 14px',
                 borderRadius: 20,
                 border: `1.5px solid ${GROUP_COLORS.txt}`,
-                background: splitPay ? GROUP_COLORS.txt : '#fff',
+                background: splitPay ? GROUP_COLORS.txt : 'var(--card)',
                 fontFamily: 'inherit',
                 fontSize: 12,
                 fontWeight: 800,
@@ -1773,10 +1821,11 @@ export function ResForm({
                 cursor: 'pointer',
               }}
             >
-              {splitPay ? '✓ Cobro por separado · volver a junto' : '🔗 Cobrar por separado (cada habitación)'}
+              {ic(splitPay ? 'tick' : 'link', 13)}
+              {splitPay ? 'Cobro por separado · volver a junto' : 'Cobrar por separado (cada habitación)'}
             </button>
             {!splitPay && (
-              <div style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>
+              <div style={{ fontSize: 11, color: 'var(--mut)', marginTop: 4 }}>
                 Lo pagado se reparte entre las habitaciones según lo que cuesta cada una.
               </div>
             )}
@@ -1803,8 +1852,7 @@ export function ResForm({
             style={{
               background: freeStay ? '#F5F3FF' : saldoPendiente > 0 ? '#FEF2F2' : '#ECFDF5',
               padding: '10px 14px',
-              borderRadius: 8,
-              border: `1.5px solid ${freeStay ? '#DDD6FE' : saldoPendiente > 0 ? '#FECACA' : '#A7F3D0'}`,
+              borderRadius: 'var(--r-item)',
               textAlign: 'right',
               minWidth: 130,
               marginBottom: 12,
@@ -1814,7 +1862,7 @@ export function ResForm({
               style={{
                 fontSize: 10,
                 fontWeight: 800,
-                color: freeStay ? '#5B21B6' : saldoPendiente > 0 ? '#DC2626' : '#059669',
+                color: freeStay ? '#5B21B6' : saldoPendiente > 0 ? 'var(--red)' : '#059669',
                 textTransform: 'uppercase',
                 letterSpacing: 0.5,
                 marginBottom: 2,
@@ -1832,7 +1880,7 @@ export function ResForm({
               {freeStay
                 ? freeStayText(f) === 'Sin cargo'
                   ? currency(0)
-                  : `🎁 ${freeStayText(f)}`
+                  : <>{ic('gift', 16)}{freeStayText(f)}</>
                 : currency(saldoPendiente)}
             </div>
           </div>
@@ -1862,43 +1910,40 @@ export function ResForm({
               alignItems: 'center',
               gap: 10,
               padding: '10px 14px',
-              background: vccOn ? '#EFF6FF' : '#F9FAFB',
-              borderRadius: 10,
-              border: `1.5px solid ${vccOn ? '#3B82F6' : '#E5E7EB'}`,
+              background: vccOn ? 'var(--acc-soft)' : 'var(--bg)',
+              borderRadius: 'var(--r-item)',
+              boxShadow: vccOn ? 'inset 0 0 0 1.5px var(--acc)' : 'none',
               cursor: 'pointer',
             }}
             onClick={toggleVcc}
           >
             <div
               style={{
-                width: 20,
-                height: 20,
-                borderRadius: 5,
-                border: `2px solid ${vccOn ? '#3B82F6' : '#D1D5DB'}`,
-                background: vccOn ? '#3B82F6' : '#fff',
+                width: 22,
+                height: 22,
+                borderRadius: '50%',
+                border: `2px solid ${vccOn ? 'var(--acc)' : 'var(--handle)'}`,
+                background: vccOn ? 'var(--acc)' : 'var(--card)',
+                color: '#fff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
               }}
             >
-              {vccOn && (
-                <span style={{ color: '#fff', fontSize: 13, fontWeight: 800 }}>
-                  ✓
-                </span>
-              )}
+              {vccOn && <Icon name="tick" size={14} strokeWidth={3} />}
             </div>
             <div>
               <div
                 style={{
                   fontSize: 13,
                   fontWeight: 700,
-                  color: vccOn ? '#1E40AF' : '#374151',
+                  color: vccOn ? 'var(--acc)' : 'var(--ink-2)',
                 }}
               >
                 Tarjeta virtual cobrada (VCC)
               </div>
-              <div style={{ fontSize: 11, color: '#9CA3AF' }}>
+              <div style={{ fontSize: 11, color: 'var(--mut)' }}>
                 {vccOn
                   ? 'Queda pagada con la tarjeta virtual de Booking'
                   : 'Tildalo cuando cobres la tarjeta virtual de Booking'}
@@ -1921,25 +1966,26 @@ export function ResForm({
             display: 'inline-flex',
             alignItems: 'center',
             gap: 6,
-            minHeight: 34,
-            padding: '6px 14px',
+            minHeight: 36,
+            padding: '7px 14px',
             borderRadius: 20,
-            border: `1.5px solid ${f.requiresInvoice ? '#7C3AED' : '#E5E7EB'}`,
-            background: f.requiresInvoice ? '#EDE9FE' : '#fff',
-            color: f.requiresInvoice ? '#5B21B6' : '#6B7280',
+            border: 'none',
+            boxShadow: f.requiresInvoice ? 'inset 0 0 0 1.5px #7C3AED' : 'none',
+            background: f.requiresInvoice ? '#EDE9FE' : 'var(--fill)',
+            color: f.requiresInvoice ? '#5B21B6' : 'var(--ink-2)',
             fontFamily: 'inherit',
             fontWeight: f.requiresInvoice ? 800 : 600,
-            fontSize: 12,
+            fontSize: 14,
             cursor: 'pointer',
             whiteSpace: 'nowrap',
           }}
         >
-          {f.requiresInvoice ? '✓ ' : ''}🧾 Solicita factura
+          {ic(f.requiresInvoice ? 'tick' : 'invoice', 14, { marginRight: 0 })}Solicita factura
         </button>
       </div>
       {f.requiresInvoice && (
         <Inp
-          label="🏢 Empresa (opcional)"
+          label="Empresa (opcional)"
           value={f.company || ''}
           autoComplete="off"
           onChange={(e) => sv('company', e.target.value)}
@@ -1954,7 +2000,7 @@ export function ResForm({
             display: 'block',
             fontSize: 11,
             fontWeight: 700,
-            color: '#888',
+            color: 'var(--mut)',
             marginBottom: 4,
             textTransform: 'uppercase',
             letterSpacing: 0.4,
@@ -1968,9 +2014,11 @@ export function ResForm({
             rows={3}
             style={{
               width: '100%',
-              padding: '9px 12px',
-              border: '1.5px solid #E5E7EB',
-              borderRadius: 8,
+              padding: '10px 12px',
+              border: '1px solid var(--line)',
+              borderRadius: 'var(--r-field)',
+              background: 'var(--card)',
+              color: 'var(--ink)',
               fontSize: 13,
               fontFamily: 'inherit',
               outline: 'none',
@@ -2000,11 +2048,13 @@ export function ResForm({
               sv('pin_acceso', pin);
             }}
             style={{
-              padding: '9px 14px', background: '#EEF2FF', border: '1.5px solid #C7D2FE',
-              color: '#4F46E5', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', height: 38
+              padding: '9px 14px', background: 'var(--acc-soft)', border: 'none', fontFamily: 'inherit',
+              color: 'var(--acc)', borderRadius: 'var(--r-field)', fontWeight: 700, fontSize: 14, cursor: 'pointer', height: 40,
+              marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
             }}
           >
-            🪄 Generar
+            <Icon name="wand" size={16} />
+            Generar
           </button>
         </div>
       </Step>
@@ -2023,7 +2073,7 @@ export function ResForm({
               textAlign: 'center',
             }}
           >
-            🔗 {selRooms.length} habitaciones · {groupGuests} huéspedes · Total del grupo {currency(groupTotal)}
+            {ic('link', 14)}{selRooms.length} habitaciones · {groupGuests} huéspedes · Total del grupo {currency(groupTotal)}
           </div>
         )}
 
@@ -2031,18 +2081,17 @@ export function ResForm({
         {valErr && (
           <div
             style={{
-              color: '#DC2626',
-              fontSize: 13,
+              color: 'var(--red)',
+              fontSize: 13.5,
               fontWeight: 700,
               marginBottom: 14,
               textAlign: 'center',
               background: '#FEF2F2',
-              padding: '10px',
-              borderRadius: 8,
-              border: '1px solid #FECACA',
+              padding: '11px 12px',
+              borderRadius: 'var(--r-item)',
             }}
           >
-            ⚠️ {valErr}
+            {ic('warning', 15)}{valErr}
           </div>
         )}
 
@@ -2052,32 +2101,33 @@ export function ResForm({
           disabled={isSaving}
           style={{
             flex: 1,
-            padding: '12px',
-            background: '#F3F4F6',
+            padding: '13px',
+            background: 'var(--fill)',
             border: 'none',
-            borderRadius: 8,
+            borderRadius: 'var(--r-field)',
             fontFamily: 'inherit',
             fontWeight: 600,
+            fontSize: 15,
             cursor: isSaving ? 'not-allowed' : 'pointer',
-            color: '#555',
+            color: 'var(--ink)',
           }}
         >
           Cancelar
         </button>
         <button
-          onClick={handleSave}
+          onClick={() => handleSave()}
           disabled={isSaving}
           style={{
             flex: 2,
-            padding: '12px',
-            background: conflicts.length > 0 ? '#DC2626' : '#3B82F6',
+            padding: '13px',
+            background: conflicts.length > 0 ? 'var(--red)' : 'var(--acc)',
             border: 'none',
-            borderRadius: 8,
+            borderRadius: 'var(--r-field)',
             fontFamily: 'inherit',
             fontWeight: 700,
             cursor: isSaving ? 'wait' : 'pointer',
             color: '#fff',
-            fontSize: 14,
+            fontSize: 15,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -2113,9 +2163,9 @@ export function ResForm({
             padding: 16,
           }}
         >
-          <PopCard style={{ background: '#fff', borderRadius: 16, maxWidth: 400, width: '100%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.25)' }}>
-            <div style={{ background: '#2563EB', padding: '16px 22px' }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>🧮 Con las fechas nuevas cambia el precio</div>
+          <PopCard style={{ background: 'var(--card)', borderRadius: 22, maxWidth: 400, width: '100%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.25)' }}>
+            <div style={{ background: 'var(--acc)', padding: '16px 22px' }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>{ic('calculator', 17)}Con las fechas nuevas cambia el precio</div>
               <div style={{ fontSize: 12, color: '#DBEAFE', marginTop: 4 }}>
                 {fmtD(f.checkIn)} → {fmtD(f.checkOut)} · {nights === 1 ? '1 noche' : `${nights} noches`}
               </div>
@@ -2126,26 +2176,26 @@ export function ResForm({
                 return (
                   <div
                     key={x.m.id}
-                    style={{ padding: '8px 0', borderBottom: '1px solid #F3F4F6', fontSize: 12.5, color: '#374151' }}
+                    style={{ padding: '8px 0', borderBottom: '1px solid var(--bg)', fontSize: 12.5, color: 'var(--ink-2)' }}
                   >
-                    <div style={{ fontWeight: 800, color: '#111' }}>
+                    <div style={{ fontWeight: 800, color: 'var(--ink)' }}>
                       {x.m.room}
                       {x.isMe ? ' (esta)' : ''}
                     </div>
                     {pending ? (
                       <div style={{ lineHeight: 1.5 }}>
                         Cargado: {money(x.nowRate)}/noche ({currency(x.nowTotal)}) →{' '}
-                        <b style={{ color: '#1D4ED8' }}>
+                        <b style={{ color: 'var(--acc)' }}>
                           Tarifario: {money(x.q.avg)}/noche ({currency(x.newTotal)})
                         </b>
                       </div>
                     ) : (
-                      <div style={{ color: '#6B7280' }}>Queda igual</div>
+                      <div style={{ color: 'var(--mut)' }}>Queda igual</div>
                     )}
                   </div>
                 );
               })}
-              <p style={{ fontSize: 11.5, color: '#6B7280', margin: '12px 0 14px', lineHeight: 1.45 }}>
+              <p style={{ fontSize: 11.5, color: 'var(--mut)', margin: '12px 0 14px', lineHeight: 1.45 }}>
                 Se guarda cuando tocás Guardar. Si después elegís "Solo esta habitación", solo cambia {initial?.room}.
                 Lo que ya pagaron no se toca: si el total sube, queda más saldo por cobrar.
               </p>
@@ -2153,14 +2203,14 @@ export function ResForm({
                 <button
                   type="button"
                   onClick={applyRequote}
-                  style={{ padding: '11px', borderRadius: 8, fontFamily: 'inherit', fontWeight: 700, fontSize: 13, cursor: 'pointer', background: '#2563EB', color: '#fff', border: 'none' }}
+                  style={{ padding: '11px', borderRadius: 8, fontFamily: 'inherit', fontWeight: 700, fontSize: 13, cursor: 'pointer', background: 'var(--acc)', color: '#fff', border: 'none' }}
                 >
                   Aplicar tarifario
                 </button>
                 <button
                   type="button"
                   onClick={() => setRequoteOpen(false)}
-                  style={{ padding: '11px', borderRadius: 8, fontFamily: 'inherit', fontWeight: 700, fontSize: 13, cursor: 'pointer', background: '#fff', color: '#374151', border: '1.5px solid #E5E7EB' }}
+                  style={{ padding: '11px', borderRadius: 8, fontFamily: 'inherit', fontWeight: 700, fontSize: 13, cursor: 'pointer', background: 'var(--card)', color: 'var(--ink-2)', border: '1.5px solid var(--line)' }}
                 >
                   Cerrar sin cambios
                 </button>
@@ -2202,12 +2252,12 @@ export function ResForm({
               padding: 16,
             }}
           >
-            <PopCard style={{ background: '#fff', borderRadius: 16, maxWidth: 380, width: '100%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.25)' }}>
+            <PopCard style={{ background: 'var(--card)', borderRadius: 22, maxWidth: 380, width: '100%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.25)' }}>
               <div style={{ background: GROUP_COLORS.txt, padding: '16px 22px' }}>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>🔗 ¿Aplicar a todo el grupo?</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>{ic('link', 17)}¿Aplicar a todo el grupo?</div>
               </div>
               <div style={{ padding: '18px 22px' }}>
-                <p style={{ fontSize: 13, color: '#374151', margin: '0 0 12px', lineHeight: 1.45 }}>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', margin: '0 0 12px', lineHeight: 1.45 }}>
                   {onlyPerson ? (
                     <>
                       Corregiste datos del titular. ¿Pasarlos también a las habitaciones que todavía tienen sus datos (
@@ -2222,14 +2272,14 @@ export function ResForm({
                   )}
                 </p>
                 {datesChanged && (
-                  <p style={{ fontSize: 11.5, color: '#6B7280', margin: '0 0 12px' }}>
+                  <p style={{ fontSize: 11.5, color: 'var(--mut)', margin: '0 0 12px' }}>
                     Con las fechas nuevas, cada habitación recalcula su total con su tarifa
                     {requotedRooms.length ? ` (${listY(requotedRooms)} con la del tarifario)` : ''}.
                   </p>
                 )}
                 {otherConf.length > 0 && (
                   <div style={{ fontSize: 12, color: '#991B1B', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '8px 10px', marginBottom: 12 }}>
-                    ⚠️ Para todo el grupo quedarían empalmadas:{' '}
+                    {ic('warning', 13)}Para todo el grupo quedarían empalmadas:{' '}
                     {otherConf.map((x) => `${x.room} con ${x.c.guestName}`).join(' · ')}
                   </div>
                 )}
@@ -2247,16 +2297,63 @@ export function ResForm({
                       setScopeAsk(null);
                       proceed(f);
                     }}
-                    style={{ ...btn, background: '#fff', color: '#374151', border: '1.5px solid #E5E7EB' }}
+                    style={{ ...btn, background: 'var(--card)', color: 'var(--ink-2)', border: '1.5px solid var(--line)' }}
                   >
                     Solo esta habitación ({initial.room})
                   </button>
                   <button
                     type="button"
                     onClick={() => setScopeAsk(null)}
-                    style={{ ...btn, background: 'none', color: '#6B7280', border: 'none', fontWeight: 600 }}
+                    style={{ ...btn, background: 'none', color: 'var(--mut)', border: 'none', fontWeight: 600 }}
                   >
-                    ← Volver al formulario
+                    {ic('chevL', 15)}Volver al formulario
+                  </button>
+                </div>
+              </div>
+            </PopCard>
+          </Backdrop>
+        );
+      })()}</AnimatePresence>
+
+      <AnimatePresence>{pastAsk && (() => {
+        const t = pastStartText(f.checkIn);
+        const btn = {
+          flex: 1,
+          padding: '12px',
+          border: 'none',
+          borderRadius: 'var(--r-field)',
+          fontFamily: 'inherit',
+          fontWeight: 700,
+          fontSize: 14.5,
+          cursor: 'pointer',
+        };
+        return (
+          <Backdrop key="pastAsk"
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          >
+            <PopCard
+              style={{ background: 'var(--card)', borderRadius: 22, maxWidth: 360, width: '100%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.25)' }}
+            >
+              <div style={{ padding: '22px 22px 18px', textAlign: 'center' }}>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#FEF3C7', color: '#B45309', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                  <Icon name="cal" size={24} />
+                </div>
+                <div style={{ fontSize: 17, fontWeight: 'var(--w-title)', color: 'var(--ink)', marginBottom: 6 }}>{t.title}</div>
+                <p style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.45, margin: '0 0 6px' }}>{t.body}</p>
+                <p style={{ fontSize: 13, color: 'var(--mut)', lineHeight: 1.45, margin: '0 0 18px' }}>{t.hint}</p>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button type="button" onClick={() => setPastAsk(null)} style={{ ...btn, background: 'var(--fill)', color: 'var(--ink)' }}>
+                    Corregir fecha
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPastAsk(null);
+                      handleSave(true);
+                    }}
+                    style={{ ...btn, background: 'var(--acc)', color: '#fff' }}
+                  >
+                    Sí, guardar
                   </button>
                 </div>
               </div>
@@ -2280,8 +2377,8 @@ export function ResForm({
         >
           <PopCard
             style={{
-              background: '#fff',
-              borderRadius: 16,
+              background: 'var(--card)',
+              borderRadius: 22,
               maxWidth: 380,
               width: '100%',
               overflow: 'hidden',
@@ -2290,7 +2387,7 @@ export function ResForm({
           >
             <div
               style={{
-                background: '#DC2626',
+                background: 'var(--red)',
                 padding: '16px 22px',
                 display: 'flex',
                 alignItems: 'center',
@@ -2303,8 +2400,8 @@ export function ResForm({
               </div>
             </div>
             <div style={{ padding: '20px 22px' }}>
-              <p style={{ fontSize: 13, color: '#374151', marginBottom: 16, lineHeight: 1.4 }}>
-                Ya hay una reserva actual de <b style={{ color: '#DC2626' }}>{conflicts.map(c => c.guestName).join(' y ')}</b> en estas fechas.
+              <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16, lineHeight: 1.4 }}>
+                Ya hay una reserva actual de <b style={{ color: 'var(--red)' }}>{conflicts.map(c => c.guestName).join(' y ')}</b> en estas fechas.
                 <br /><br />
                 ¿Deseas forzar el empalme y guardar de todas formas?
               </p>
@@ -2314,16 +2411,16 @@ export function ResForm({
                   style={{
                     flex: 1,
                     padding: '10px',
-                    background: '#EFF6FF',
+                    background: 'var(--acc-soft)',
                     border: 'none',
                     borderRadius: 8,
                     fontFamily: 'inherit',
                     fontWeight: 700,
                     cursor: 'pointer',
-                    color: '#1E40AF',
+                    color: 'var(--acc)',
                   }}
                 >
-                  ← Corregir
+                  {ic('chevL', 15)}Corregir
                 </button>
                 <button
                   onClick={confModal}
@@ -2336,7 +2433,7 @@ export function ResForm({
                     fontFamily: 'inherit',
                     fontWeight: 700,
                     cursor: 'pointer',
-                    color: '#DC2626',
+                    color: 'var(--red)',
                   }}
                 >
                   Forzar Empalme
@@ -2364,7 +2461,7 @@ function ChipGroup({ label, value, onChange, options }) {
         style={{
           fontSize: 11,
           fontWeight: 700,
-          color: '#888',
+          color: 'var(--mut)',
           marginBottom: 6,
           textTransform: 'uppercase',
           letterSpacing: 0.4,
@@ -2372,7 +2469,8 @@ function ChipGroup({ label, value, onChange, options }) {
       >
         {label}
       </div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      {/* De a dos por fila: así entran los nombres enteros en el celular ("Por llegar", "Hospedado") */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 7 }}>
         {opts.map((o) => {
           const on = o.value === value;
           return (
@@ -2381,24 +2479,28 @@ function ChipGroup({ label, value, onChange, options }) {
               type="button"
               onClick={() => onChange(o.value)}
               style={{
-                flex: '1 1 0',
                 minWidth: 0,
-                minHeight: 38,
-                padding: '8px 6px',
-                borderRadius: 20,
-                border: `1.5px solid ${on ? o.txt || '#3B82F6' : '#E5E7EB'}`,
-                background: on ? o.bg || '#EFF6FF' : '#fff',
-                color: on ? o.txt || '#1E40AF' : '#6B7280',
+                minHeight: 42,
+                padding: '8px 8px',
+                borderRadius: 'var(--r-field)',
+                border: 'none',
+                boxShadow: on ? `inset 0 0 0 1.5px ${o.txt || 'var(--acc)'}` : 'none',
+                background: on ? o.bg || 'var(--acc-soft)' : 'var(--fill)',
+                color: on ? o.txt || 'var(--acc)' : 'var(--ink-2)',
                 fontFamily: 'inherit',
-                fontWeight: on ? 800 : 600,
-                fontSize: 12,
+                fontWeight: on ? 700 : 600,
+                fontSize: 14,
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 5,
               }}
             >
-              {on ? '✓ ' : ''}
+              {on && <Icon name="tick" size={15} strokeWidth={3} />}
               {o.label}
             </button>
           );
@@ -2417,7 +2519,7 @@ function ReadBox({ label, value }) {
           display: 'block',
           fontSize: 11,
           fontWeight: 700,
-          color: '#888',
+          color: 'var(--mut)',
           marginBottom: 4,
           textTransform: 'uppercase',
           letterSpacing: 0.4,
@@ -2427,13 +2529,13 @@ function ReadBox({ label, value }) {
       </label>
       <div
         style={{
-          padding: '9px 12px',
-          border: '1.5px solid #E5E7EB',
-          borderRadius: 8,
+          padding: '10px 12px',
+          border: '1px solid var(--line)',
+          borderRadius: 'var(--r-field)',
           fontSize: 13,
           fontWeight: 800,
-          background: '#F3F4F6',
-          color: '#111',
+          background: 'var(--bg)',
+          color: 'var(--ink)',
           minHeight: 36,
           boxSizing: 'border-box',
         }}
@@ -2451,20 +2553,21 @@ function RoomCards({ rooms, alloc, setA, titularRoom, titularName, roomTotal, sp
   const inputSt = {
     width: '100%',
     minWidth: 0,
-    padding: '9px 12px',
-    border: '1.5px solid #E5E7EB',
-    borderRadius: 8,
+    padding: '10px 12px',
+    border: '1px solid var(--line)',
+    borderRadius: 'var(--r-field)',
+    background: 'var(--card)',
+    color: 'var(--ink)',
     fontSize: 13,
     fontFamily: 'inherit',
     outline: 'none',
     boxSizing: 'border-box',
-    background: '#fff',
   };
-  const lbl = { display: 'block', fontSize: 10.5, fontWeight: 700, color: '#888', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.4 };
+  const lbl = { display: 'block', fontSize: 10.5, fontWeight: 700, color: 'var(--mut)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.4 };
   return (
     <div style={{ marginBottom: 14 }}>
       <div style={{ fontSize: 11, fontWeight: 800, color: GROUP_COLORS.txt, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.4 }}>
-        {isGroup ? '🔗 Reparto por habitación' : 'Huéspedes de la habitación'}
+        {isGroup ? <>{ic('link', 12)}Reparto por habitación</> : 'Huéspedes de la habitación'}
       </div>
       {rooms.map((id) => {
         const room = ROOMS.find((r) => r.id === id);
@@ -2491,17 +2594,17 @@ function RoomCards({ rooms, alloc, setA, titularRoom, titularName, roomTotal, sp
           <div
             key={id}
             style={{
-              border: `1.5px solid ${isTit && isGroup ? GROUP_COLORS.border : '#E5E7EB'}`,
-              background: '#FAFAFA',
-              borderRadius: 12,
+              boxShadow: isTit && isGroup ? `inset 0 0 0 1.5px ${GROUP_COLORS.border}` : 'none',
+              background: 'var(--bg)',
+              borderRadius: 'var(--r-item)',
               padding: 12,
               marginBottom: 10,
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                <span style={{ fontSize: 16, fontWeight: 900, color: '#111' }}>{id}</span>
-                <span style={{ fontSize: 11, color: '#9CA3AF' }}>hasta {max}</span>
+                <span style={{ fontSize: 16, fontWeight: 900, color: 'var(--ink)' }}>{id}</span>
+                <span style={{ fontSize: 11, color: 'var(--mut)' }}>hasta {max}</span>
               </div>
               {isGroup && isTit && (
                 <span
@@ -2518,12 +2621,12 @@ function RoomCards({ rooms, alloc, setA, titularRoom, titularName, roomTotal, sp
                     textOverflow: 'ellipsis',
                   }}
                 >
-                  ★ Titular{titularName ? ` · ${titularName}` : ''}
+                  {ic('star', 12)}Titular{titularName ? ` · ${titularName}` : ''}
                 </span>
               )}
             </div>
             {isGroup && titularRoom && !isTit && (
-              <div style={{ fontSize: 11, color: '#6B7280', marginTop: -4, marginBottom: 8 }}>
+              <div style={{ fontSize: 11, color: 'var(--mut)', marginTop: -4, marginBottom: 8 }}>
                 Contacto: se carga al llegar (le sacás la foto al documento).
               </div>
             )}
@@ -2536,16 +2639,17 @@ function RoomCards({ rooms, alloc, setA, titularRoom, titularName, roomTotal, sp
                   type="button"
                   onClick={() => setGuests(n)}
                   style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 8,
-                    border: `2px solid ${a.guests === n ? '#3B82F6' : '#E5E7EB'}`,
-                    background: a.guests === n ? '#EFF6FF' : '#fff',
+                    width: 40,
+                    height: 40,
+                    borderRadius: 'var(--r-field)',
+                    border: 'none',
+                    boxShadow: a.guests === n ? 'inset 0 0 0 2px var(--acc)' : 'none',
+                    background: a.guests === n ? 'var(--acc-soft)' : 'var(--card)',
                     fontFamily: 'inherit',
                     fontWeight: 700,
-                    fontSize: 14,
+                    fontSize: 15,
                     cursor: 'pointer',
-                    color: a.guests === n ? '#1E40AF' : '#6B7280',
+                    color: a.guests === n ? 'var(--acc)' : 'var(--ink-2)',
                   }}
                 >
                   {n}
@@ -2556,9 +2660,9 @@ function RoomCards({ rooms, alloc, setA, titularRoom, titularName, roomTotal, sp
             {(a.companions || []).map((c, i) => (
               <div
                 key={i}
-                style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8, padding: 10, background: '#fff', border: '1px solid #EEF0F2', borderRadius: 10 }}
+                style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8, padding: 10, background: 'var(--card)', borderRadius: 'var(--r-field)' }}
               >
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280' }}>Acompañante {i + 1}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--mut)' }}>Acompañante {i + 1}</div>
                 <input
                   value={c.name}
                   placeholder="Nombre"
@@ -2599,7 +2703,7 @@ function RoomCards({ rooms, alloc, setA, titularRoom, titularName, roomTotal, sp
                   onChange={(e) => setA(id, { extra: e.target.value === '' ? '' : Number(e.target.value), auto: false })}
                   style={inputSt}
                 />
-                <div style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>
+                <div style={{ fontSize: 11, color: 'var(--mut)', marginTop: 4 }}>
                   {a.guests - 2 === 1 ? '1 persona extra' : `${a.guests - 2} personas extra`} (la tarifa incluye 2)
                   {Number(a.extra) > 0 ? ` · +${currency(Number(a.extra) * (a.guests - 2))} por noche` : ''}
                 </div>
@@ -2607,8 +2711,8 @@ function RoomCards({ rooms, alloc, setA, titularRoom, titularName, roomTotal, sp
             )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, fontSize: 12.5 }}>
-              <span style={{ color: '#6B7280', fontWeight: 600 }}>Total {id}</span>
-              <span style={{ fontWeight: 900, color: '#111' }}>{currency(total)}</span>
+              <span style={{ color: 'var(--mut)', fontWeight: 600 }}>Total {id}</span>
+              <span style={{ fontWeight: 900, color: 'var(--ink)' }}>{currency(total)}</span>
             </div>
 
             {splitPay && (

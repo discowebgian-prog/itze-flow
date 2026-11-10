@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { scanDocument } from '../../lib/docScan';
 import { supabase } from '../../lib/supabase';
 import { SCAN, notify, notifyError, humanError } from '../../lib/voice';
+import { Icon, ic } from '../ui/Icon';
 
 // ── RESERVATION FORM ──────────────────────────────────────────────────────────
 // ── CARGADOR DE DOCUMENTO: GUARDA LA FOTO Y LEE LOS DATOS DEL FRENTE ─────────
@@ -96,35 +97,50 @@ export function IneUploader({ f, onUploadFrente, onUploadDorso, onScan }) {
   };
 
   return (
-    <div style={{ padding: 16, background: '#F0F9FF', borderRadius: 10, border: '1px solid #BAE6FD', marginBottom: 16 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: '#0369A1', textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5 }}>
-        Fotos del documento
+    <div style={{ padding: 14, background: 'var(--acc-soft)', borderRadius: 'var(--r-item)', marginBottom: 16 }}>
+      <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--acc)', marginBottom: 10, lineHeight: 1.35 }}>
+        Sacale foto al documento: se completan solos el nombre y casi todo lo demás.
       </div>
       <div style={{ display: 'flex', gap: 10 }}>
-        <label style={{ flex: 1, padding: '12px 10px', background: f.url_ine_frente ? '#10B981' : '#0284C7', color: '#fff', borderRadius: 8, textAlign: 'center', cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s' }}>
-          {loadingF ? SCAN.uploading : f.url_ine_frente ? '✓ Frente OK' : '📸 Foto Frente'}
+        <label style={{ ...camBtn, background: f.url_ine_frente ? '#DCFCE7' : 'var(--acc)', color: f.url_ine_frente ? '#15803D' : '#fff' }}>
+          {loadingF ? SCAN.uploading : f.url_ine_frente ? <>{ic('tick', 16)}Frente listo</> : <>{ic('camera', 17)}Foto frente</>}
           <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => processFile(e, 'frente')} />
         </label>
-        <label style={{ flex: 1, padding: '12px 10px', background: f.url_ine_dorso ? '#10B981' : '#0284C7', color: '#fff', borderRadius: 8, textAlign: 'center', cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s' }}>
-          {loadingD ? SCAN.uploading : f.url_ine_dorso ? '✓ Dorso OK' : '📸 Foto Dorso'}
+        <label style={{ ...camBtn, background: f.url_ine_dorso ? '#DCFCE7' : 'var(--acc)', color: f.url_ine_dorso ? '#15803D' : '#fff' }}>
+          {loadingD ? SCAN.uploading : f.url_ine_dorso ? <>{ic('tick', 16)}Dorso listo</> : <>{ic('camera', 17)}Foto dorso</>}
           <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => processFile(e, 'dorso')} />
         </label>
       </div>
       {scan.status === 'reading' && (
-        <div key="reading" className="pop-in" style={{ marginTop: 10, fontSize: 12, color: '#0369A1', fontWeight: 600 }}>
-          ✦ {scan.text}
+        <div key="reading" className="pop-in" style={{ marginTop: 10, fontSize: 12.5, color: 'var(--acc)', fontWeight: 600 }}>
+          {ic('sparkles', 14)}{scan.text}
         </div>
       )}
       {scan.status === 'done' && (
-        <div key="done" className="pop-in" style={{ marginTop: 10, fontSize: 12, color: '#059669', fontWeight: 700 }}>
-          ✓ {scan.text}
+        <div key="done" className="pop-in" style={{ marginTop: 10, fontSize: 12.5, color: '#15803D', fontWeight: 700 }}>
+          {ic('check', 14)}{scan.text}
         </div>
       )}
       {scan.status === 'failed' && (
-        <div key="failed" className="pop-in" style={{ marginTop: 10, fontSize: 12, color: '#B45309', fontWeight: 600 }}>
-          📷 {scan.text}
+        <div key="failed" className="pop-in" style={{ marginTop: 10, fontSize: 12.5, color: '#B45309', fontWeight: 600 }}>
+          {ic('camera', 14)}{scan.text}
         </div>
       )}
     </div>
   );
 }
+
+// Botones de foto: grandes, fáciles de tocar con el documento en la otra mano
+const camBtn = {
+  flex: 1,
+  minHeight: 46,
+  padding: '11px 10px',
+  borderRadius: 'var(--r-field)',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  fontWeight: 700,
+  fontSize: 14.5,
+  transition: 'background .2s, color .2s',
+};
