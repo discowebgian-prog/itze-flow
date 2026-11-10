@@ -1,8 +1,12 @@
 /* eslint-disable */
 // @ts-nocheck
 import { useState } from 'react';
-import { TODAY, fmt, fmtD, parseD, MONTHS, DAYS } from '../../lib/dates';
+import { TODAY, fmt, parseD, MONTHS, DAYS } from '../../lib/dates';
 import { Icon } from './Icon';
+
+// "vie 20 nov" (o — si falta)
+const dayTxt = (d) =>
+  d ? parseD(d).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '').replace(',', '').replace(' de ', ' ') : '—';
 
 // ── RANGE CALENDAR ────────────────────────────────────────────────────────────
 // fixedRows: siempre 6 semanas, así el almanaque no cambia de alto al pasar de mes (lo usa Cotizar)
@@ -53,10 +57,8 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows 
   return (
     <div
       style={{
-        background: '#fff',
-        border: '1.5px solid #E5E7EB',
-        borderRadius: 10,
-        padding: '10px 14px',
+        background: 'var(--card)',
+        padding: '2px 0 0',
         marginBottom: 12,
         userSelect: 'none',
       }}
@@ -90,11 +92,11 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows 
         </button>
         <div
           style={{
-            fontWeight: 900,
-            fontSize: 16,
-            color: '#1E40AF',
+            fontWeight: 'var(--w-title)',
+            fontSize: 17,
+            color: 'var(--ink)',
             textTransform: 'capitalize',
-            letterSpacing: 0.5,
+            letterSpacing: '-.01em',
           }}
         >
           {MONTHS[m]} {y}
@@ -131,7 +133,7 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows 
         {DAYS.map((d) => (
           <div
             key={d}
-            style={{ fontSize: 10, fontWeight: 800, color: '#9CA3AF' }}
+            style={{ fontSize: 11, fontWeight: 700, color: 'var(--mut)' }}
           >
             {d.charAt(0)}
           </div>
@@ -159,17 +161,17 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows 
             inRange = s > checkIn && s <= hover;
 
           let bg = 'transparent',
-            col = '#374151',
-            radius = 8;
+            col = 'var(--ink)',
+            radius = '50%';
           if (isEnd) {
-            bg = '#3B82F6';
+            bg = 'var(--acc)';
             col = '#fff';
           } else if (inRange) {
-            bg = '#DBEAFE';
-            col = '#1E40AF';
-            radius = 4;
+            bg = 'var(--acc-soft)';
+            col = 'var(--acc)';
+            radius = 10;
           } else if (isDisabled) {
-            col = '#D1D5DB';
+            col = 'var(--handle)';
           }
 
           return (
@@ -183,49 +185,53 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows 
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 13,
-                fontWeight: isEnd ? 800 : 600,
+                fontSize: 15,
+                fontWeight: isEnd ? 700 : 500,
                 background: bg,
                 color: col,
                 borderRadius: radius,
                 cursor: isDisabled ? 'not-allowed' : 'pointer',
                 position: 'relative',
-                ...(isToday && !isEnd ? { color: '#2563EB', fontWeight: 900 } : {}),
+                ...(isToday && !isEnd ? { color: 'var(--acc)', fontWeight: 800 } : {}),
               }}
             >
               {d.getDate()}
               {/* Hoy: puntito azul debajo del número */}
               {isToday && !isEnd && (
-                <span style={{ position: 'absolute', bottom: 4, width: 4, height: 4, borderRadius: '50%', background: '#2563EB' }} />
+                <span style={{ position: 'absolute', bottom: 4, width: 4, height: 4, borderRadius: '50%', background: 'var(--acc)' }} />
               )}
             </div>
           );
         })}
       </div>
+      {/* Pie en palabras (antes "CI: 20/11/2026 · CO: 23/11/2026") */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          gap: 8,
           marginTop: 10,
           fontSize: 13,
-          fontWeight: 700,
-          color: '#6B7280',
-          background: '#F8FAFC',
-          padding: '8px 12px',
-          borderRadius: 8,
+          fontWeight: 600,
+          color: 'var(--mut)',
+          background: 'var(--bg)',
+          padding: '9px 12px',
+          borderRadius: 'var(--r-field)',
         }}
       >
-        <div>
-          CI: <span style={{ color: '#111' }}>{fmtD(checkIn)}</span>
+        <div style={{ lineHeight: 1.25 }}>
+          <div style={{ fontSize: 11 }}>Entrada</div>
+          <div style={{ color: 'var(--ink)', fontWeight: 700, fontSize: 14 }}>{dayTxt(checkIn)}</div>
         </div>
         {nights > 0 && (
-          <div style={{ color: '#3B82F6', fontSize: 12, fontWeight: 800 }}>
+          <div style={{ color: 'var(--acc)', background: 'var(--acc-soft)', borderRadius: 20, padding: '3px 10px', fontSize: 12.5, fontWeight: 700 }}>
             {nights} noche{nights !== 1 ? 's' : ''}
           </div>
         )}
-        <div>
-          CO: <span style={{ color: '#111' }}>{fmtD(checkOut)}</span>
+        <div style={{ lineHeight: 1.25, textAlign: 'right' }}>
+          <div style={{ fontSize: 11 }}>Salida</div>
+          <div style={{ color: 'var(--ink)', fontWeight: 700, fontSize: 14 }}>{dayTxt(checkOut)}</div>
         </div>
       </div>
     </div>

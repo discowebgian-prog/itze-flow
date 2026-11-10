@@ -13,36 +13,38 @@ export function LatePicker({ hour, cost, onHour, onCost }) {
   const chip = (on) => ({
     flex: '1 1 0',
     minWidth: 0,
-    minHeight: 36,
+    minHeight: 40,
     padding: '6px 4px',
-    borderRadius: 20,
-    border: `1.5px solid ${on ? LATE_COLORS.txt : '#E5E7EB'}`,
-    background: on ? LATE_COLORS.bg : '#fff',
-    color: on ? LATE_COLORS.txt : '#6B7280',
+    borderRadius: 'var(--r-field)',
+    border: 'none',
+    boxShadow: on ? `inset 0 0 0 1.5px ${LATE_COLORS.txt}` : 'none',
+    background: on ? LATE_COLORS.bg : 'var(--card)',
+    color: on ? LATE_COLORS.txt : 'var(--ink-2)',
     fontFamily: 'inherit',
-    fontWeight: on ? 800 : 600,
-    fontSize: 12,
+    fontWeight: on ? 700 : 600,
+    fontSize: 14,
     cursor: 'pointer',
     whiteSpace: 'nowrap',
   });
   const label = {
     fontSize: 11,
     fontWeight: 700,
-    color: '#888',
+    color: 'var(--mut)',
     marginBottom: 6,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   };
   const field = {
     width: '100%',
-    padding: '9px 12px',
-    border: '1.5px solid #E5E7EB',
-    borderRadius: 8,
+    padding: '10px 12px',
+    border: '1px solid var(--line)',
+    borderRadius: 'var(--r-field)',
+    color: 'var(--ink)',
     fontSize: 13,
     fontFamily: 'inherit',
     outline: 'none',
     boxSizing: 'border-box',
-    background: '#fff',
+    background: 'var(--card)',
   };
 
   return (
@@ -59,8 +61,7 @@ export function LatePicker({ hour, cost, onHour, onCost }) {
             }}
             style={chip(hour === h && !showOther)}
           >
-            {hour === h && !showOther ? '✓ ' : ''}
-            {h}
+                        {h}
           </button>
         ))}
         <button
@@ -68,7 +69,7 @@ export function LatePicker({ hour, cost, onHour, onCost }) {
           onClick={() => setShowOther(true)}
           style={{ ...chip(showOther), gridColumn: 'span 2' }}
         >
-          {showOther ? '✓ ' : ''}Otra hora
+          Otra hora
         </button>
       </div>
       {showOther && (

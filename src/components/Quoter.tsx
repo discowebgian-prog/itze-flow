@@ -6,7 +6,7 @@ import { roomTypeOf, quoteStay } from '../lib/rates';
 import { findConflicts } from '../lib/reservations';
 import { TODAY, fmt, addDays, parseD, diffDays, currency, DAYS } from '../lib/dates';
 import { RangeCalendar } from './ui/RangeCalendar';
-import { Icon } from './ui/Icon';
+import { Icon, ic } from './ui/Icon';
 import { money } from './reservations/QuoteInfo';
 import {
   nightAvailability,
@@ -191,9 +191,8 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
     fontWeight: 600,
     color: '#92400E',
     background: '#FFFBEB',
-    border: '1px solid #FCD34D',
-    borderRadius: 8,
-    padding: '9px 11px',
+    borderRadius: 'var(--r-field)',
+    padding: '10px 12px',
     lineHeight: 1.4,
   };
 
@@ -443,16 +442,17 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const lbl = { fontSize: 11, fontWeight: 800, color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 };
+  const lbl = { fontSize: 11, fontWeight: 800, color: 'var(--mut)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 };
   const stepBtn = (disabled) => ({
     width: 44,
     height: 44,
-    borderRadius: 10,
-    border: '1.5px solid #E5E7EB',
-    background: disabled ? '#F9FAFB' : '#fff',
-    color: disabled ? '#D1D5DB' : '#111',
-    fontSize: 22,
-    fontWeight: 800,
+    borderRadius: '50%',
+    border: 'none',
+    background: disabled ? 'var(--bg)' : 'var(--fill)',
+    color: disabled ? 'var(--handle)' : 'var(--acc)',
+    fontSize: 24,
+    fontWeight: 600,
+    lineHeight: 1,
     cursor: disabled ? 'default' : 'pointer',
     fontFamily: 'inherit',
   });
@@ -470,7 +470,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
         onChange={(ci, co) => (co ? commitDates(ci, co) : setDraftIn(ci))}
       />
       {/* Alto fijo de dos renglones: el texto cambia sin mover lo de abajo */}
-      <div style={{ fontSize: 13.5, fontWeight: 700, color: '#1E40AF', marginTop: 10, lineHeight: 1.35, minHeight: 37 }}>
+      <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--acc)', marginTop: 10, lineHeight: 1.35, minHeight: 37 }}>
         {picking
           ? `Entrada el ${oneDay(draftIn)}. Ahora tocá la fecha de salida.`
           : n > 0
@@ -499,8 +499,8 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
             <button type="button" disabled={guests <= 1} onClick={() => setGuests((g) => Math.max(1, g - 1))} style={stepBtn(guests <= 1)}>
               −
             </button>
-            <div style={{ fontSize: 26, fontWeight: 800, minWidth: 40, textAlign: 'center', color: guests ? '#111' : '#D1D5DB' }}>{guests}</div>
-            {!guests && <div style={{ fontSize: 12.5, color: '#6B7280' }}>Tocá + para elegir</div>}
+            <div style={{ fontSize: 26, fontWeight: 800, minWidth: 40, textAlign: 'center', color: guests ? 'var(--ink)' : 'var(--handle)' }}>{guests}</div>
+            {!guests && <div style={{ fontSize: 12.5, color: 'var(--mut)' }}>Tocá + para elegir</div>}
             <button
               type="button"
               disabled={guests >= HOSTEL_CAPACITY}
@@ -518,7 +518,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
               {plan ? ` Pero ${planText(plan, guests)}.` : ''}
             </div>
           ) : (
-            <div style={{ marginTop: 6, fontSize: 12, color: '#6B7280' }}>
+            <div style={{ marginTop: 6, fontSize: 12, color: 'var(--mut)' }}>
               {busyRooms.length
                 ? `${esosDias} tenemos lugar para hasta ${personas(freeCap)}.`
                 : `${esosDias} tenemos todo el hostel libre: lugar para hasta ${personas(freeCap)}.`}
@@ -532,23 +532,24 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                   type="button"
                   onClick={() => setPlanOn(!planOn)}
                   style={{
-                    minHeight: 42,
-                    borderRadius: 9,
+                    minHeight: 44,
+                    borderRadius: 'var(--r-field)',
                     fontFamily: 'inherit',
-                    fontWeight: 800,
-                    fontSize: 13,
+                    fontWeight: 700,
+                    fontSize: 14,
                     cursor: 'pointer',
-                    background: planOn ? '#7C3AED' : '#fff',
-                    color: planOn ? '#fff' : '#7C3AED',
-                    border: '1.5px solid #7C3AED',
+                    background: planOn ? '#7C3AED' : '#F5F3FF',
+                    color: planOn ? '#fff' : '#6D28D9',
+                    border: 'none',
                   }}
                 >
-                  {planOn ? '✓ Cotizando con el cambio de habitación' : '🔀 Cotizar con este cambio de habitación'}
+                  {ic(planOn ? 'tick' : 'shuffle', 16)}
+                  {planOn ? 'Cotizando con el cambio de habitación' : 'Cotizar con este cambio de habitación'}
                 </button>
               )}
               {near && (near.before || near.after) && (
-                <div style={{ fontSize: 12.5, color: '#374151', marginTop: 4 }}>
-                  📅 Fechas más cercanas con lugar para {guests === 1 ? 'esa persona' : `las ${guests} personas`}
+                <div style={{ fontSize: 12.5, color: 'var(--ink-2)', marginTop: 4 }}>
+                  {ic('cal', 14)}Fechas más cercanas con lugar para {guests === 1 ? 'esa persona' : `las ${guests} personas`}
                   {plan ? ' sin cambiar de habitación' : ''}:
                 </div>
               )}
@@ -562,24 +563,29 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                       type="button"
                       onClick={() => goDates(ci)}
                       style={{
-                        minHeight: 40,
-                        borderRadius: 9,
+                        minHeight: 44,
+                        borderRadius: 'var(--r-field)',
                         fontFamily: 'inherit',
-                        fontWeight: 700,
-                        fontSize: 12.5,
+                        fontWeight: 600,
+                        fontSize: 13.5,
                         cursor: 'pointer',
-                        background: '#fff',
-                        color: '#2563EB',
-                        border: '1.5px solid #93C5FD',
+                        background: 'var(--acc-soft)',
+                        color: 'var(--acc)',
+                        border: 'none',
                         textAlign: 'left',
-                        padding: '8px 12px',
+                        padding: '9px 12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 8,
                       }}
                     >
-                      {cap1(entradaSalida(ci, fmt(addDays(parseD(ci), n))))} →
+                      {cap1(entradaSalida(ci, fmt(addDays(parseD(ci), n))))}
+                      <Icon name="chev" size={17} />
                     </button>
                   ))}
               {near && !near.before && !near.after && !plan && (
-                <div style={{ fontSize: 12, color: '#6B7280' }}>
+                <div style={{ fontSize: 12, color: 'var(--mut)' }}>
                   No encontré fechas cercanas (3 meses antes o después) con lugar para {personas(guests)} juntas.
                 </div>
               )}
@@ -590,8 +596,8 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
 
           {planActive && (
             <Step num={3} title="Con cambio de habitación" done boxRef={planRef}>
-            <div style={{ fontSize: 12.5, color: '#5B21B6', background: '#F5F3FF', border: '1px solid #DDD6FE', borderRadius: 8, padding: '8px 10px' }}>
-              🔀 Cotizando con cambio de habitación. Al reservar se cargan una tras otra, con los mismos datos del huésped.
+            <div style={{ fontSize: 13, color: '#5B21B6', background: '#F5F3FF', borderRadius: 'var(--r-field)', padding: '10px 12px', lineHeight: 1.4 }}>
+              {ic('shuffle', 14)}Cotizando con cambio de habitación. Al reservar se cargan una tras otra, con los mismos datos del huésped.
             </div>
             </Step>
           )}
@@ -603,7 +609,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
           {/* ¿Comparten cama? cambia la sugerencia (amigos o compañeros de trabajo suelen querer cada uno la suya) */}
           {guests >= 2 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-              <span style={{ fontSize: 12.5, fontWeight: 700, color: '#374151', marginRight: 2 }}>¿Pueden compartir cama?</span>
+              <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink)', marginRight: 2 }}>¿Pueden compartir cama?</span>
               {[
                 [true, 'Sí'],
                 [false, 'No, cada uno en su cama'],
@@ -613,19 +619,22 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                   type="button"
                   onClick={() => setShare(share === v ? null : v)}
                   style={{
-                    minHeight: 32,
-                    padding: '0 12px',
+                    minHeight: 36,
+                    padding: '0 14px',
                     borderRadius: 999,
                     fontFamily: 'inherit',
-                    fontWeight: 700,
-                    fontSize: 12.5,
+                    fontWeight: 600,
+                    fontSize: 14,
                     cursor: 'pointer',
-                    background: share === v ? '#2563EB' : '#fff',
-                    color: share === v ? '#fff' : '#2563EB',
-                    border: '1.5px solid #2563EB',
+                    background: share === v ? 'var(--acc)' : 'var(--fill)',
+                    color: share === v ? '#fff' : 'var(--ink)',
+                    border: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
                   }}
                 >
-                  {share === v ? '✓ ' : ''}
+                  {share === v && <Icon name="tick" size={14} strokeWidth={3} />}
                   {l}
                 </button>
               ))}
@@ -633,7 +642,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
           )}
           {sofaAsk && (
             <div className="qt-in" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-              <span style={{ fontSize: 12.5, fontWeight: 700, color: '#374151', marginRight: 2 }}>¿Quieren usar el sofá cama?</span>
+              <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink)', marginRight: 2 }}>¿Quieren usar el sofá cama?</span>
               {[
                 [true, 'Sí'],
                 [false, 'No'],
@@ -643,19 +652,22 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                   type="button"
                   onClick={() => setSofa(sofa === v ? null : v)}
                   style={{
-                    minHeight: 32,
+                    minHeight: 36,
                     padding: '0 14px',
                     borderRadius: 999,
                     fontFamily: 'inherit',
-                    fontWeight: 700,
-                    fontSize: 12.5,
+                    fontWeight: 600,
+                    fontSize: 14,
                     cursor: 'pointer',
-                    background: sofa === v ? '#2563EB' : '#fff',
-                    color: sofa === v ? '#fff' : '#2563EB',
-                    border: '1.5px solid #2563EB',
+                    background: sofa === v ? 'var(--acc)' : 'var(--fill)',
+                    color: sofa === v ? '#fff' : 'var(--ink)',
+                    border: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
                   }}
                 >
-                  {sofa === v ? '✓ ' : ''}
+                  {sofa === v && <Icon name="tick" size={14} strokeWidth={3} />}
                   {l}
                 </button>
               ))}
@@ -672,18 +684,19 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
               }}
             >
               {left === 0
-                ? '✓ ¡Listo! Todos tienen lugar.'
+                ? <>{ic('check', 15)}¡Listo! Todos tienen lugar.</>
                 : left > 0
                 ? `Falta ubicar a ${personas(left)}`
                 : `Hay ${personas(-left)} de más: quitá en alguna habitación.`}
             </div>
           )}
           {recText && (
-            <div style={{ fontSize: 12.5, color: '#92400E', background: '#FFFBEB', borderRadius: 8, padding: '7px 10px', marginBottom: 8 }}>
-              {recText}
+            <div style={{ display: 'flex', gap: 7, fontSize: 13, color: '#92400E', background: '#FFFBEB', borderRadius: 'var(--r-field)', padding: '9px 11px', marginBottom: 10, lineHeight: 1.4 }}>
+              <Icon name="star" size={16} color="#D97706" style={{ marginTop: 1 }} />
+              <span>{recText.replace(/^⭐ /, '')}</span>
             </div>
           )}
-          {placed === 0 && <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 8 }}>Tocá la habitación que prefieran.</div>}
+          {placed === 0 && <div style={{ fontSize: 12, color: 'var(--mut)', marginBottom: 8 }}>Tocá la habitación que prefieran.</div>}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {freeRooms.map((r, idx) => {
               const g = distFree[r.id] || 0;
@@ -696,12 +709,15 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                   className="qt-in"
                   style={{
                     animationDelay: `${idx * 60}ms`,
-                    border: `1.5px solid ${g ? '#2563EB' : isOpen ? '#93C5FD' : '#E5E7EB'}`,
-                    background: g ? '#EFF6FF' : '#fff',
-                    borderRadius: 10,
+                    background: g ? 'var(--acc-soft)' : isOpen ? 'var(--card)' : 'var(--bg)',
+                    borderRadius: 'var(--r-item)',
                     overflow: 'hidden',
-                    boxShadow: isOpen ? '0 4px 14px rgba(37,99,235,.12)' : 'none',
-                    transition: 'border-color .2s, background .2s, box-shadow .25s',
+                    boxShadow: g
+                      ? 'inset 0 0 0 1.5px var(--acc)'
+                      : isOpen
+                      ? 'inset 0 0 0 1.5px #93C5FD, 0 4px 14px rgba(37,99,235,.12)'
+                      : 'none',
+                    transition: 'background .2s, box-shadow .25s',
                   }}
                 >
                   <div
@@ -712,15 +728,15 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       gap: 8,
-                      padding: '10px 12px',
+                      padding: '11px 12px 11px 14px',
                       cursor: !g && canAdd ? 'pointer' : 'default',
                     }}
                   >
                     {/* Datos de la habitación (sin personas: tocar la tarjeta abre "¿Cuántas van aquí?") */}
                     <div style={{ flex: 1, minWidth: 0, opacity: canAdd ? 1 : 0.5 }}>
                     <span>
-                        <span style={{ fontWeight: 800, fontSize: 14, color: '#111' }}>{r.id}</span>
-                        <span style={{ fontSize: 12, color: '#6B7280' }}> · {r.desc} · hasta {r.maxGuests}</span>
+                        <span style={{ fontWeight: 700, fontSize: 15.5, color: 'var(--ink)' }}>{r.id}</span>
+                        <span style={{ fontSize: 12, color: 'var(--mut)' }}> · {r.desc} · hasta {r.maxGuests}</span>
                         {(() => {
                           const k = g || Math.min(Math.max(left, 1), r.maxGuests);
                           const pr = priceFor(r.id, k);
@@ -728,7 +744,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                           return (
                             <span style={{ display: 'block', fontSize: 11.5, marginTop: 2 }}>
                               {pr !== null && (
-                                <span style={{ color: '#374151', fontWeight: 600 }}>
+                                <span style={{ color: 'var(--ink-2)', fontWeight: 600 }}>
                                   {g ? currency(pr) : `${personas(k)}: ${currency(pr)}`}
                                   {g > 0 &&
                                     (() => {
@@ -749,9 +765,9 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                                         note = `${(g - bi.camas - bi.sofa) * 2} comparten cama`;
                                       }
                                       return note ? (
-                                        <span style={{ color: warn ? '#B45309' : '#6B7280', fontWeight: warn ? 800 : 600 }}>
+                                        <span style={{ color: warn ? '#B45309' : 'var(--mut)', fontWeight: warn ? 800 : 600 }}>
                                           {' '}
-                                          · {warn ? '⚠️ ' : ''}
+                                          · {warn ? ic('warning', 12, { marginRight: 3 }) : ''}
                                           {note}
                                         </span>
                                       ) : null;
@@ -759,11 +775,11 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                                 </span>
                               )}
                               {recRooms.includes(r.id) && (
-                                <span style={{ marginLeft: 6, color: '#B45309', fontWeight: 800 }}>⭐ Recomendada</span>
+                                <span style={{ marginLeft: 6, color: '#B45309', fontWeight: 700, whiteSpace: 'nowrap' }}>{ic('star', 12, { marginRight: 3 })}Recomendada</span>
                               )}
                               {late && (
                                 <span style={{ display: 'block', color: '#4F46E5', fontWeight: 700 }}>
-                                  🕐 Libre desde las {late}: ese día sale alguien con late check-out
+                                  {ic('clock', 12, { marginRight: 3 })}Libre desde las {late}: ese día sale alguien con late check-out
                                 </span>
                               )}
                             </span>
@@ -781,22 +797,26 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                           style={{
                             width: 36,
                             height: 36,
-                            borderRadius: 9,
+                            borderRadius: '50%',
                             fontFamily: 'inherit',
-                            fontWeight: 800,
-                            fontSize: g === 1 ? 15 : 20,
+                            fontWeight: 600,
+                            fontSize: 22,
                             lineHeight: 1,
                             cursor: 'pointer',
-                            background: '#fff',
-                            color: g === 1 ? '#B91C1C' : '#1D4ED8',
-                            border: `1.5px solid ${g === 1 ? '#FCA5A5' : '#93C5FD'}`,
+                            background: 'var(--card)',
+                            color: g === 1 ? 'var(--red)' : 'var(--acc)',
+                            border: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: 0,
                           }}
                         >
-                          {g === 1 ? '✕' : '−'}
+                          {g === 1 ? <Icon name="close" size={17} strokeWidth={2.5} /> : '−'}
                         </button>
                         <div style={{ textAlign: 'center', minWidth: 58 }}>
-                          <div style={{ fontSize: 17, fontWeight: 900, color: '#1D4ED8', lineHeight: 1.1 }}>{g}</div>
-                          <div style={{ fontSize: 10.5, fontWeight: 700, color: '#1D4ED8' }}>{g === 1 ? 'persona' : 'personas'}</div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--acc)', lineHeight: 1.1 }}>{g}</div>
+                          <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--acc)' }}>{g === 1 ? 'persona' : 'personas'}</div>
                         </div>
                         <button
                           type="button"
@@ -806,15 +826,16 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                           style={{
                             width: 36,
                             height: 36,
-                            borderRadius: 9,
+                            borderRadius: '50%',
                             fontFamily: 'inherit',
-                            fontWeight: 800,
-                            fontSize: 20,
+                            fontWeight: 600,
+                            fontSize: 22,
                             lineHeight: 1,
                             cursor: g >= maxHere ? 'default' : 'pointer',
-                            background: g >= maxHere ? '#F9FAFB' : '#2563EB',
-                            color: g >= maxHere ? '#D1D5DB' : '#fff',
-                            border: `1.5px solid ${g >= maxHere ? '#E5E7EB' : '#2563EB'}`,
+                            background: g >= maxHere ? 'var(--card)' : 'var(--acc)',
+                            color: g >= maxHere ? 'var(--handle)' : '#fff',
+                            border: 'none',
+                            padding: 0,
                           }}
                         >
                           +
@@ -826,14 +847,13 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                         aria-hidden
                         style={{
                           flexShrink: 0,
-                          fontSize: 22,
-                          lineHeight: 1,
-                          color: !canAdd ? '#E5E7EB' : isOpen ? '#2563EB' : '#9CA3AF',
+                          display: 'inline-flex',
+                          color: !canAdd ? 'var(--line)' : isOpen ? 'var(--acc)' : 'var(--handle)',
                           transform: isOpen ? 'rotate(90deg)' : 'none',
                           transition: 'transform .15s',
                         }}
                       >
-                        ›
+                        <Icon name="chev" size={20} strokeWidth={2.5} />
                       </span>
                     )}
                   </div>
@@ -842,7 +862,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                     <div style={{ display: 'grid', gridTemplateRows: isOpen ? '1fr' : '0fr', transition: 'grid-template-rows .28s ease' }}>
                       <div style={{ overflow: 'hidden', opacity: isOpen ? 1 : 0, transition: 'opacity .22s ease' }}>
                     <div style={{ padding: '0 12px 12px' }}>
-                      <div style={{ fontSize: 12.5, fontWeight: 800, color: '#1D4ED8', marginBottom: 6 }}>¿Cuántas van aquí?</div>
+                      <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--acc)', marginBottom: 6 }}>¿Cuántas van aquí?</div>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {Array.from({ length: r.maxGuests }, (_, i) => i + 1).map((k) => {
                           const dis = k > maxHere;
@@ -854,15 +874,16 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                               onClick={() => setRoomGuests(r.id, k)}
                               style={{
                                 minWidth: 44,
-                                minHeight: 40,
-                                borderRadius: 8,
+                                minHeight: 42,
+                                borderRadius: 'var(--r-field)',
                                 fontFamily: 'inherit',
-                                fontWeight: 800,
-                                fontSize: 14,
+                                fontWeight: 700,
+                                fontSize: 16,
                                 cursor: dis ? 'default' : 'pointer',
-                                background: g === k ? '#2563EB' : dis ? '#F9FAFB' : '#fff',
-                                color: g === k ? '#fff' : dis ? '#D1D5DB' : '#111',
-                                border: `1.5px solid ${g === k ? '#2563EB' : '#E5E7EB'}`,
+                                background: g === k ? 'var(--acc)' : 'var(--fill)',
+                                color: g === k ? '#fff' : dis ? 'var(--handle)' : 'var(--ink)',
+                                border: 'none',
+                                opacity: dis ? 0.5 : 1,
                               }}
                             >
                               {k}
@@ -874,16 +895,16 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                             type="button"
                             onClick={() => setRoomGuests(r.id, 0)}
                             style={{
-                              minHeight: 40,
-                              padding: '0 12px',
-                              borderRadius: 8,
+                              minHeight: 42,
+                              padding: '0 14px',
+                              borderRadius: 'var(--r-field)',
                               fontFamily: 'inherit',
-                              fontWeight: 700,
-                              fontSize: 12.5,
+                              fontWeight: 600,
+                              fontSize: 14,
                               cursor: 'pointer',
-                              background: '#fff',
-                              color: '#B91C1C',
-                              border: '1.5px solid #FCA5A5',
+                              background: '#FEF2F2',
+                              color: 'var(--red)',
+                              border: 'none',
                             }}
                           >
                             Quitar
@@ -907,15 +928,15 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                   className="qt-in"
                   style={{
                     animationDelay: `${(freeRooms.length + idx) * 60}ms`,
-                    padding: '7px 12px',
-                    borderRadius: 10,
-                    background: '#F9FAFB',
-                    border: '1px dashed #E5E7EB',
-                    fontSize: 12,
-                    color: '#9CA3AF',
+                    padding: '8px 14px',
+                    borderRadius: 'var(--r-field)',
+                    background: 'var(--bg)',
+                    opacity: 0.75,
+                    fontSize: 12.5,
+                    color: 'var(--mut)',
                   }}
                 >
-                  <b style={{ color: '#6B7280' }}>{r.id}</b> ·{' '}
+                  <b style={{ color: 'var(--mut)' }}>{r.id}</b> ·{' '}
                   {r.busyNights.length === n ? `ocupada ${n === 1 ? 'ese día' : 'esos días'}` : `ocupada ${nightsText(r.busyNights)}`}
                 </div>
               ))}
@@ -929,20 +950,20 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
           {/* 4 · Cotización */}
           {items.length > 0 && (
             <Step num={4} title="Cotización" done={done} boxRef={quoteRef}>
-              <div style={{ border: '1px solid #E5E7EB', borderRadius: 10, overflow: 'hidden' }}>
+              <div style={{ background: 'var(--bg)', borderRadius: 'var(--r-item)', overflow: 'hidden' }}>
                 {items.map((it) => (
-                  <div key={it.key} style={{ padding: '10px 12px', borderBottom: '1px solid #F3F4F6' }}>
+                  <div key={it.key} style={{ padding: '11px 14px', borderBottom: '1px solid var(--line)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
-                      <div style={{ fontSize: 13, color: '#111' }}>
+                      <div style={{ fontSize: 13, color: 'var(--ink)' }}>
                         <b>{it.room}</b> · {personas(it.guests)}
                         {it.nightsLabel && <span style={{ color: '#7C3AED', fontSize: 12 }}> · {it.nightsLabel}</span>}
                       </div>
-                      <div style={{ fontWeight: 800, fontSize: 14, color: '#111' }}>
+                      <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--ink)' }}>
                         {it.total === null ? 'Sin precio' : currency(it.total)}
                       </div>
                     </div>
                     {it.q && !it.q.missing && (
-                      <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 2, lineHeight: 1.45 }}>
+                      <div style={{ fontSize: 11.5, color: 'var(--mut)', marginTop: 2, lineHeight: 1.45 }}>
                         {it.q.lines.map((l) => `${l.count} × ${currency(l.price)}`).join(' + ')}
                         {it.q.extraGuests > 0 &&
                           ` + ${it.q.extraGuests === 1 ? '1 persona extra' : `${it.q.extraGuests} personas extra`} ${currency(it.q.extraTotal)}`}
@@ -951,22 +972,22 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                   </div>
                 ))}
                 {done ? (
-                  <div style={{ padding: '12px', background: '#F8FAFC' }}>
+                  <div style={{ padding: '12px 14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                      <div style={{ fontSize: 15, fontWeight: 800, color: '#111' }}>Total</div>
-                      <div style={{ fontSize: 20, fontWeight: 900, color: '#111' }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--ink)' }}>Total</div>
+                      <div style={{ fontSize: 21, fontWeight: 800, color: 'var(--ink)' }}>
                         {currency(total)}
                         {guests > 1 && (
-                          <span style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}> ({money(total / guests)} por persona)</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink-2)' }}> ({money(total / guests)} por persona)</span>
                         )}
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right', fontSize: 12.5, color: '#6B7280', marginTop: 4 }}>
-                      Promedio por persona por noche: <b style={{ color: '#111' }}>{money(Math.round((total / guests / n) * 100) / 100)}</b>
+                    <div style={{ textAlign: 'right', fontSize: 12.5, color: 'var(--mut)', marginTop: 4 }}>
+                      Promedio por persona por noche: <b style={{ color: 'var(--ink)' }}>{money(Math.round((total / guests / n) * 100) / 100)}</b>
                     </div>
                   </div>
                 ) : (
-                  <div style={{ padding: '10px 12px', fontSize: 12.5, color: '#92400E', background: '#FFFBEB' }}>
+                  <div style={{ padding: '11px 14px', fontSize: 13, color: '#92400E', background: '#FFFBEB' }}>
                     {missingPrice
                       ? 'Una de las habitaciones no tiene precio cargado en Tarifas para esas fechas.'
                       : left > 0
@@ -981,7 +1002,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
           {done && (
             <Step num={5} title="Mensaje para WhatsApp" done={copied}>
               {/* Español / English: para huéspedes que no hablan español (en inglés aclara que son pesos MXN) */}
-              <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+              <div style={{ display: 'inline-flex', gap: 2, padding: 2, marginBottom: 10, background: 'var(--fill)', borderRadius: 10 }}>
                 {[['es', 'Español'], ['en', 'English']].map(([k, label]) => (
                   <button
                     key={k}
@@ -991,18 +1012,19 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                       setCopied(false);
                     }}
                     style={{
-                      padding: '5px 12px',
-                      borderRadius: 20,
+                      padding: '6px 16px',
+                      borderRadius: 8,
                       fontFamily: 'inherit',
-                      fontSize: 12,
-                      fontWeight: 700,
+                      fontSize: 13,
+                      fontWeight: lang === k ? 700 : 600,
                       cursor: 'pointer',
-                      border: lang === k ? '1.5px solid #16A34A' : '1px solid #D1D5DB',
-                      background: lang === k ? '#DCFCE7' : '#fff',
-                      color: lang === k ? '#166534' : '#6B7280',
+                      border: 'none',
+                      background: lang === k ? 'var(--card)' : 'transparent',
+                      boxShadow: lang === k ? '0 1px 3px rgba(0,0,0,.12)' : 'none',
+                      color: lang === k ? 'var(--ink)' : 'var(--mut)',
+                      transition: 'background .15s',
                     }}
                   >
-                    {lang === k ? '✓ ' : ''}
                     {label}
                   </button>
                 ))}
@@ -1013,9 +1035,8 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                   fontSize: 13,
                   lineHeight: 1.5,
                   background: '#F0FDF4',
-                  border: '1px solid #BBF7D0',
-                  borderRadius: 10,
-                  padding: '10px 12px',
+                  borderRadius: 'var(--r-item)',
+                  padding: '12px 14px',
                   color: '#14532D',
                 }}
               >
@@ -1027,21 +1048,26 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                   onClick={copy}
                   style={{
                     flex: 1,
-                    minHeight: 44,
-                    borderRadius: 9,
+                    minHeight: 46,
+                    borderRadius: 'var(--r-field)',
                     fontFamily: 'inherit',
-                    fontWeight: 800,
-                    fontSize: 14,
+                    fontWeight: 700,
+                    fontSize: 15,
                     cursor: 'pointer',
                     background: copied ? '#047857' : '#16A34A',
                     color: '#fff',
                     border: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 7,
                   }}
                 >
-                  {copied ? '✓ Copiado' : '📋 Copiar para WhatsApp'}
+                  <Icon name={copied ? 'tick' : 'whatsapp'} size={18} strokeWidth={copied ? 3 : 2} />
+                  {copied ? 'Copiado' : 'Copiar para WhatsApp'}
                 </button>
               </div>
-              <div style={{ fontSize: 12, color: '#4B5563', fontWeight: 500, marginTop: 10, lineHeight: 1.45 }}>
+              <div style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 500, marginTop: 10, lineHeight: 1.45 }}>
                 * Ojo: si entró una reserva de Booking que todavía no aparece en el calendario, esa habitación puede figurar libre.
               </div>
             </Step>
@@ -1050,7 +1076,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
           {/* 6 · Reservar: en su propia tarjeta, separado del mensaje */}
           {done && onReserve && (
             <Step num={6} title="Reservar">
-              <div style={{ fontSize: 12.5, color: '#4B5563', marginBottom: 10, lineHeight: 1.45 }}>
+              <div style={{ fontSize: 12.5, color: 'var(--ink-2)', marginBottom: 10, lineHeight: 1.45 }}>
                 {planActive
                   ? `Se abren ${reserveQueue().length} reservas una tras otra (cambio de habitación), con los datos del huésped de la primera.`
                   : items.length > 1
@@ -1063,19 +1089,23 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                 onClick={() => onReserve({ queue: reserveQueue() })}
                 style={{
                   flex: 2,
-                  minHeight: 46,
-                  borderRadius: 10,
+                  minHeight: 48,
+                  borderRadius: 'var(--r-field)',
                   fontFamily: 'inherit',
-                  fontWeight: 800,
+                  fontWeight: 700,
                   fontSize: 15,
                   cursor: 'pointer',
-                  background: 'linear-gradient(135deg,#3B82F6,#6366F1)',
+                  background: 'var(--acc)',
                   color: '#fff',
                   border: 'none',
-                  boxShadow: '0 2px 8px rgba(99,102,241,.3)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
                 }}
               >
-                + Reservar
+                <Icon name="plus" size={18} strokeWidth={2.5} />
+                Reservar
               </button>
               {onClose && (
                 <button
@@ -1083,15 +1113,15 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                   onClick={onClose}
                   style={{
                     flex: 1,
-                    minHeight: 46,
-                    borderRadius: 10,
+                    minHeight: 48,
+                    borderRadius: 'var(--r-field)',
                     fontFamily: 'inherit',
-                    fontWeight: 700,
-                    fontSize: 13,
+                    fontWeight: 600,
+                    fontSize: 13.5,
                     cursor: 'pointer',
-                    background: '#fff',
-                    color: '#4B5563',
-                    border: '1.5px solid #D1D5DB',
+                    background: 'var(--fill)',
+                    color: 'var(--ink)',
+                    border: 'none',
                     lineHeight: 1.2,
                   }}
                 >
@@ -1107,7 +1137,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
   );
 }
 
-// Botón "🧮 Cotizar" (va al lado de cada "+ Reserva" / "+ Nueva")
+// Botón "Cotizar" (calculadora) (va al lado de cada "+ Reserva" / "+ Nueva")
 export function QuoteButton({ onClick, compact = false, style = {} }) {
   return (
     <button
