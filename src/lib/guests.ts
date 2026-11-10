@@ -188,9 +188,10 @@ export function suggestGuests(allRes, query, decisions = [], excludeId = null, m
 }
 
 export function freqBadge(n) {
-  if (n >= 5) return { label: '⭐⭐ VIP', color: '#7C3AED', bg: '#EDE9FE' };
-  if (n >= 3) return { label: '⭐ Frecuente', color: '#B45309', bg: '#FEF3C7' };
-  if (n >= 2) return { label: '↩ Regresa', color: '#0369A1', bg: '#E0F2FE' };
+  // label sin emoji; icon = nombre de ícono Lucide (Icon.tsx), se dibuja al lado
+  if (n >= 5) return { label: 'VIP', icon: 'star', color: '#7C3AED', bg: '#EDE9FE' };
+  if (n >= 3) return { label: 'Frecuente', icon: 'star', color: '#B45309', bg: '#FEF3C7' };
+  if (n >= 2) return { label: 'Regresa', icon: 'repeat', color: '#0369A1', bg: '#E0F2FE' };
   return null;
 }
 
@@ -228,10 +229,8 @@ export function stayInfo(allRes, res, decisions = []) {
 export function stayBadge(info) {
   if (!info) return null;
   if (info.number === 1) {
-    return { label: '🆕 Primera estancia', color: '#475569', bg: '#F1F5F9' };
+    return { label: 'Primera estancia', icon: 'sparkles', color: '#475569', bg: '#F1F5F9' };
   }
   const f = freqBadge(info.number);
-  const tag = f.label.replace(/^\S+\s/, ''); // "Regresa", "Frecuente", "VIP"
-  const icon = f.label.split(' ')[0];
-  return { label: `${icon} ${info.number}ª estancia · ${tag}`, color: f.color, bg: f.bg };
+  return { label: `${info.number}ª estancia · ${f.label}`, icon: f.icon, color: f.color, bg: f.bg };
 }

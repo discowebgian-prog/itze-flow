@@ -1204,7 +1204,7 @@ export function ResForm({
               borderRadius: 20,
             }}
           >
-            {stayTag.label}
+            {ic(stayTag.icon, 12)}{stayTag.label}
           </span>
           {stay.last && lastVisitText(stay) && (
             <span style={{ fontSize: 11.5, color: 'var(--mut)' }}>{lastVisitText(stay)}</span>
