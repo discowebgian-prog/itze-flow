@@ -122,8 +122,8 @@ export function ResList({ reservations, properties, onView, onAdd, onQuote }) {
                   width: 26,
                   height: 26,
                   borderRadius: '50%',
-                  background: '#DCFCE7',
-                  color: '#16A34A',
+                  background: 'var(--c-DCFCE7)',
+                  color: 'var(--c-16A34A)',
                   textDecoration: 'none',
                 }}
               >
@@ -143,12 +143,12 @@ export function ResList({ reservations, properties, onView, onAdd, onQuote }) {
           {saldo > 0 ? (
             <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--red)' }}>Debe {currency(saldo)}</span>
           ) : isFreeStay(r) ? (
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#7C3AED', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-7C3AED)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <Icon name="gift" size={13} />
               {freeStayText(r)}
             </span>
           ) : (
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#16A34A' }}>Pagado</span>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-16A34A)' }}>Pagado</span>
           )}
         </div>
       </div>
@@ -293,10 +293,10 @@ export function ResList({ reservations, properties, onView, onAdd, onQuote }) {
               </div>
             )}
 
-            {section('Llegadas', 'rin', '#2563EB', llegadas)}
-            {section('Salidas', 'rout', '#EA580C', salidas)}
-            {section('Alojados', 'bed', '#059669', hospedados)}
-            {section('Canceladas', 'close', '#DC2626', canceladas, { opacity: 0.75 })}
+            {section('Llegadas', 'rin', 'var(--c-2563EB)', llegadas)}
+            {section('Salidas', 'rout', 'var(--c-EA580C)', salidas)}
+            {section('Alojados', 'bed', 'var(--c-059669)', hospedados)}
+            {section('Canceladas', 'close', 'var(--c-DC2626)', canceladas, { opacity: 0.75 })}
           </div>
         </>
       )}

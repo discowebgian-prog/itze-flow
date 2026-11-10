@@ -9,8 +9,8 @@ export function ConflictWarn({ conflicts, properties }) {
     <div
       className="pop-in"
       style={{
-        background: '#FEF2F2',
-        border: '1.5px solid #FECACA',
+        background: 'var(--c-FEF2F2)',
+        border: '1.5px solid var(--c-FECACA)',
         borderRadius: 10,
         padding: '10px 14px',
         marginBottom: 12,
@@ -20,7 +20,7 @@ export function ConflictWarn({ conflicts, properties }) {
         style={{
           fontWeight: 700,
           fontSize: 13,
-          color: '#DC2626',
+          color: 'var(--c-DC2626)',
           marginBottom: 6,
         }}
       >
@@ -33,9 +33,9 @@ export function ConflictWarn({ conflicts, properties }) {
             key={r.id}
             style={{
               fontSize: 12,
-              color: '#7F1D1D',
+              color: 'var(--c-7F1D1D)',
               padding: '3px 0',
-              borderTop: '1px solid #FECACA',
+              borderTop: '1px solid var(--c-FECACA)',
             }}
           >
             <b>{r.guestName}</b> · {fmtD(r.checkIn)} → {fmtD(r.checkOut)} ·{' '}

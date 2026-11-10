@@ -43,7 +43,7 @@ export const QT_CSS = `
 /* Resaltado de una vez (Personas al elegir fechas): aro azul que se apaga */
 @keyframes qtGlow {
   0% { box-shadow: 0 0 0 0 rgba(37,99,235,.5); border-color: var(--acc); background: var(--acc-soft); }
-  65% { box-shadow: 0 0 0 10px rgba(37,99,235,0); border-color: #93C5FD; background: var(--card); }
+  65% { box-shadow: 0 0 0 10px rgba(37,99,235,0); border-color: var(--c-93C5FD); background: var(--card); }
   100% { box-shadow: var(--shadow); border-color: transparent; background: var(--card); }
 }
 .qt-in.qt-glow { animation: qtIn .38s cubic-bezier(.2,.8,.2,1) both, qtGlow 1.4s .3s ease-out both; }
@@ -189,8 +189,8 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
     marginTop: 8,
     fontSize: 13,
     fontWeight: 600,
-    color: '#92400E',
-    background: '#FFFBEB',
+    color: 'var(--c-92400E)',
+    background: 'var(--c-FFFBEB)',
     borderRadius: 'var(--r-field)',
     padding: '10px 12px',
     lineHeight: 1.4,
@@ -538,8 +538,8 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                     fontWeight: 700,
                     fontSize: 14,
                     cursor: 'pointer',
-                    background: planOn ? '#7C3AED' : '#F5F3FF',
-                    color: planOn ? '#fff' : '#6D28D9',
+                    background: planOn ? 'var(--c-7C3AED)' : 'var(--c-F5F3FF)',
+                    color: planOn ? '#fff' : 'var(--c-6D28D9)',
                     border: 'none',
                   }}
                 >
@@ -596,7 +596,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
 
           {planActive && (
             <Step num={3} title="Con cambio de habitación" done boxRef={planRef}>
-            <div style={{ fontSize: 13, color: '#5B21B6', background: '#F5F3FF', borderRadius: 'var(--r-field)', padding: '10px 12px', lineHeight: 1.4 }}>
+            <div style={{ fontSize: 13, color: 'var(--c-5B21B6)', background: 'var(--c-F5F3FF)', borderRadius: 'var(--r-field)', padding: '10px 12px', lineHeight: 1.4 }}>
               {ic('shuffle', 14)}Cotizando con cambio de habitación. Al reservar se cargan una tras otra, con los mismos datos del huésped.
             </div>
             </Step>
@@ -680,7 +680,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                 fontSize: 13,
                 fontWeight: 800,
                 marginBottom: 8,
-                color: left === 0 ? '#047857' : left > 0 ? '#B45309' : '#B91C1C',
+                color: left === 0 ? 'var(--c-047857)' : left > 0 ? 'var(--c-B45309)' : 'var(--c-B91C1C)',
               }}
             >
               {left === 0
@@ -691,8 +691,8 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
             </div>
           )}
           {recText && (
-            <div style={{ display: 'flex', gap: 7, fontSize: 13, color: '#92400E', background: '#FFFBEB', borderRadius: 'var(--r-field)', padding: '9px 11px', marginBottom: 10, lineHeight: 1.4 }}>
-              <Icon name="star" size={16} color="#D97706" style={{ marginTop: 1 }} />
+            <div style={{ display: 'flex', gap: 7, fontSize: 13, color: 'var(--c-92400E)', background: 'var(--c-FFFBEB)', borderRadius: 'var(--r-field)', padding: '9px 11px', marginBottom: 10, lineHeight: 1.4 }}>
+              <Icon name="star" size={16} color="var(--c-D97706)" style={{ marginTop: 1 }} />
               <span>{recText.replace(/^⭐ /, '')}</span>
             </div>
           )}
@@ -715,7 +715,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                     boxShadow: g
                       ? 'inset 0 0 0 1.5px var(--acc)'
                       : isOpen
-                      ? 'inset 0 0 0 1.5px #93C5FD, 0 4px 14px rgba(37,99,235,.12)'
+                      ? 'inset 0 0 0 1.5px var(--c-93C5FD), 0 4px 14px rgba(37,99,235,.12)'
                       : 'none',
                     transition: 'background .2s, box-shadow .25s',
                   }}
@@ -765,7 +765,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                                         note = `${(g - bi.camas - bi.sofa) * 2} comparten cama`;
                                       }
                                       return note ? (
-                                        <span style={{ color: warn ? '#B45309' : 'var(--mut)', fontWeight: warn ? 800 : 600 }}>
+                                        <span style={{ color: warn ? 'var(--c-B45309)' : 'var(--mut)', fontWeight: warn ? 800 : 600 }}>
                                           {' '}
                                           · {warn ? ic('warning', 12, { marginRight: 3 }) : ''}
                                           {note}
@@ -775,10 +775,10 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                                 </span>
                               )}
                               {recRooms.includes(r.id) && (
-                                <span style={{ marginLeft: 6, color: '#B45309', fontWeight: 700, whiteSpace: 'nowrap' }}>{ic('star', 12, { marginRight: 3 })}Recomendada</span>
+                                <span style={{ marginLeft: 6, color: 'var(--c-B45309)', fontWeight: 700, whiteSpace: 'nowrap' }}>{ic('star', 12, { marginRight: 3 })}Recomendada</span>
                               )}
                               {late && (
-                                <span style={{ display: 'block', color: '#4F46E5', fontWeight: 700 }}>
+                                <span style={{ display: 'block', color: 'var(--c-4F46E5)', fontWeight: 700 }}>
                                   {ic('clock', 12, { marginRight: 3 })}Libre desde las {late}: ese día sale alguien con late check-out
                                 </span>
                               )}
@@ -902,7 +902,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                               fontWeight: 600,
                               fontSize: 14,
                               cursor: 'pointer',
-                              background: '#FEF2F2',
+                              background: 'var(--c-FEF2F2)',
                               color: 'var(--red)',
                               border: 'none',
                             }}
@@ -956,7 +956,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
                       <div style={{ fontSize: 13, color: 'var(--ink)' }}>
                         <b>{it.room}</b> · {personas(it.guests)}
-                        {it.nightsLabel && <span style={{ color: '#7C3AED', fontSize: 12 }}> · {it.nightsLabel}</span>}
+                        {it.nightsLabel && <span style={{ color: 'var(--c-7C3AED)', fontSize: 12 }}> · {it.nightsLabel}</span>}
                       </div>
                       <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--ink)' }}>
                         {it.total === null ? 'Sin precio' : currency(it.total)}
@@ -987,7 +987,7 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                     </div>
                   </div>
                 ) : (
-                  <div style={{ padding: '11px 14px', fontSize: 13, color: '#92400E', background: '#FFFBEB' }}>
+                  <div style={{ padding: '11px 14px', fontSize: 13, color: 'var(--c-92400E)', background: 'var(--c-FFFBEB)' }}>
                     {missingPrice
                       ? 'Una de las habitaciones no tiene precio cargado en Tarifas para esas fechas.'
                       : left > 0
@@ -1034,10 +1034,10 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
                   whiteSpace: 'pre-wrap',
                   fontSize: 13,
                   lineHeight: 1.5,
-                  background: '#F0FDF4',
+                  background: 'var(--c-F0FDF4)',
                   borderRadius: 'var(--r-item)',
                   padding: '12px 14px',
-                  color: '#14532D',
+                  color: 'var(--c-14532D)',
                 }}
               >
                 {msg}

@@ -84,8 +84,8 @@ export function Dashboard({
       label: 'Llegan hoy',
       val: ciToday.length,
       icon: 'rin',
-      col: '#2563EB',
-      bg: '#EFF6FF',
+      col: 'var(--c-2563EB)',
+      bg: 'var(--c-EFF6FF)',
       onClick: () => {
         const el = document.getElementById('seccion-ingresos');
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -99,8 +99,8 @@ export function Dashboard({
       label: 'Se van hoy',
       val: coToday.length,
       icon: 'rout',
-      col: '#EA580C',
-      bg: '#FFF7ED',
+      col: 'var(--c-EA580C)',
+      bg: 'var(--c-FFF7ED)',
       onClick: () => {
         const el = document.getElementById('seccion-salidas');
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -113,16 +113,16 @@ export function Dashboard({
       label: 'En casa',
       val: active.length,
       icon: 'bed',
-      col: '#059669',
-      bg: '#ECFDF5',
+      col: 'var(--c-059669)',
+      bg: 'var(--c-ECFDF5)',
       onClick: () => onGoTo('calendario', 'hospedado'),
     },
     {
       label: 'Saldos pendientes',
       val: pending.length,
       icon: 'wallet',
-      col: '#DC2626',
-      bg: '#FEF2F2',
+      col: 'var(--c-DC2626)',
+      bg: 'var(--c-FEF2F2)',
       onClick: () => {
         onGoTo('finanzas');
         setTimeout(() => {
@@ -138,8 +138,8 @@ export function Dashboard({
         return totalRooms > 0 ? Math.round((active.length / totalRooms) * 100) + '%' : '0%';
       })(),
       icon: 'chart',
-      col: '#7C3AED',
-      bg: '#F5F3FF',
+      col: 'var(--c-7C3AED)',
+      bg: 'var(--c-F5F3FF)',
       onClick: () => onGoTo('calendario', 'hospedado'),
     },
   ];
@@ -252,12 +252,12 @@ export function Dashboard({
               fontWeight: 600,
               cursor: 'pointer',
               border: 'none',
-              background: bdPending.length ? '#FCE7F3' : 'var(--card)',
-              color: bdPending.length ? '#9D174D' : 'var(--ink-2)',
+              background: bdPending.length ? 'var(--c-FCE7F3)' : 'var(--card)',
+              color: bdPending.length ? 'var(--c-9D174D)' : 'var(--ink-2)',
               boxShadow: bdPending.length ? 'none' : 'var(--shadow)',
             }}
           >
-            <Icon name="cake" size={16} color={bdPending.length ? '#DB2777' : '#EC4899'} />
+            <Icon name="cake" size={16} color={bdPending.length ? 'var(--c-DB2777)' : 'var(--c-EC4899)'} />
             {bdPending.length === 1
               ? `Hoy cumple ${bdPending[0].g.name} · Saludar`
               : bdPending.length > 1
@@ -322,33 +322,33 @@ export function Dashboard({
 
       {/* Llegan hoy */}
       {ciToday.length > 0 && (
-        <Group id="seccion-ingresos" title={`Llegan hoy (${ciToday.length})`} icon="rin" col="#2563EB">
+        <Group id="seccion-ingresos" title={`Llegan hoy (${ciToday.length})`} icon="rin" col="var(--c-2563EB)">
           {ciToday.map((r, liI) =>
-            row(r, liI, { icon: 'rin', col: '#2563EB', bg: '#EFF6FF', pulse: pulseIn ? 'pulseBlue 0.8s ease-in-out 3' : null })
+            row(r, liI, { icon: 'rin', col: 'var(--c-2563EB)', bg: 'var(--c-EFF6FF)', pulse: pulseIn ? 'pulseBlue 0.8s ease-in-out 3' : null })
           )}
         </Group>
       )}
 
       {/* Se van hoy */}
       {coToday.length > 0 && (
-        <Group id="seccion-salidas" title={`Se van hoy (${coToday.length})`} icon="rout" col="#EA580C">
+        <Group id="seccion-salidas" title={`Se van hoy (${coToday.length})`} icon="rout" col="var(--c-EA580C)">
           {coToday.map((r, liI) =>
-            row(r, liI, { icon: 'rout', col: '#EA580C', bg: '#FFF7ED', pulse: pulseOut ? 'pulseOrange 0.8s ease-in-out 3' : null, after: <LateBadge r={r} /> })
+            row(r, liI, { icon: 'rout', col: 'var(--c-EA580C)', bg: 'var(--c-FFF7ED)', pulse: pulseOut ? 'pulseOrange 0.8s ease-in-out 3' : null, after: <LateBadge r={r} /> })
           )}
         </Group>
       )}
 
       {/* VCC de Booking por cobrar */}
       {vccPending.length > 0 && (
-        <Group title={`VCC de Booking por cobrar (${vccPending.length})`} icon="card" col="#1E40AF">
+        <Group title={`VCC de Booking por cobrar (${vccPending.length})`} icon="card" col="var(--c-1E40AF)">
           {vccPending.map((r, liI) =>
             row(r, liI, {
               icon: 'card',
-              col: '#1E40AF',
-              bg: '#DBEAFE',
+              col: 'var(--c-1E40AF)',
+              bg: 'var(--c-DBEAFE)',
               sub: 'Llegó el ' + parseD(r.checkIn).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }),
               right: (
-                <span style={{ fontWeight: 800, fontSize: 15, color: '#1E40AF', whiteSpace: 'nowrap' }}>
+                <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--c-1E40AF)', whiteSpace: 'nowrap' }}>
                   {currency(Number(r.totalAmount) - Number(r.paid))}
                 </span>
               ),

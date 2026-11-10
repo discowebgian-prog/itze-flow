@@ -102,11 +102,11 @@ export function IneUploader({ f, onUploadFrente, onUploadDorso, onScan }) {
         Sacale foto al documento: se completan solos el nombre y casi todo lo demás.
       </div>
       <div style={{ display: 'flex', gap: 10 }}>
-        <label style={{ ...camBtn, background: f.url_ine_frente ? '#DCFCE7' : 'var(--acc)', color: f.url_ine_frente ? '#15803D' : '#fff' }}>
+        <label style={{ ...camBtn, background: f.url_ine_frente ? 'var(--c-DCFCE7)' : 'var(--acc)', color: f.url_ine_frente ? 'var(--c-15803D)' : '#fff' }}>
           {loadingF ? SCAN.uploading : f.url_ine_frente ? <>{ic('tick', 16)}Frente listo</> : <>{ic('camera', 17)}Foto frente</>}
           <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => processFile(e, 'frente')} />
         </label>
-        <label style={{ ...camBtn, background: f.url_ine_dorso ? '#DCFCE7' : 'var(--acc)', color: f.url_ine_dorso ? '#15803D' : '#fff' }}>
+        <label style={{ ...camBtn, background: f.url_ine_dorso ? 'var(--c-DCFCE7)' : 'var(--acc)', color: f.url_ine_dorso ? 'var(--c-15803D)' : '#fff' }}>
           {loadingD ? SCAN.uploading : f.url_ine_dorso ? <>{ic('tick', 16)}Dorso listo</> : <>{ic('camera', 17)}Foto dorso</>}
           <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => processFile(e, 'dorso')} />
         </label>
@@ -117,12 +117,12 @@ export function IneUploader({ f, onUploadFrente, onUploadDorso, onScan }) {
         </div>
       )}
       {scan.status === 'done' && (
-        <div key="done" className="pop-in" style={{ marginTop: 10, fontSize: 12.5, color: '#15803D', fontWeight: 700 }}>
+        <div key="done" className="pop-in" style={{ marginTop: 10, fontSize: 12.5, color: 'var(--c-15803D)', fontWeight: 700 }}>
           {ic('check', 14)}{scan.text}
         </div>
       )}
       {scan.status === 'failed' && (
-        <div key="failed" className="pop-in" style={{ marginTop: 10, fontSize: 12.5, color: '#B45309', fontWeight: 600 }}>
+        <div key="failed" className="pop-in" style={{ marginTop: 10, fontSize: 12.5, color: 'var(--c-B45309)', fontWeight: 600 }}>
           {ic('camera', 14)}{scan.text}
         </div>
       )}

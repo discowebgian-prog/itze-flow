@@ -13,9 +13,9 @@ export function WhoAmI({ current, onPick, onClose }) {
     flex: 1,
     padding: '14px 10px',
     borderRadius: 12,
-    border: active ? '2px solid #2563EB' : '1.5px solid var(--c-E5E7EB)',
-    background: active ? '#EFF6FF' : 'var(--card)',
-    color: active ? '#1D4ED8' : 'var(--c-111827)',
+    border: active ? '2px solid var(--c-2563EB)' : '1.5px solid var(--c-E5E7EB)',
+    background: active ? 'var(--c-EFF6FF)' : 'var(--card)',
+    color: active ? 'var(--c-1D4ED8)' : 'var(--c-111827)',
     fontFamily: 'inherit',
     fontWeight: 800,
     fontSize: 16,
@@ -75,7 +75,7 @@ export function WhoAmI({ current, onPick, onClose }) {
             <button
               disabled={!other.trim()}
               onClick={() => onPick(other.trim())}
-              style={{ padding: '10px 14px', borderRadius: 10, border: 'none', background: other.trim() ? '#2563EB' : 'var(--c-CBD5E1)', color: '#fff', fontFamily: 'inherit', fontWeight: 800, cursor: other.trim() ? 'pointer' : 'default' }}
+              style={{ padding: '10px 14px', borderRadius: 10, border: 'none', background: other.trim() ? 'var(--c-2563EB)' : 'var(--c-CBD5E1)', color: '#fff', fontFamily: 'inherit', fontWeight: 800, cursor: other.trim() ? 'pointer' : 'default' }}
             >
               Listo
             </button>

@@ -213,7 +213,7 @@ export function Login({ onLogin }) {
             style={{
               width: '100%',
               padding: '13px',
-              background: ok ? '#34C759' : 'var(--acc)',
+              background: ok ? 'var(--c-34C759)' : 'var(--acc)',
               border: 'none',
               borderRadius: 'var(--r-field)',
               color: '#fff',
@@ -259,8 +259,8 @@ export function Login({ onLogin }) {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
                 style={{
-                  background: '#DCFCE7',
-                  color: '#15803D',
+                  background: 'var(--c-DCFCE7)',
+                  color: 'var(--c-15803D)',
                   padding: '10px 12px',
                   borderRadius: 'var(--r-field)',
                   fontSize: 13.5,

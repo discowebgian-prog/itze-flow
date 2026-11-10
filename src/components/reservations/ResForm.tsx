@@ -741,8 +741,8 @@ export function ResForm({
             marginTop: 10,
             fontSize: 13,
             fontWeight: 600,
-            color: '#92400E',
-            background: '#FFFBEB',
+            color: 'var(--c-92400E)',
+            background: 'var(--c-FFFBEB)',
             borderRadius: 'var(--r-field)',
             padding: '9px 12px',
             lineHeight: 1.4,
@@ -763,11 +763,11 @@ export function ResForm({
             gap: 8,
             margin: '-4px 0 12px',
             padding: '8px 10px',
-            background: '#FFFBEB',
-            border: '1px solid #FCD34D',
+            background: 'var(--c-FFFBEB)',
+            border: '1px solid var(--c-FCD34D)',
             borderRadius: 8,
             fontSize: 12,
-            color: '#92400E',
+            color: 'var(--c-92400E)',
             fontWeight: 600,
           }}
         >
@@ -778,8 +778,8 @@ export function ResForm({
             style={{
               padding: '4px 12px',
               background: 'var(--card)',
-              border: '1.5px solid #D97706',
-              color: '#B45309',
+              border: '1.5px solid var(--c-D97706)',
+              color: 'var(--c-B45309)',
               borderRadius: 7,
               fontWeight: 800,
               fontSize: 12,
@@ -801,7 +801,7 @@ export function ResForm({
             margin: '-4px 0 12px',
             padding: '8px 10px',
             background: 'var(--acc-soft)',
-            border: '1px solid #BFDBFE',
+            border: '1px solid var(--c-BFDBFE)',
             borderRadius: 8,
             fontSize: 12,
             color: 'var(--acc)',
@@ -860,7 +860,7 @@ export function ResForm({
                     borderRadius: 'var(--r-field)',
                     border: 'none',
                     boxShadow: on ? `inset 0 0 0 2px ${ring}` : 'none',
-                    background: on ? (busy ? '#FEF2F2' : 'var(--acc-soft)') : 'var(--fill)',
+                    background: on ? (busy ? 'var(--c-FEF2F2)' : 'var(--acc-soft)') : 'var(--fill)',
                     fontFamily: 'inherit',
                     cursor: 'pointer',
                     lineHeight: 1.2,
@@ -927,11 +927,11 @@ export function ResForm({
                 marginTop: 10,
                 padding: '10px 12px',
                 borderRadius: 10,
-                background: titularRoom ? GROUP_COLORS.bg : '#FFFBEB',
-                border: `1.5px solid ${titularRoom ? GROUP_COLORS.border : '#FCD34D'}`,
+                background: titularRoom ? GROUP_COLORS.bg : 'var(--c-FFFBEB)',
+                border: `1.5px solid ${titularRoom ? GROUP_COLORS.border : 'var(--c-FCD34D)'}`,
               }}
             >
-              <div style={{ fontSize: 12.5, fontWeight: 800, color: titularRoom ? GROUP_COLORS.txt : '#92400E', marginBottom: 8 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 800, color: titularRoom ? GROUP_COLORS.txt : 'var(--c-92400E)', marginBottom: 8 }}>
                 ¿En qué habitación duerme el titular (quien reserva)?
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -1023,10 +1023,10 @@ export function ResForm({
           value: s.value,
           label: s.short || s.label,
           ...(s.value === 'Booking'
-            ? { bg: '#DBEAFE', txt: 'var(--acc)' }
+            ? { bg: 'var(--c-DBEAFE)', txt: 'var(--acc)' }
             : s.value === 'Redes'
-            ? { bg: '#FCE7F3', txt: '#9D174D' }
-            : { bg: '#D1FAE5', txt: '#065F46' }),
+            ? { bg: 'var(--c-FCE7F3)', txt: 'var(--c-9D174D)' }
+            : { bg: 'var(--c-D1FAE5)', txt: 'var(--c-065F46)' }),
         }))}
       />
       {(!f.status || !f.source) && (
@@ -1074,13 +1074,13 @@ export function ResForm({
           style={{
             marginTop: -4,
             marginBottom: 12,
-            background: '#F0F9FF',
-            border: '1.5px solid #BAE6FD',
+            background: 'var(--c-F0F9FF)',
+            border: '1.5px solid var(--c-BAE6FD)',
             borderRadius: 10,
             padding: 10,
           }}
         >
-          <div style={{ fontSize: 11, fontWeight: 800, color: '#0369A1', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--c-0369A1)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 }}>
             ¿Ya se hospedó antes?
           </div>
           {suggestions.map((s) => {
@@ -1091,7 +1091,7 @@ export function ResForm({
                 key={s.key}
                 style={{
                   background: 'var(--card)',
-                  border: `1px solid ${s.blacklisted ? '#FECACA' : '#E0F2FE'}`,
+                  border: `1px solid ${s.blacklisted ? 'var(--c-FECACA)' : 'var(--c-E0F2FE)'}`,
                   borderRadius: 8,
                   padding: '8px 10px',
                   marginBottom: 6,
@@ -1121,7 +1121,7 @@ export function ResForm({
                   onClick={() => pickGuest(s)}
                   style={{
                     padding: '7px 10px',
-                    background: '#0284C7',
+                    background: 'var(--c-0284C7)',
                     color: '#fff',
                     border: 'none',
                     borderRadius: 7,
@@ -1143,7 +1143,7 @@ export function ResForm({
             style={{
               background: 'none',
               border: 'none',
-              color: '#0369A1',
+              color: 'var(--c-0369A1)',
               fontSize: 11,
               fontWeight: 700,
               cursor: 'pointer',
@@ -1165,9 +1165,9 @@ export function ResForm({
             alignItems: 'center',
             gap: 8,
             fontSize: 11,
-            color: '#065F46',
-            background: '#ECFDF5',
-            border: '1px solid #A7F3D0',
+            color: 'var(--c-065F46)',
+            background: 'var(--c-ECFDF5)',
+            border: '1px solid var(--c-A7F3D0)',
             borderRadius: 8,
             padding: '6px 10px',
           }}
@@ -1176,7 +1176,7 @@ export function ResForm({
           <button
             type="button"
             onClick={undoGuest}
-            style={{ background: 'none', border: 'none', color: '#047857', fontWeight: 800, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+            style={{ background: 'none', border: 'none', color: 'var(--c-047857)', fontWeight: 800, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
           >
             Deshacer
           </button>
@@ -1216,20 +1216,20 @@ export function ResForm({
       {birthdayInStay(f) && f.status !== 'cancelada' && (
         <div
           className="pop-in"
-          style={{ background: '#FDF2F8', border: '1.5px solid #FBCFE8', borderRadius: 10, padding: '9px 12px', marginBottom: 12, fontSize: 12.5, color: '#9D174D', fontWeight: 700, lineHeight: 1.4 }}
+          style={{ background: 'var(--c-FDF2F8)', border: '1.5px solid var(--c-FBCFE8)', borderRadius: 10, padding: '9px 12px', marginBottom: 12, fontSize: 12.5, color: 'var(--c-9D174D)', fontWeight: 700, lineHeight: 1.4 }}
         >
           {birthdayText(birthdayInStay(f))}
-          <span style={{ fontWeight: 500, color: '#BE185D' }}> · un lindo detalle para tener en cuenta</span>
+          <span style={{ fontWeight: 500, color: 'var(--c-BE185D)' }}> · un lindo detalle para tener en cuenta</span>
         </div>
       )}
 
       {/* ── ALERTA DE LISTA NEGRA (VISIBLE SOLO SI HAY COINCIDENCIA) ── */}
       {matchBlacklist && (
-        <div style={{ background: '#FEF2F2', border: '1.5px solid #FECACA', borderRadius: 10, padding: '12px 16px', marginBottom: 16 }}>
-          <div style={{ color: '#991B1B', fontWeight: 800, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+        <div style={{ background: 'var(--c-FEF2F2)', border: '1.5px solid var(--c-FECACA)', borderRadius: 10, padding: '12px 16px', marginBottom: 16 }}>
+          <div style={{ color: 'var(--c-991B1B)', fontWeight: 800, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
             {ic('warning', 13)}Alerta de Lista Negra
           </div>
-          <div style={{ color: '#7F1D1D', fontSize: 12, marginBottom: 10, lineHeight: 1.4 }}>
+          <div style={{ color: 'var(--c-7F1D1D)', fontSize: 12, marginBottom: 10, lineHeight: 1.4 }}>
             El sistema detectó un huésped marcado como "No Grato" con el mismo nombre y nacionalidad. Verificá si es la misma persona:
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -1244,7 +1244,7 @@ export function ResForm({
               </DocLink>
             )}
             {!matchBlacklist.url_ine_frente && !matchBlacklist.url_ine_dorso && (
-              <span style={{ fontSize: 11, color: '#991B1B', fontWeight: 600 }}>
+              <span style={{ fontSize: 11, color: 'var(--c-991B1B)', fontWeight: 600 }}>
                 (No hay fotos previas para contrastar).
               </span>
             )}
@@ -1512,8 +1512,8 @@ export function ResForm({
             borderRadius: 20,
             // Con color también apagado para que se vea; activado va lleno como la etiqueta
             border: 'none',
-            background: lateOpen ? '#4F46E5' : '#EEF2FF',
-            color: lateOpen ? '#fff' : '#4338CA',
+            background: lateOpen ? 'var(--c-4F46E5)' : 'var(--c-EEF2FF)',
+            color: lateOpen ? '#fff' : 'var(--c-4338CA)',
             fontFamily: 'inherit',
             fontWeight: 700,
             fontSize: 14,
@@ -1530,7 +1530,7 @@ export function ResForm({
             marginBottom: 14,
             padding: 12,
             borderRadius: 'var(--r-item)',
-            background: '#F5F7FF',
+            background: 'var(--c-F5F7FF)',
             border: `1px solid ${LATE_COLORS.border}`,
           }}
         >
@@ -1649,7 +1649,7 @@ export function ResForm({
                   marginBottom: 8,
                   alignItems: 'center',
                   padding: '8px 10px 8px 12px',
-                  background: a.bonificada ? '#F0FDF4' : 'var(--bg)',
+                  background: a.bonificada ? 'var(--c-F0FDF4)' : 'var(--bg)',
                   borderRadius: 'var(--r-field)',
                 }}
               >
@@ -1690,8 +1690,8 @@ export function ResForm({
                       width: 20,
                       height: 20,
                       borderRadius: '50%',
-                      border: `2px solid ${a.bonificada ? '#22C55E' : 'var(--handle)'}`,
-                      background: a.bonificada ? '#22C55E' : 'var(--card)',
+                      border: `2px solid ${a.bonificada ? 'var(--c-22C55E)' : 'var(--handle)'}`,
+                      background: a.bonificada ? 'var(--c-22C55E)' : 'var(--card)',
                       color: '#fff',
                       display: 'flex',
                       alignItems: 'center',
@@ -1700,7 +1700,7 @@ export function ResForm({
                   >
                     {a.bonificada && <Icon name="tick" size={12} strokeWidth={3.5} />}
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: a.bonificada ? '#15803D' : 'var(--mut)' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: a.bonificada ? 'var(--c-15803D)' : 'var(--mut)' }}>
                     Bonif.
                   </span>
                 </div>
@@ -1772,9 +1772,9 @@ export function ResForm({
                       onClick={() => sv('paid', q.value)}
                       style={{
                         padding: '0 10px',
-                        background: q.active ? '#10B981' : '#D1FAE5',
-                        color: q.active ? '#fff' : '#065F46',
-                        border: '1.5px solid #10B981',
+                        background: q.active ? 'var(--c-10B981)' : 'var(--c-D1FAE5)',
+                        color: q.active ? '#fff' : 'var(--c-065F46)',
+                        border: '1.5px solid var(--c-10B981)',
                         borderRadius: 8,
                         fontWeight: 800,
                         fontSize: 12,
@@ -1850,7 +1850,7 @@ export function ResForm({
           </div>
           <div
             style={{
-              background: freeStay ? '#F5F3FF' : saldoPendiente > 0 ? '#FEF2F2' : '#ECFDF5',
+              background: freeStay ? 'var(--c-F5F3FF)' : saldoPendiente > 0 ? 'var(--c-FEF2F2)' : 'var(--c-ECFDF5)',
               padding: '10px 14px',
               borderRadius: 'var(--r-item)',
               textAlign: 'right',
@@ -1862,7 +1862,7 @@ export function ResForm({
               style={{
                 fontSize: 10,
                 fontWeight: 800,
-                color: freeStay ? '#5B21B6' : saldoPendiente > 0 ? 'var(--red)' : '#059669',
+                color: freeStay ? 'var(--c-5B21B6)' : saldoPendiente > 0 ? 'var(--red)' : 'var(--c-059669)',
                 textTransform: 'uppercase',
                 letterSpacing: 0.5,
                 marginBottom: 2,
@@ -1874,7 +1874,7 @@ export function ResForm({
               style={{
                 fontSize: 18,
                 fontWeight: 900,
-                color: freeStay ? '#6D28D9' : saldoPendiente > 0 ? '#B45309' : '#059669',
+                color: freeStay ? 'var(--c-6D28D9)' : saldoPendiente > 0 ? 'var(--c-B45309)' : 'var(--c-059669)',
               }}
             >
               {freeStay
@@ -1970,9 +1970,9 @@ export function ResForm({
             padding: '7px 14px',
             borderRadius: 20,
             border: 'none',
-            boxShadow: f.requiresInvoice ? 'inset 0 0 0 1.5px #7C3AED' : 'none',
-            background: f.requiresInvoice ? '#EDE9FE' : 'var(--fill)',
-            color: f.requiresInvoice ? '#5B21B6' : 'var(--ink-2)',
+            boxShadow: f.requiresInvoice ? 'inset 0 0 0 1.5px var(--c-7C3AED)' : 'none',
+            background: f.requiresInvoice ? 'var(--c-EDE9FE)' : 'var(--fill)',
+            color: f.requiresInvoice ? 'var(--c-5B21B6)' : 'var(--ink-2)',
             fontFamily: 'inherit',
             fontWeight: f.requiresInvoice ? 800 : 600,
             fontSize: 14,
@@ -2086,7 +2086,7 @@ export function ResForm({
               fontWeight: 700,
               marginBottom: 14,
               textAlign: 'center',
-              background: '#FEF2F2',
+              background: 'var(--c-FEF2F2)',
               padding: '11px 12px',
               borderRadius: 'var(--r-item)',
             }}
@@ -2278,7 +2278,7 @@ export function ResForm({
                   </p>
                 )}
                 {otherConf.length > 0 && (
-                  <div style={{ fontSize: 12, color: '#991B1B', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '8px 10px', marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, color: 'var(--c-991B1B)', background: 'var(--c-FEF2F2)', border: '1px solid var(--c-FECACA)', borderRadius: 8, padding: '8px 10px', marginBottom: 12 }}>
                     {ic('warning', 13)}Para todo el grupo quedarían empalmadas:{' '}
                     {otherConf.map((x) => `${x.room} con ${x.c.guestName}`).join(' · ')}
                   </div>
@@ -2335,7 +2335,7 @@ export function ResForm({
               style={{ background: 'var(--card)', borderRadius: 22, maxWidth: 360, width: '100%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.25)' }}
             >
               <div style={{ padding: '22px 22px 18px', textAlign: 'center' }}>
-                <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#FEF3C7', color: '#B45309', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--c-FEF3C7)', color: 'var(--c-B45309)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
                   <Icon name="cal" size={24} />
                 </div>
                 <div style={{ fontSize: 17, fontWeight: 'var(--w-title)', color: 'var(--ink)', marginBottom: 6 }}>{t.title}</div>
@@ -2427,8 +2427,8 @@ export function ResForm({
                   style={{
                     flex: 1,
                     padding: '10px',
-                    background: '#FEF2F2',
-                    border: '1.5px solid #FECACA',
+                    background: 'var(--c-FEF2F2)',
+                    border: '1.5px solid var(--c-FECACA)',
                     borderRadius: 8,
                     fontFamily: 'inherit',
                     fontWeight: 700,
@@ -2739,9 +2739,9 @@ function RoomCards({ rooms, alloc, setA, titularRoom, titularName, roomTotal, sp
                       onClick={() => setA(id, { paid: q.v })}
                       style={{
                         padding: '0 10px',
-                        background: q.on ? '#10B981' : '#D1FAE5',
-                        color: q.on ? '#fff' : '#065F46',
-                        border: '1.5px solid #10B981',
+                        background: q.on ? 'var(--c-10B981)' : 'var(--c-D1FAE5)',
+                        color: q.on ? '#fff' : 'var(--c-065F46)',
+                        border: '1.5px solid var(--c-10B981)',
                         borderRadius: 8,
                         fontWeight: 800,
                         fontSize: 12,

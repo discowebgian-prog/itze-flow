@@ -93,7 +93,7 @@ export function GuestsPage({
     { v: 'todos', label: 'Todos' },
     { v: 'empresa', icon: 'company', label: `Empresas (${nEmpresas})` },
     { v: 'particular', icon: 'user', label: `Particulares (${nParticulares})` },
-    { v: 'cumple', icon: 'cake', label: `Cumpleaños esta semana (${weekBdays.length})`, bg: '#DB2777' },
+    { v: 'cumple', icon: 'cake', label: `Cumpleaños esta semana (${weekBdays.length})`, bg: 'var(--c-DB2777)' },
   ];
 
   return (
@@ -112,21 +112,21 @@ export function GuestsPage({
       {canReview && dupPairs.length > 0 && (
         <div className="pop-in"
           style={{
-            display: 'flex', alignItems: 'center', gap: 12, background: '#FFFBEB',
+            display: 'flex', alignItems: 'center', gap: 12, background: 'var(--c-FFFBEB)',
             borderRadius: 'var(--r-item)', padding: '12px 14px', marginBottom: 14,
           }}
         >
-          <span style={{ width: 34, height: 34, borderRadius: '50%', background: '#FEF3C7', color: '#B45309', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <span style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--c-FEF3C7)', color: 'var(--c-B45309)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Icon name="search" size={17} />
           </span>
-          <div style={{ flex: 1, fontSize: 13.5, color: '#92400E', fontWeight: 600, lineHeight: 1.35 }}>
+          <div style={{ flex: 1, fontSize: 13.5, color: 'var(--c-92400E)', fontWeight: 600, lineHeight: 1.35 }}>
             Encontramos {dupPairs.length}{' '}
             {dupPairs.length === 1 ? 'posible huésped duplicado' : 'posibles huéspedes duplicados'}
           </div>
           <button
             onClick={() => setReviewing(true)}
             style={{
-              padding: '8px 16px', borderRadius: 20, border: 'none', background: '#F59E0B', color: '#fff',
+              padding: '8px 16px', borderRadius: 20, border: 'none', background: 'var(--c-F59E0B)', color: '#fff',
               fontWeight: 700, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', flexShrink: 0,
             }}
           >
@@ -233,8 +233,8 @@ export function GuestsPage({
         onClick={() => lastRes && onView(lastRes)}
         style={{
           '--i': idx, alignItems: 'flex-start',
-          background: flash ? '#FDF2F8' : undefined,
-          boxShadow: flash ? 'inset 0 0 0 2px #DB2777' : 'none',
+          background: flash ? 'var(--c-FDF2F8)' : undefined,
+          boxShadow: flash ? 'inset 0 0 0 2px var(--c-DB2777)' : 'none',
           borderRadius: flash ? 'var(--r-item)' : 0,
           transition: 'background .3s, box-shadow .3s',
         }}
@@ -243,7 +243,7 @@ export function GuestsPage({
         <div
           style={{
             width: 40, height: 40, borderRadius: '50%', flexShrink: 0, marginTop: 1,
-            background: g.isCompany ? '#EDE9FE' : 'var(--acc-soft)', color: g.isCompany ? '#5B21B6' : 'var(--acc)',
+            background: g.isCompany ? 'var(--c-EDE9FE)' : 'var(--acc-soft)', color: g.isCompany ? 'var(--c-5B21B6)' : 'var(--acc)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14.5,
           }}
         >
@@ -262,9 +262,9 @@ export function GuestsPage({
             )}
           </div>
           <div style={{ fontSize: 12.5, color: 'var(--mut)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {g.isCompany && <span style={{ color: '#5B21B6', fontWeight: 600 }}>{g.company} · </span>}
+            {g.isCompany && <span style={{ color: 'var(--c-5B21B6)', fontWeight: 600 }}>{g.company} · </span>}
             {g.visits} {g.visits === 1 ? 'visita' : 'visitas'} ·{' '}
-            <span style={{ color: '#15803D', fontWeight: 600 }}>{currency(g.totalSpent)}</span>
+            <span style={{ color: 'var(--c-15803D)', fontWeight: 600 }}>{currency(g.totalSpent)}</span>
             {g.doc ? ` · ${g.doc}` : ''}
           </div>
 
@@ -272,7 +272,7 @@ export function GuestsPage({
             <div
               style={{
                 marginTop: 5, fontSize: 12.5, fontWeight: soon ? 700 : 500,
-                color: today ? '#9D174D' : soon ? '#BE185D' : 'var(--mut)', lineHeight: 1.35,
+                color: today ? 'var(--c-9D174D)' : soon ? 'var(--c-BE185D)' : 'var(--mut)', lineHeight: 1.35,
               }}
             >
               {ic('cake', 13, { marginRight: 4 })}
@@ -297,7 +297,7 @@ export function GuestsPage({
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4, padding: '7px 11px', borderRadius: 20,
                 textDecoration: 'none', fontWeight: 700, fontSize: 13,
-                background: greeted ? '#FCE7F3' : '#DB2777', color: greeted ? '#9D174D' : '#fff',
+                background: greeted ? 'var(--c-FCE7F3)' : 'var(--c-DB2777)', color: greeted ? 'var(--c-9D174D)' : '#fff',
               }}
             >
               <Icon name={greeted ? 'tick' : 'whatsapp'} size={14} strokeWidth={greeted ? 3 : 2} />
@@ -311,7 +311,7 @@ export function GuestsPage({
               aria-label={`WhatsApp a ${g.name}`}
               onClick={(e) => e.stopPropagation()}
               style={{
-                width: 36, height: 36, borderRadius: '50%', background: '#DCFCE7', color: '#15803D',
+                width: 36, height: 36, borderRadius: '50%', background: 'var(--c-DCFCE7)', color: 'var(--c-15803D)',
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none',
               }}
             >

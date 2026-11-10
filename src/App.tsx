@@ -373,7 +373,7 @@ export default function AppMejorada() {
     height: 16,
     padding: '0 4px',
     borderRadius: 8,
-    background: '#EF4444',
+    background: 'var(--c-EF4444)',
     color: '#fff',
     fontSize: 10,
     fontWeight: 800,
@@ -993,8 +993,8 @@ const toggleBlacklist = async (id, currentStatus) => {
                 <span
                   style={{
                     fontSize: 11,
-                    background: '#EDE9FE',
-                    color: '#7C3AED',
+                    background: 'var(--c-EDE9FE)',
+                    color: 'var(--c-7C3AED)',
                     fontWeight: 700,
                     padding: '2px 8px',
                     borderRadius: 6,
@@ -1007,8 +1007,8 @@ const toggleBlacklist = async (id, currentStatus) => {
                 <span
                   style={{
                     fontSize: 11,
-                    background: '#DBEAFE',
-                    color: '#1E40AF',
+                    background: 'var(--c-DBEAFE)',
+                    color: 'var(--c-1E40AF)',
                     fontWeight: 700,
                     padding: '2px 8px',
                     borderRadius: 6,
@@ -1419,16 +1419,16 @@ const toggleBlacklist = async (id, currentStatus) => {
           >
             <div
               style={{
-                background: '#FEF2F2',
+                background: 'var(--c-FEF2F2)',
                 padding: '18px 22px',
-                borderBottom: '1px solid #FECACA',
+                borderBottom: '1px solid var(--c-FECACA)',
               }}
             >
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#991B1B' }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--c-991B1B)' }}>
                 🗑 {deleteText(res.find((x) => x.id === modal.id)).title}
               </div>
               {deleteText(res.find((x) => x.id === modal.id)).where && (
-                <div style={{ fontSize: 12.5, fontWeight: 600, color: '#B91C1C', marginTop: 3 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-B91C1C)', marginTop: 3 }}>
                   {deleteText(res.find((x) => x.id === modal.id)).where}
                 </div>
               )}
@@ -1447,7 +1447,7 @@ const toggleBlacklist = async (id, currentStatus) => {
                       delRes(modal.id);
                       setModal(null);
                     }}
-                    style={{ padding: '10px', background: '#FEF2F2', border: '1.5px solid #FECACA', borderRadius: 8, fontFamily: 'inherit', fontWeight: 700, cursor: 'pointer', color: '#DC2626' }}
+                    style={{ padding: '10px', background: 'var(--c-FEF2F2)', border: '1.5px solid var(--c-FECACA)', borderRadius: 8, fontFamily: 'inherit', fontWeight: 700, cursor: 'pointer', color: 'var(--c-DC2626)' }}
                   >
                     Solo esta habitación
                   </button>
@@ -1456,7 +1456,7 @@ const toggleBlacklist = async (id, currentStatus) => {
                       delRes(modal.groupIds);
                       setModal(null);
                     }}
-                    style={{ padding: '10px', background: '#FEF2F2', border: '1.5px solid #FECACA', borderRadius: 8, fontFamily: 'inherit', fontWeight: 700, cursor: 'pointer', color: '#DC2626' }}
+                    style={{ padding: '10px', background: 'var(--c-FEF2F2)', border: '1.5px solid var(--c-FECACA)', borderRadius: 8, fontFamily: 'inherit', fontWeight: 700, cursor: 'pointer', color: 'var(--c-DC2626)' }}
                   >
                     Todo el grupo ({modal.groupIds.length} habitaciones)
                   </button>
@@ -1487,13 +1487,13 @@ const toggleBlacklist = async (id, currentStatus) => {
                   style={{
                     flex: 1,
                     padding: '10px',
-                    background: '#FEF2F2',
-                    border: '1.5px solid #FECACA',
+                    background: 'var(--c-FEF2F2)',
+                    border: '1.5px solid var(--c-FECACA)',
                     borderRadius: 8,
                     fontFamily: 'inherit',
                     fontWeight: 700,
                     cursor: 'pointer',
-                    color: '#DC2626',
+                    color: 'var(--c-DC2626)',
                   }}
                 >
                   Mover a papelera
@@ -1596,7 +1596,7 @@ const toggleBlacklist = async (id, currentStatus) => {
           >
             <div
               style={{
-                background: '#10B981',
+                background: 'var(--c-10B981)',
                 padding: '16px 22px',
                 display: 'flex',
                 alignItems: 'center',
@@ -1617,7 +1617,7 @@ const toggleBlacklist = async (id, currentStatus) => {
                     </p>
                     <p style={{ fontSize: 12, color: 'var(--c-6B7280)', marginBottom: t.warn ? 10 : 20 }}>{t.detail}</p>
                     {t.warn && (
-                      <p style={{ fontSize: 12, color: '#92400E', background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 8, padding: '7px 10px', margin: '0 0 18px', fontWeight: 600 }}>
+                      <p style={{ fontSize: 12, color: 'var(--c-92400E)', background: 'var(--c-FEF3C7)', border: '1px solid var(--c-FDE68A)', borderRadius: 8, padding: '7px 10px', margin: '0 0 18px', fontWeight: 600 }}>
                         💰 {t.warn}
                       </p>
                     )}
@@ -1646,7 +1646,7 @@ const toggleBlacklist = async (id, currentStatus) => {
                   style={{
                     flex: 1,
                     padding: '10px',
-                    background: '#10B981',
+                    background: 'var(--c-10B981)',
                     border: 'none',
                     borderRadius: 8,
                     fontFamily: 'inherit',
@@ -1689,7 +1689,7 @@ const toggleBlacklist = async (id, currentStatus) => {
           >
             <div
               style={{
-                background: '#F59E0B',
+                background: 'var(--c-F59E0B)',
                 padding: '16px 22px',
                 display: 'flex',
                 alignItems: 'center',
@@ -1710,7 +1710,7 @@ const toggleBlacklist = async (id, currentStatus) => {
                     </p>
                     <p style={{ fontSize: 12, color: 'var(--c-6B7280)', marginBottom: t.warn ? 10 : 20 }}>{t.detail}</p>
                     {t.warn && (
-                      <p style={{ fontSize: 12, color: '#92400E', background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 8, padding: '7px 10px', margin: '0 0 18px', fontWeight: 600 }}>
+                      <p style={{ fontSize: 12, color: 'var(--c-92400E)', background: 'var(--c-FEF3C7)', border: '1px solid var(--c-FDE68A)', borderRadius: 8, padding: '7px 10px', margin: '0 0 18px', fontWeight: 600 }}>
                         💰 {t.warn}
                       </p>
                     )}
@@ -1739,7 +1739,7 @@ const toggleBlacklist = async (id, currentStatus) => {
                   style={{
                     flex: 1,
                     padding: '10px',
-                    background: '#F59E0B',
+                    background: 'var(--c-F59E0B)',
                     border: 'none',
                     borderRadius: 8,
                     fontFamily: 'inherit',

@@ -7,9 +7,9 @@
         /* Pulsos al tocar "Llegan hoy" / "Se van hoy" */
         @keyframes pulseBlue {
           0%, 100% { background-color: transparent; }
-          50% { background-color: #DBEAFE; }
+          50% { background-color: var(--c-DBEAFE); }
         }
         @keyframes pulseOrange {
           0%, 100% { background-color: transparent; }
-          50% { background-color: #FFEDD5; }
+          50% { background-color: var(--c-FFEDD5); }
         }
