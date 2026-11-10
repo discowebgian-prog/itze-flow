@@ -12,6 +12,7 @@ import { Backdrop, PopCard, CountUp, Collapse } from '../components/ui/Motion';
 import { InfoTip } from '../components/ui/InfoTip';
 import { Icon, ic } from '../components/ui/Icon';
 import { notify, notifyError, financeReading } from '../lib/voice';
+import { esDueno } from '../lib/roles';
 
 // Títulos de sección (estilo Limpieza: grandes, con ícono)
 const H3 = { margin: '0 0 12px', fontSize: 20, fontWeight: 'var(--w-title)', color: 'var(--ink)', letterSpacing: '-.01em', display: 'flex', alignItems: 'center', gap: 8 };
@@ -434,7 +435,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <h2 style={{ margin: 0, fontSize: 30, fontWeight: 'var(--w-title)', color: 'var(--ink)', letterSpacing: 'var(--ls-title)' }}>Finanzas</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {user?.role === 'admin' && deleted.length > 0 && (
+          {esDueno(user) && deleted.length > 0 && (
             <button
               onClick={() => setShowTrash((x) => !x)}
               style={{
