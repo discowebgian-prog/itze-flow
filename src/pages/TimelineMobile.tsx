@@ -5,7 +5,10 @@ import { BLOCK_COLORS, getAlerts } from '../lib/constants';
 import { TODAY, fmt, addDays, parseD, MONTHS, DAYS } from '../lib/dates';
 import { LateBadge } from '../components/ui/LateBadge';
 import { GroupBadge } from '../components/ui/GroupBadge';
-import { QuoteButton } from '../components/Quoter';
+import { Icon, ic } from '../components/ui/Icon';
+
+const DIA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const MES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
 // ── TIMELINE MOBILE ───────────────────────────────────────────────────────────
 export function TimelineMobile({ reservations, properties, onClickRes, onAddRes, onQuote, highlightStatus }) {
@@ -19,112 +22,52 @@ export function TimelineMobile({ reservations, properties, onClickRes, onAddRes,
     );
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 16,
-        }}
-      >
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#111' }}>
-          Calendario
-        </h2>
-        {onQuote && <QuoteButton onClick={onQuote} style={{ marginRight: 6, borderRadius: 9 }} />}
-        <button
-          onClick={() => onAddRes()}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '8px 14px',
-            background: 'linear-gradient(135deg,#3B82F6,#6366F1)',
-            border: 'none',
-            borderRadius: 9,
-            color: '#fff',
-            fontWeight: 700,
-            fontSize: 13,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-          }}
-        >
-          + Reserva
-        </button>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* El título, Lista/Timeline, Cotizar y + Reserva los pone Timeline.tsx (antes este encabezado salía repetido) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {next14.map((d) => {
           const dRes = dayRes(d),
             isToday = fmt(d) === fmt(TODAY);
           return (
             <div
               key={fmt(d)}
-              style={{
-                background: isToday ? '#EFF6FF' : '#fff',
-                borderRadius: 12,
-                border: `1.5px solid ${isToday ? '#BFDBFE' : '#F0F0F0'}`,
-                overflow: 'hidden',
-              }}
+              className="ui-group"
+              style={{ margin: 0, boxShadow: isToday ? 'inset 0 0 0 2px var(--acc), var(--shadow)' : undefined }}
             >
               <div
                 style={{
-                  padding: '10px 14px',
+                  padding: '11px 14px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 8,
-                  background: isToday ? '#DBEAFE' : '#FAFAFA',
-                  borderBottom: dRes.length > 0 ? '1px solid #F0F0F0' : 'none',
+                  gap: 10,
+                  borderBottom: dRes.length > 0 ? '1px solid var(--line)' : 'none',
                 }}
               >
                 <div
                   style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 9,
-                    background: isToday ? '#3B82F6' : '#E5E7EB',
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    background: isToday ? 'var(--acc)' : 'var(--fill)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
+                    lineHeight: 1.05,
                   }}
                 >
-                  <span
-                    style={{
-                      fontSize: 8,
-                      fontWeight: 700,
-                      color: isToday ? 'rgba(255,255,255,.8)' : '#9CA3AF',
-                      textTransform: 'uppercase',
-                    }}
-                  >
+                  <span style={{ fontSize: 9, fontWeight: 700, color: isToday ? 'rgba(255,255,255,.85)' : 'var(--mut)', textTransform: 'uppercase' }}>
                     {DAYS[d.getDay()]}
                   </span>
-                  <span
-                    style={{
-                      fontSize: 16,
-                      fontWeight: 800,
-                      color: isToday ? '#fff' : '#374151',
-                    }}
-                  >
-                    {d.getDate()}
-                  </span>
+                  <span style={{ fontSize: 17, fontWeight: 800, color: isToday ? '#fff' : 'var(--ink)' }}>{d.getDate()}</span>
                 </div>
-                <div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: isToday ? '#1E40AF' : '#374151',
-                    }}
-                  >
-                    {isToday ? 'Hoy — ' : ''}
-                    {MONTHS[d.getMonth()]} {d.getFullYear()}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: isToday ? 'var(--acc)' : 'var(--ink)' }}>
+                    {isToday ? 'Hoy' : DIA[d.getDay()]}
+                    <span style={{ fontWeight: 500, color: 'var(--mut)' }}> · {d.getDate()} de {MES[d.getMonth()]}</span>
                   </div>
-                  <div style={{ fontSize: 11, color: '#9CA3AF' }}>
-                    {dRes.length === 0
-                      ? 'Libre'
-                      : dRes.length === 1
-                      ? '1 reserva activa'
-                      : `${dRes.length} reservas`}
+                  <div style={{ fontSize: 12.5, color: 'var(--mut)' }}>
+                    {dRes.length === 0 ? 'Libre' : dRes.length === 1 ? '1 reserva' : `${dRes.length} reservas`}
                   </div>
                 </div>
               </div>
@@ -133,14 +76,10 @@ export function TimelineMobile({ reservations, properties, onClickRes, onAddRes,
                 const bc = BLOCK_COLORS[r.status] || BLOCK_COLORS.por_llegar;
                 const alerts = getAlerts(r);
                 return (
-                  <div className="li-in"
+                  <div className="li-in ui-row"
                     key={r.id}
                     style={{ '--i': liI,
-                      padding: '10px 14px',
-                      display: 'flex',
-                      alignItems: 'center',
                       gap: 10,
-                      borderBottom: '1px solid #F8FAFC',
                       cursor: 'pointer',
                       animation: (highlightStatus && r.status === highlightStatus) ? 'pulseGreenCard 0.8s ease-in-out 3' : 'none',
                     }}
@@ -150,6 +89,7 @@ export function TimelineMobile({ reservations, properties, onClickRes, onAddRes,
                       style={{
                         width: 4,
                         alignSelf: 'stretch',
+                        minHeight: 34,
                         borderRadius: 2,
                         background: bc.bg,
                         flexShrink: 0,
@@ -159,8 +99,8 @@ export function TimelineMobile({ reservations, properties, onClickRes, onAddRes,
                       <div
                         style={{
                           fontWeight: 700,
-                          fontSize: 13,
-                          color: '#111',
+                          fontSize: 15.5,
+                          color: 'var(--ink)',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -168,28 +108,29 @@ export function TimelineMobile({ reservations, properties, onClickRes, onAddRes,
                       >
                         {r.guestName}
                       </div>
-                      <div style={{ fontSize: 11, color: '#9CA3AF', display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-                        <span>{p?.name}{r.room ? ` · Hab.${r.room}` : ''}</span>
+                      <div style={{ fontSize: 12.5, color: 'var(--mut)', display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginTop: 1 }}>
+                        <span>{r.room ? r.room : p?.name}</span>
                         {/* NUEVO ETIQUETA BOOKING EN MOBILE */}
                         {r.source === 'Booking' && (
-                          <span style={{ color: '#1E40AF', background: '#DBEAFE', padding: '2px 6px', borderRadius: 4, fontWeight: 800, fontSize: 10 }}>
+                          <span style={{ color: '#1E40AF', background: '#DBEAFE', padding: '1px 7px', borderRadius: 20, fontWeight: 700, fontSize: 11 }}>
                             Booking
                           </span>
                         )}
-                        {r.requiresInvoice && <span style={{ color: '#7C3AED', fontWeight: 700 }}>· 🧾 Factura</span>}
+                        {r.requiresInvoice && <span style={{ color: '#7C3AED', fontWeight: 600 }}>{ic('invoice', 12, { marginRight: 3 })}Factura</span>}
                         <LateBadge r={r} size={10} />
                         <GroupBadge r={r} size={10} />
-                        {r.notes && <span style={{ color: '#D97706', fontWeight: 700 }}>· 📝 Notas</span>}
+                        {r.notes && <span style={{ color: '#D97706', fontWeight: 600 }}>{ic('edit', 12, { marginRight: 3 })}Notas</span>}
                       </div>
                       {r.checkIn === fmt(d) && (
                         <div
                           style={{
-                            fontSize: 10,
+                            fontSize: 12,
                             fontWeight: 700,
-                            color: '#059669',
+                            color: '#15803D',
+                            marginTop: 2,
                           }}
                         >
-                          Check-in hoy
+                          {ic('checkIn', 12, { marginRight: 3 })}Llega este día
                         </div>
                       )}
                     </div>
@@ -227,14 +168,14 @@ export function TimelineMobile({ reservations, properties, onClickRes, onAddRes,
       </div>
       
       {/* LEYENDA DE ESTADOS EN MOBILE */}
-      <div style={{ marginTop: 20, padding: '12px 14px', background: '#fff', borderRadius: 12, border: '1px solid #E5E7EB' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.4 }}>
-          Leyenda de Estados
+      <div style={{ marginTop: 18, padding: '12px 14px', background: 'var(--card)', borderRadius: 'var(--r-item)', boxShadow: 'var(--shadow)' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.4 }}>
+          Colores de cada estado
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
           {Object.entries(BLOCK_COLORS).map(([k, v]) => (
-            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#374151', fontWeight: 600 }}>
-              <div style={{ width: 12, height: 12, borderRadius: 3, background: v.bg }} />
+            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: 'var(--ink-2)', fontWeight: 600 }}>
+              <div style={{ width: 12, height: 12, borderRadius: '50%', background: v.bg }} />
               <span style={{ textTransform: 'capitalize' }}>{k.replace('_', ' ')}</span>
             </div>
           ))}
