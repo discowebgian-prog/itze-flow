@@ -112,21 +112,21 @@ export function TimelineMobile({ reservations, properties, onClickRes, onAddRes,
                         <span>{r.room ? r.room : p?.name}</span>
                         {/* NUEVO ETIQUETA BOOKING EN MOBILE */}
                         {r.source === 'Booking' && (
-                          <span style={{ color: '#1E40AF', background: '#DBEAFE', padding: '1px 7px', borderRadius: 20, fontWeight: 700, fontSize: 11 }}>
+                          <span style={{ color: 'var(--c-1E40AF)', background: 'var(--c-DBEAFE)', padding: '1px 7px', borderRadius: 20, fontWeight: 700, fontSize: 11 }}>
                             Booking
                           </span>
                         )}
-                        {r.requiresInvoice && <span style={{ color: '#7C3AED', fontWeight: 600 }}>{ic('invoice', 12, { marginRight: 3 })}Factura</span>}
+                        {r.requiresInvoice && <span style={{ color: 'var(--c-7C3AED)', fontWeight: 600 }}>{ic('invoice', 12, { marginRight: 3 })}Factura</span>}
                         <LateBadge r={r} size={10} />
                         <GroupBadge r={r} size={10} />
-                        {r.notes && <span style={{ color: '#D97706', fontWeight: 600 }}>{ic('edit', 12, { marginRight: 3 })}Notas</span>}
+                        {r.notes && <span style={{ color: 'var(--c-D97706)', fontWeight: 600 }}>{ic('edit', 12, { marginRight: 3 })}Notas</span>}
                       </div>
                       {r.checkIn === fmt(d) && (
                         <div
                           style={{
                             fontSize: 12,
                             fontWeight: 700,
-                            color: '#15803D',
+                            color: 'var(--c-15803D)',
                             marginTop: 2,
                           }}
                         >

@@ -11,9 +11,9 @@ import { onNotify, toastMs, OFFLINE_BANNER, BACK_ONLINE, notify } from '../../li
 // Uno a la vez: si llega otro, reemplaza al anterior y su tiempo arranca de cero.
 // Los errores son rojos, quedan un poco más y se pueden cerrar tocándolos.
 const KIND = {
-  ok: { bg: '#10B981', shadow: 'rgba(16,185,129,.28)', icon: '✓' },
-  info: { bg: '#2563EB', shadow: 'rgba(37,99,235,.28)', icon: 'ℹ︎' },
-  error: { bg: '#DC2626', shadow: 'rgba(220,38,38,.28)', icon: '!' },
+  ok: { bg: 'var(--c-10B981)', shadow: 'rgba(16,185,129,.28)', icon: '✓' },
+  info: { bg: 'var(--c-2563EB)', shadow: 'rgba(37,99,235,.28)', icon: 'ℹ︎' },
+  error: { bg: 'var(--c-DC2626)', shadow: 'rgba(220,38,38,.28)', icon: '!' },
 };
 
 export function Toast({ isMobile }) {
@@ -214,9 +214,9 @@ export function OfflineBanner({ show }) {
         >
           <div
             style={{
-              background: '#FEF3C7',
-              borderBottom: '1px solid #FCD34D',
-              color: '#92400E',
+              background: 'var(--c-FEF3C7)',
+              borderBottom: '1px solid var(--c-FCD34D)',
+              color: 'var(--c-92400E)',
               fontSize: 12.5,
               fontWeight: 700,
               padding: '8px 16px',

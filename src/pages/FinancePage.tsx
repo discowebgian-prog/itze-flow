@@ -36,7 +36,7 @@ function CmpTitle({ label }) {
 function Delta({ cur, prev, style = {} }) {
   if (!prev) return <span title="El mes anterior no tuvo ingresos acá" style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--mut)', ...style }}>—</span>;
   const p = Math.round(((cur - prev) / prev) * 100);
-  const color = p > 0 ? '#059669' : p < 0 ? 'var(--red)' : 'var(--mut)';
+  const color = p > 0 ? 'var(--c-059669)' : p < 0 ? 'var(--red)' : 'var(--mut)';
   return (
     <span title={`Mes anterior: ${currency(prev)}`} style={{ fontSize: 10.5, fontWeight: 800, color, whiteSpace: 'nowrap', cursor: 'help', ...style }}>
       {p > 0 ? '▲' : p < 0 ? '▼' : '='} {Math.abs(p)}%
@@ -417,10 +417,10 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
   // Semáforo del % del potencial (a ajustar con Gian)
   const potColor = (p) =>
     p >= 65
-      ? { c: '#15803D', bg: '#DCFCE7', bar: '#22C55E', txt: 'Bien encaminado' }
+      ? { c: 'var(--c-15803D)', bg: 'var(--c-DCFCE7)', bar: 'var(--c-22C55E)', txt: 'Bien encaminado' }
       : p >= 40
-      ? { c: '#B45309', bg: '#FEF3C7', bar: '#F59E0B', txt: 'Se puede mejorar' }
-      : { c: '#B91C1C', bg: '#FEE2E2', bar: 'var(--red)', txt: 'Muy por debajo' };
+      ? { c: 'var(--c-B45309)', bg: 'var(--c-FEF3C7)', bar: 'var(--c-F59E0B)', txt: 'Se puede mejorar' }
+      : { c: 'var(--c-B91C1C)', bg: 'var(--c-FEE2E2)', bar: 'var(--red)', txt: 'Muy por debajo' };
 
   useEffect(() => {
     setTimeout(() => {
@@ -439,7 +439,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
               onClick={() => setShowTrash((x) => !x)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px',
-                background: showTrash ? '#FEF2F2' : 'var(--fill)', border: 'none',
+                background: showTrash ? 'var(--c-FEF2F2)' : 'var(--fill)', border: 'none',
                 borderRadius: 20, fontFamily: 'inherit', fontWeight: 600, fontSize: 14,
                 cursor: 'pointer', color: showTrash ? 'var(--red)' : 'var(--ink)',
               }}
@@ -452,8 +452,8 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
             onClick={() => exportToExcel(reservations, properties)}
             style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px',
-              background: '#DCFCE7', border: 'none', borderRadius: 20,
-              fontFamily: 'inherit', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#15803D',
+              background: 'var(--c-DCFCE7)', border: 'none', borderRadius: 20,
+              fontFamily: 'inherit', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: 'var(--c-15803D)',
             }}
           >
             <Icon name="download" size={16} />
@@ -467,7 +467,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
         <h3 style={{ ...H3, margin: '0 0 14px' }}><Icon name="wallet" size={20} color="var(--red)" />Egresos</h3>
         <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-start' }}>
           
-          <form onSubmit={handleGuardarGasto} style={{ flex: '1 1 280px', display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--bg)', padding: 14, borderRadius: 'var(--r-item)' }}>
+          <form onSubmit={handleGuardarGasto} style={{ flex: '1 1 280px', display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--inset)', padding: 14, borderRadius: 'var(--r-item)' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 5 }}>Fecha</label>
@@ -508,7 +508,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                    <div key={g.id} className="ui-row" style={{ cursor: 'default', justifyContent: 'space-between', padding: '11px 4px' }}>
                      <div>
                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                         <span style={{ fontSize: 11.5, fontWeight: 700, color: '#991B1B', background: '#FEE2E2', padding: '2px 8px', borderRadius: 20 }}>{g.categoria}</span>
+                         <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--c-991B1B)', background: 'var(--c-FEE2E2)', padding: '2px 8px', borderRadius: 20 }}>{g.categoria}</span>
                          <span style={{ fontSize: 12, color: 'var(--mut)', fontWeight: 500 }}>{shortDay(g.fecha)}</span>
                        </div>
                        <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ink)' }}>{g.notas}</div>
@@ -636,12 +636,12 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
 
               {/* ── KPI HOTELEROS: OCUPACIÓN Y ADR ── */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
-                <div style={{ textAlign: 'center', background: 'var(--bg)', padding: '10px 6px', borderRadius: 'var(--r-item)' }}>
+                <div style={{ textAlign: 'center', background: 'var(--inset)', padding: '10px 6px', borderRadius: 'var(--r-item)' }}>
                   <div style={{ fontSize: 10, color: 'var(--mut)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{isCurrent ? 'Ocupación a hoy' : 'Ocupación'}<InfoTip k="ocupacion" /></div>
-                  <div style={{ fontWeight: 'var(--w-title)', fontSize: 20, color: isFuture ? 'var(--mut)' : occPct >= 70 ? '#10B981' : occPct >= 40 ? '#F59E0B' : 'var(--red)' }}>{isFuture ? '—' : `${occPct}%`}</div>
+                  <div style={{ fontWeight: 'var(--w-title)', fontSize: 20, color: isFuture ? 'var(--mut)' : occPct >= 70 ? 'var(--c-10B981)' : occPct >= 40 ? 'var(--c-F59E0B)' : 'var(--red)' }}>{isFuture ? '—' : `${occPct}%`}</div>
                   <div style={{ fontSize: 9, color: 'var(--mut)', marginTop: 2, fontWeight: 600 }}>Física</div>
                 </div>
-                <div title="Tarifa Promedio Diaria" style={{ textAlign: 'center', background: 'var(--bg)', padding: '10px 6px', borderRadius: 'var(--r-item)', cursor: 'help' }}>
+                <div title="Tarifa Promedio Diaria" style={{ textAlign: 'center', background: 'var(--inset)', padding: '10px 6px', borderRadius: 'var(--r-item)', cursor: 'help' }}>
                   <div style={{ fontSize: 10, color: 'var(--mut)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>ADR<InfoTip k="adr" /></div>
                   <div style={{ fontWeight: 'var(--w-title)', fontSize: 20, color: 'var(--ink)' }}><CountUp value={currency(adr)} /></div>
                   <div style={{ fontSize: 9, color: 'var(--mut)', marginTop: 2, fontWeight: 600 }}>Tarifa Promedio</div>
@@ -649,7 +649,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
               </div>
 
               {(isCurrent || isFuture) && (
-                <div style={{ fontSize: 12, background: 'var(--bg)', padding: '10px 12px', borderRadius: 'var(--r-item)', marginBottom: 14 }}>
+                <div style={{ fontSize: 12, background: 'var(--inset)', padding: '10px 12px', borderRadius: 'var(--r-item)', marginBottom: 14 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ color: 'var(--ink-2)', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>Reservado del mes<InfoTip k="proyectado" />:</span>
                     <span style={{ fontWeight: 800, color: 'var(--ink)' }}>{bookedPct}% · {currency(m.bookedRevenue)}</span>
@@ -666,7 +666,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
               )}
 
               {/* RENTABILIDAD & GOPPAR */}
-              <div style={{ background: 'var(--bg)', borderRadius: 'var(--r-item)', padding: 12, marginBottom: 14 }}>
+              <div style={{ background: 'var(--inset)', borderRadius: 'var(--r-item)', padding: 12, marginBottom: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
                   <span style={{ color: 'var(--ink-2)', fontWeight: 600 }}>{isCurrent ? 'Ingreso a Hoy:' : 'Ingreso Base Real:'}</span>
                   <span style={{ fontWeight: 800, color: 'var(--ink)' }}><CountUp value={currency(m.trueRevenue)} /></span>
@@ -676,8 +676,8 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                   <span style={{ fontWeight: 800, color: 'var(--red)' }}>-<CountUp value={currency(m.gastos)} /></span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: '#047857', background: '#D1FAE5', padding: '2px 8px', borderRadius: 6 }}>GANANCIA NETA</span>
-                  <span style={{ fontWeight: 'var(--w-title)', fontSize: 18, color: '#065F46' }}><CountUp value={currency(netProfit)} /></span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--c-047857)', background: 'var(--c-D1FAE5)', padding: '2px 8px', borderRadius: 6 }}>GANANCIA NETA</span>
+                  <span style={{ fontWeight: 'var(--w-title)', fontSize: 18, color: 'var(--c-065F46)' }}><CountUp value={currency(netProfit)} /></span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center' }}>Ind. GOPPAR<InfoTip k="goppar" /></span>
@@ -686,20 +686,20 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
               </div>
 
               {/* ── RENDIMIENTO: REVPAR SEGMENTADO Y GLOBAL ── */}
-              <div style={{ background: 'var(--bg)', borderRadius: 'var(--r-item)', padding: '11px 12px', marginBottom: 14 }}>
+              <div style={{ background: 'var(--inset)', borderRadius: 'var(--r-item)', padding: '11px 12px', marginBottom: 14 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center' }}>RevPAR Segmentado<InfoTip k="revpar" /></span>
                   <span style={{ fontSize: 9, color: 'var(--mut)' }}>Ingreso x Hab.</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
-                  <div style={{ background: '#FFFBEB', padding: '8px 4px', borderRadius: 12, textAlign: 'center' }}>
-                    <div style={{ fontSize: 9, color: '#D97706', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Lun - Mié</div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: '#92400E' }}><CountUp value={currency(revparEntre)} /></div>
+                  <div style={{ background: 'var(--c-FFFBEB)', padding: '8px 4px', borderRadius: 12, textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, color: 'var(--c-D97706)', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Lun - Mié</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-92400E)' }}><CountUp value={currency(revparEntre)} /></div>
                     {showCmp && <div style={{ marginTop: 2 }}><Delta cur={revparEntre} prev={prev.entre} /></div>}
                   </div>
-                  <div style={{ background: '#F5F3FF', padding: '8px 4px', borderRadius: 12, textAlign: 'center' }}>
-                    <div style={{ fontSize: 9, color: '#7C3AED', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Jue - Dom</div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: '#5B21B6' }}><CountUp value={currency(revparFinde)} /></div>
+                  <div style={{ background: 'var(--c-F5F3FF)', padding: '8px 4px', borderRadius: 12, textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, color: 'var(--c-7C3AED)', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Jue - Dom</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-5B21B6)' }}><CountUp value={currency(revparFinde)} /></div>
                     {showCmp && <div style={{ marginTop: 2 }}><Delta cur={revparFinde} prev={prev.finde} /></div>}
                   </div>
                   <div title="Ingreso por Habitación Disponible" style={{ background: 'var(--acc-soft)', padding: '8px 4px', borderRadius: 12, textAlign: 'center', cursor: 'help' }}>
@@ -715,7 +715,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
               {pot && (pot.pct !== null || pot.missing) && (() => {
                 if (pot.pct === null)
                   return (
-                    <div style={{ background: 'var(--bg)', borderRadius: 'var(--r-item)', padding: '11px 12px', marginBottom: 14, fontSize: 11.5, color: 'var(--mut)' }}>
+                    <div style={{ background: 'var(--inset)', borderRadius: 'var(--r-item)', padding: '11px 12px', marginBottom: 14, fontSize: 11.5, color: 'var(--mut)' }}>
                       {ic('target', 14)}Para ver el % del potencial falta el precio de alguna noche: revisá que esté cargada la tarifa Normal en Tarifas.
                     </div>
                   );
@@ -727,7 +727,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                   </span>
                 );
                 return (
-                  <div style={{ background: 'var(--bg)', borderRadius: 'var(--r-item)', padding: '11px 12px', marginBottom: 14 }}>
+                  <div style={{ background: 'var(--inset)', borderRadius: 'var(--r-item)', padding: '11px 12px', marginBottom: 14 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', marginBottom: 8, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center' }}>{ic('target', 13, { marginRight: 4 })}% del potencial<InfoTip k="potencial" /></span>
                       <span style={{ fontSize: 9, color: 'var(--mut)' }}>{isCurrent ? `del 1 al ${passedDays}` : 'mes completo'}</span>
@@ -743,7 +743,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, gap: 6 }}>
                           <span style={{ fontSize: 10.5, fontWeight: 800, color: k.c, background: k.bg, borderRadius: 999, padding: '1px 7px' }}>{k.txt}</span>
                           {dPts !== null && (
-                            <span title={`Mes anterior (${cmpLabel}): ${potPrev.pct}%`} style={{ fontSize: 9.5, fontWeight: 800, color: dPts > 0 ? '#16A34A' : dPts < 0 ? 'var(--red)' : 'var(--mut)', cursor: 'help' }}>
+                            <span title={`Mes anterior (${cmpLabel}): ${potPrev.pct}%`} style={{ fontSize: 9.5, fontWeight: 800, color: dPts > 0 ? 'var(--c-16A34A)' : dPts < 0 ? 'var(--red)' : 'var(--mut)', cursor: 'help' }}>
                               {dPts > 0 ? '▲' : dPts < 0 ? '▼' : '='} {Math.abs(dPts)} pts vs mes anterior
                             </span>
                           )}
@@ -764,19 +764,19 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
               })()}
 
               {/* DESGLOSE DE INVENTARIO */}
-              <div style={{ background: 'var(--bg)', borderRadius: 'var(--r-item)', padding: '11px 12px', marginBottom: 14 }}>
+              <div style={{ background: 'var(--inset)', borderRadius: 'var(--r-item)', padding: '11px 12px', marginBottom: 14 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center' }}>Segmentación Física<InfoTip k="segmentacion" /></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4, alignItems: 'center' }}>
                   <span style={{ color: 'var(--ink-2)', fontWeight: 600 }}>Habitaciones 1, 2, 3 y 5</span>
-                  <div style={{ textAlign: 'right' }}><span style={{ color: oComp > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}><CountUp value={oComp + '%'} /></span><span style={{ fontWeight: 700, color: 'var(--ink)' }}>{currency(rComp)}</span>{showCmp && <Delta cur={rComp} prev={prev.comp} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
+                  <div style={{ textAlign: 'right' }}><span style={{ color: oComp > 60 ? 'var(--c-10B981)' : 'var(--c-F59E0B)', fontWeight: 800, marginRight: 6 }}><CountUp value={oComp + '%'} /></span><span style={{ fontWeight: 700, color: 'var(--ink)' }}>{currency(rComp)}</span>{showCmp && <Delta cur={rComp} prev={prev.comp} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4, alignItems: 'center' }}>
                   <span style={{ color: 'var(--ink-2)', fontWeight: 600 }}>Habitación 4</span>
-                  <div style={{ textAlign: 'right' }}><span style={{ color: oKing > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}><CountUp value={oKing + '%'} /></span><span style={{ fontWeight: 700, color: 'var(--ink)' }}>{currency(rKing)}</span>{showCmp && <Delta cur={rKing} prev={prev.king} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
+                  <div style={{ textAlign: 'right' }}><span style={{ color: oKing > 60 ? 'var(--c-10B981)' : 'var(--c-F59E0B)', fontWeight: 800, marginRight: 6 }}><CountUp value={oKing + '%'} /></span><span style={{ fontWeight: 700, color: 'var(--ink)' }}>{currency(rKing)}</span>{showCmp && <Delta cur={rKing} prev={prev.king} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, alignItems: 'center' }}>
                   <span style={{ color: 'var(--ink-2)', fontWeight: 600 }}>Habitación 6</span>
-                  <div style={{ textAlign: 'right' }}><span style={{ color: oMat > 60 ? '#10B981' : '#F59E0B', fontWeight: 800, marginRight: 6 }}><CountUp value={oMat + '%'} /></span><span style={{ fontWeight: 700, color: 'var(--ink)' }}>{currency(rMat)}</span>{showCmp && <Delta cur={rMat} prev={prev.mat} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
+                  <div style={{ textAlign: 'right' }}><span style={{ color: oMat > 60 ? 'var(--c-10B981)' : 'var(--c-F59E0B)', fontWeight: 800, marginRight: 6 }}><CountUp value={oMat + '%'} /></span><span style={{ fontWeight: 700, color: 'var(--ink)' }}>{currency(rMat)}</span>{showCmp && <Delta cur={rMat} prev={prev.mat} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
                 </div>
                 {showCmp && <CmpTitle label={cmpLabel} />}
               </div>
@@ -789,17 +789,17 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 12 }}>
                   <span style={{ color: 'var(--mut)', fontWeight: 600 }}>Cobrado:</span>
-                  <span style={{ fontWeight: 700, color: '#10B981' }}>{currency(m.paid)}</span>
+                  <span style={{ fontWeight: 700, color: 'var(--c-10B981)' }}>{currency(m.paid)}</span>
                 </div>
-                <div style={{ height: 4, background: 'var(--bg)', borderRadius: 4, marginBottom: 8 }}>
-                  <div style={{ height: '100%', background: '#10B981', borderRadius: 4, width: `${pct}%` }} />
+                <div style={{ height: 4, background: 'var(--inset)', borderRadius: 4, marginBottom: 8 }}>
+                  <div style={{ height: '100%', background: 'var(--c-10B981)', borderRadius: 4, width: `${pct}%` }} />
                 </div>
               </div>
 
               {/* ── REVENUE INTELLIGENCE (IA) ── */}
               <div style={{ borderTop: '1px solid var(--line)', paddingTop: 14, marginTop: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#4F46E5', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--c-4F46E5)', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <Icon name="sparkles" size={15} />Asesor estratégico IA
                   </div>
                   {!aiInsights[m.key] ? (
@@ -807,7 +807,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                       onClick={() => analizarRevenue(m, { pot: pot && pot.pct !== null ? pot : null, trueRevenue: Math.round(m.trueRevenue), bookedRevenue: Math.round(m.bookedRevenue), bookedPct, projectedPct, projectedRevenue, gastos: m.gastos, occPct, adr, revpar, goppar, revparEntre, revparFinde, oMat, oKing, oComp, prevCmp: showCmp ? { label: cmpLabel, revpar: prev.revpar, entre: prev.entre, finde: prev.finde } : null })}
                       disabled={analyzingMonth === m.key}
                       style={{
-                        background: '#EEF2FF', border: 'none', color: '#4F46E5', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: analyzingMonth === m.key ? 'wait' : 'pointer', opacity: analyzingMonth === m.key ? 0.7 : 1
+                        background: 'var(--c-EEF2FF)', border: 'none', color: 'var(--c-4F46E5)', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: analyzingMonth === m.key ? 'wait' : 'pointer', opacity: analyzingMonth === m.key ? 0.7 : 1
                       }}
                     >
                       {analyzingMonth === m.key ? 'Analizando…' : 'Generar diagnóstico'}
@@ -816,7 +816,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                     <button
                     onClick={() => setInsightModal({ title: `Diagnóstico de ${m.label}`, content: aiInsights[m.key], monthKey: m.key })}
                       style={{
-                        background: '#4F46E5', border: 'none', color: '#fff', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6
+                        background: 'var(--c-4F46E5)', border: 'none', color: '#fff', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6
                       }}
                     >
                       <Icon name="book" size={15} />Leer diagnóstico
@@ -848,10 +848,10 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontWeight: 'var(--w-title)', fontSize: 20, color: 'var(--ink)' }}><CountUp value={currency(total)} /></div>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, color: total - paid > 0 ? 'var(--red)' : '#15803D' }}>Pendiente: {currency(total - paid)}</div>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: total - paid > 0 ? 'var(--red)' : 'var(--c-15803D)' }}>Pendiente: {currency(total - paid)}</div>
                 </div>
               </div>
-              <div style={{ height: 6, background: 'var(--bg)', borderRadius: 4 }}>
+              <div style={{ height: 6, background: 'var(--inset)', borderRadius: 4 }}>
                 <div style={{ height: '100%', background: prop.color, borderRadius: 4, width: pct + '%', transition: 'width .3s' }} />
               </div>
             </div>
@@ -876,7 +876,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
             </div>
           );
         })}
-        {pending.length === 0 && <div style={{ textAlign: 'center', color: '#15803D', padding: 24, fontSize: 14, fontWeight: 600 }}>{ic('check', 16)}Nadie debe nada</div>}
+        {pending.length === 0 && <div style={{ textAlign: 'center', color: 'var(--c-15803D)', padding: 24, fontSize: 14, fontWeight: 600 }}>{ic('check', 16)}Nadie debe nada</div>}
       </div>
 
       {/* ── POP-UP DEL DIAGNÓSTICO IA ── */}
@@ -885,11 +885,11 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
           <PopCard style={{ background: 'var(--card)', borderRadius: 22, width: '100%', maxWidth: 500, display: 'flex', flexDirection: 'column', maxHeight: '85vh', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,.3)' }}>
             
             {/* ENCABEZADO FIJO */}
-            <div style={{ background: '#EEF2FF', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              <div style={{ fontSize: 17, fontWeight: 'var(--w-title)', color: '#312E81', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ background: 'var(--c-EEF2FF)', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+              <div style={{ fontSize: 17, fontWeight: 'var(--w-title)', color: 'var(--c-312E81)', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Icon name="sparkles" size={19} />{insightModal.title}
               </div>
-              <button aria-label="Cerrar" onClick={() => setInsightModal(null)} style={{ background: 'rgba(79,70,229,.12)', border: 'none', width: 30, height: 30, borderRadius: '50%', cursor: 'pointer', color: '#4F46E5', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}><Icon name="close" size={16} strokeWidth={2.5} /></button>
+              <button aria-label="Cerrar" onClick={() => setInsightModal(null)} style={{ background: 'rgba(79,70,229,.12)', border: 'none', width: 30, height: 30, borderRadius: '50%', cursor: 'pointer', color: 'var(--c-4F46E5)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}><Icon name="close" size={16} strokeWidth={2.5} /></button>
             </div>
             
                         {/* ÁREA DE LECTURA CON SCROLL BLINDADO */}
@@ -898,7 +898,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
 
               {(chatMessages[insightModal.monthKey] || []).slice(2).map((msg, i) => (
                 <div key={i} style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--line)' }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: msg.role === 'user' ? '#4F46E5' : '#059669', textTransform: 'uppercase', marginBottom: 4 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: msg.role === 'user' ? 'var(--c-4F46E5)' : 'var(--c-059669)', textTransform: 'uppercase', marginBottom: 4 }}>
                     {msg.role === 'user' ? 'Tu pregunta' : 'Respuesta'}
                   </div>
                   <div>{msg.content}</div>
@@ -913,7 +913,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
             </div>
 
             {/* PIE DE PÁGINA FIJO */}
-            <div style={{ padding: '16px 20px', borderTop: '1px solid var(--line)', background: 'var(--bg)', flexShrink: 0 }}>
+            <div style={{ padding: '16px 20px', borderTop: '1px solid var(--line)', background: 'var(--inset)', flexShrink: 0 }}>
               <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                 <input
                   type="text"
@@ -926,7 +926,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                 <button
                   onClick={enviarPregunta}
                   disabled={chatLoading || !chatInput.trim()}
-                  style={{ background: '#4F46E5', color: '#fff', padding: '10px 16px', borderRadius: 'var(--r-field)', border: 'none', fontWeight: 700, fontFamily: 'inherit', cursor: chatLoading ? 'wait' : 'pointer', fontSize: 14, opacity: (chatLoading || !chatInput.trim()) ? 0.6 : 1 }}
+                  style={{ background: 'var(--c-4F46E5)', color: '#fff', padding: '10px 16px', borderRadius: 'var(--r-field)', border: 'none', fontWeight: 700, fontFamily: 'inherit', cursor: chatLoading ? 'wait' : 'pointer', fontSize: 14, opacity: (chatLoading || !chatInput.trim()) ? 0.6 : 1 }}
                 >
                   Preguntar
                 </button>

@@ -36,11 +36,11 @@ const fmtRange = (a, b) => {
 
 // Colores para distinguir períodos en "Cómo queda"
 const PERIOD_COLORS = [
-  { bg: '#FEF3C7', txt: '#92400E', border: '#FCD34D' },
-  { bg: '#FCE7F3', txt: '#9D174D', border: '#F9A8D4' },
-  { bg: '#DCFCE7', txt: '#166534', border: '#86EFAC' },
-  { bg: '#E0E7FF', txt: '#3730A3', border: '#A5B4FC' },
-  { bg: '#FFEDD5', txt: '#9A3412', border: '#FDBA74' },
+  { bg: 'var(--c-FEF3C7)', txt: 'var(--c-92400E)', border: 'var(--c-FCD34D)' },
+  { bg: 'var(--c-FCE7F3)', txt: 'var(--c-9D174D)', border: 'var(--c-F9A8D4)' },
+  { bg: 'var(--c-DCFCE7)', txt: 'var(--c-166534)', border: 'var(--c-86EFAC)' },
+  { bg: 'var(--c-E0E7FF)', txt: 'var(--c-3730A3)', border: 'var(--c-A5B4FC)' },
+  { bg: 'var(--c-FFEDD5)', txt: 'var(--c-9A3412)', border: 'var(--c-FDBA74)' },
 ];
 const NORMAL_COLOR = { bg: 'var(--fill)', txt: 'var(--ink-2)', border: 'var(--handle)' };
 
@@ -49,9 +49,9 @@ const todayStr = () => fmt(TODAY);
 function statusOf(p) {
   if (isNormal(p)) return null;
   const t = todayStr();
-  if (p.hasta < t) return { label: 'Terminado', bg: '#F3F4F6', txt: 'var(--mut)' };
-  if (p.desde > t) return { label: 'Próximo', bg: '#E0F2FE', txt: '#0369A1' };
-  return { label: 'Vigente hoy', bg: '#DCFCE7', txt: '#15803D' };
+  if (p.hasta < t) return { label: 'Terminado', bg: 'var(--c-F3F4F6)', txt: 'var(--mut)' };
+  if (p.desde > t) return { label: 'Próximo', bg: 'var(--c-E0F2FE)', txt: 'var(--c-0369A1)' };
+  return { label: 'Vigente hoy', bg: 'var(--c-DCFCE7)', txt: 'var(--c-15803D)' };
 }
 
 const emptyPrecios = (from) =>
@@ -157,7 +157,7 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
     return (
       <div style={{ maxWidth: 760, margin: '0 auto' }}>
         <h2 style={{ margin: '0 0 12px', fontSize: 30, fontWeight: 'var(--w-title)', color: 'var(--ink)', letterSpacing: 'var(--ls-title)' }}>Tarifas</h2>
-        <div style={{ ...card, background: '#FFFBEB', boxShadow: 'none', color: '#92400E', fontSize: 13.5, lineHeight: 1.5 }}>
+        <div style={{ ...card, background: 'var(--c-FFFBEB)', boxShadow: 'none', color: 'var(--c-92400E)', fontSize: 13.5, lineHeight: 1.5 }}>
           {loading
             ? 'Cargando tarifas…'
             : <>{ic('warning', 14)}Todavía no está la tabla de tarifas en la base. Hay que correr <b>supabase/tarifas.sql</b> en Supabase (SQL Editor).</>}
@@ -168,10 +168,10 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
 
   // ── Fila de precios de un período (vista) ──
   const priceTable = (p) => (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.6fr) repeat(3, minmax(0,1fr))', rowGap: 8, columnGap: 8, fontSize: 13.5, alignItems: 'center', background: 'var(--bg)', borderRadius: 'var(--r-item)', padding: '10px 12px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.6fr) repeat(3, minmax(0,1fr))', rowGap: 8, columnGap: 8, fontSize: 13.5, alignItems: 'center', background: 'var(--inset)', borderRadius: 'var(--r-item)', padding: '10px 12px' }}>
       <div />
-      <div style={{ fontSize: 10.5, fontWeight: 800, color: '#D97706', textTransform: 'uppercase', textAlign: 'right' }}>Lun–Mié</div>
-      <div style={{ fontSize: 10.5, fontWeight: 800, color: '#7C3AED', textTransform: 'uppercase', textAlign: 'right' }}>Jue–Dom</div>
+      <div style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--c-D97706)', textTransform: 'uppercase', textAlign: 'right' }}>Lun–Mié</div>
+      <div style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--c-7C3AED)', textTransform: 'uppercase', textAlign: 'right' }}>Jue–Dom</div>
       <div style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--mut)', textTransform: 'uppercase', textAlign: 'right' }}>+ Persona</div>
       {ROOM_TYPES.map((ty) => {
         const x = (p.precios || {})[ty.id] || {};
@@ -233,7 +233,7 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
               {e.desde && e.hasta && e.desde <= e.hasta && <b> {periodNights(e)} {periodNights(e) === 1 ? 'noche' : 'noches'}.</b>}
             </div>
             {overlaps.length > 0 && (
-              <div style={{ background: '#FFFBEB', borderRadius: 'var(--r-field)', padding: '10px 12px', fontSize: 13, color: '#92400E', marginBottom: 12, lineHeight: 1.45 }}>
+              <div style={{ background: 'var(--c-FFFBEB)', borderRadius: 'var(--r-field)', padding: '10px 12px', fontSize: 13, color: 'var(--c-92400E)', marginBottom: 12, lineHeight: 1.45 }}>
                 {overlaps.map((o) => {
                   const wins = periodNights(draft) <= periodNights(o);
                   return (
@@ -252,8 +252,8 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.3fr) repeat(3, minmax(0,1fr))', rowGap: 8, columnGap: 8, alignItems: 'center' }}>
           <div />
-          <div style={{ fontSize: 10.5, fontWeight: 800, color: '#D97706', textTransform: 'uppercase', textAlign: 'center' }}>Lun–Mié $</div>
-          <div style={{ fontSize: 10.5, fontWeight: 800, color: '#7C3AED', textTransform: 'uppercase', textAlign: 'center' }}>Jue–Dom $</div>
+          <div style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--c-D97706)', textTransform: 'uppercase', textAlign: 'center' }}>Lun–Mié $</div>
+          <div style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--c-7C3AED)', textTransform: 'uppercase', textAlign: 'center' }}>Jue–Dom $</div>
           <div style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--mut)', textTransform: 'uppercase', textAlign: 'center' }}>+ Persona $</div>
           {ROOM_TYPES.map((ty) => [
             <div key={ty.id + 'l'} style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.2 }}>
@@ -303,7 +303,7 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
               <span style={{ fontWeight: 'var(--w-title)', fontSize: 17, color: 'var(--ink)' }}>{p.nombre}</span>
               {st && <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20, background: st.bg, color: st.txt }}>{st.label}</span>}
               {todayPeriod && todayPeriod.id === p.id && isNormal(p) && (
-                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20, background: '#DCFCE7', color: '#15803D' }}>Rige hoy</span>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20, background: 'var(--c-DCFCE7)', color: 'var(--c-15803D)' }}>Rige hoy</span>
               )}
             </div>
             <div style={{ fontSize: 13, color: 'var(--mut)', marginTop: 3 }}>
@@ -376,7 +376,7 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
               {sel.getFullYear() !== TODAY.getFullYear() ? ` ${sel.getFullYear()}` : ''}
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-              <span style={selFinde ? chip('#F5F3FF', '#7C3AED') : chip('#FFFBEB', '#D97706')}>{selFinde ? 'Jue–Dom' : 'Lun–Mié'}</span>
+              <span style={selFinde ? chip('var(--c-F5F3FF)', 'var(--c-7C3AED)') : chip('var(--c-FFFBEB)', 'var(--c-D97706)')}>{selFinde ? 'Jue–Dom' : 'Lun–Mié'}</span>
               {selPeriod && <span style={chip(colorOf(selPeriod).bg, colorOf(selPeriod).txt)}>{selPeriod.nombre}</span>}
             </div>
           </div>
@@ -445,7 +445,7 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
           </div>
         </Collapse>
 
-        <div style={{ marginTop: 12, background: 'var(--bg)', borderRadius: 'var(--r-item)', padding: '2px 12px 10px' }}>
+        <div style={{ marginTop: 12, background: 'var(--inset)', borderRadius: 'var(--r-item)', padding: '2px 12px 10px' }}>
           {selPeriod ? (
             ROOM_TYPES.map((ty) => {
               const n = nightPrice(selDay, ty.id, periods);
@@ -506,7 +506,7 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
       {dayCard()}
 
       {!normal && !editing && (
-        <div style={{ ...card, background: '#FFFBEB', boxShadow: 'none', color: '#92400E', fontSize: 13.5 }}>
+        <div style={{ ...card, background: 'var(--c-FFFBEB)', boxShadow: 'none', color: 'var(--c-92400E)', fontSize: 13.5 }}>
           {ic('warning', 14)}Falta la tarifa Normal (la que rige cuando no hay otro período).
         </div>
       )}

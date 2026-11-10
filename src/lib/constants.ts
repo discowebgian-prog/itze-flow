@@ -8,7 +8,7 @@ export const PROPS = [
     name: 'Itzé Hostel Boutique',
     type: 'hostel',
     ownerId: 'admin',
-    color: '#E06C4F',
+    color: 'var(--c-E06C4F)',
     emoji: '🏨',
     rooms: 6,
   },
@@ -48,57 +48,57 @@ export const ROOM_BEDS = {
 };
 
 export const SOURCES = [
-  { value: 'Booking', label: 'Booking', short: 'Booking', color: '#003580' },
+  { value: 'Booking', label: 'Booking', short: 'Booking', color: 'var(--c-003580)' },
   {
     value: 'Directo-Puerta',
     label: 'Directo — Puerta',
     short: 'Por puerta',
-    color: '#10B981',
+    color: 'var(--c-10B981)',
   },
   {
     value: 'Directo-Celular',
     label: 'Directo — Celular',
     short: 'Por celular',
-    color: '#059669',
+    color: 'var(--c-059669)',
   },
-  { value: 'Redes', label: 'Redes', short: 'Redes', color: '#DB2777' },
+  { value: 'Redes', label: 'Redes', short: 'Redes', color: 'var(--c-DB2777)' },
 ];
 
 export const srcShort = (v) => SOURCES.find((s) => s.value === v)?.short || v;
 
 export const srcLabel = (v) => SOURCES.find((s) => s.value === v)?.label || v;
 
-export const srcColor = (v) => SOURCES.find((s) => s.value === v)?.color || '#888';
+export const srcColor = (v) => SOURCES.find((s) => s.value === v)?.color || 'var(--c-888888)';
 
 export const RS = {
-  por_llegar: { bg: '#DBEAFE', txt: '#1E40AF', label: 'Por llegar' },
-  hospedado: { bg: '#D1FAE5', txt: '#065F46', label: 'Hospedado' },
-  finalizada: { bg: '#F3F4F6', txt: '#6B7280', label: 'Finalizada' },
-  cancelada: { bg: '#FEE2E2', txt: '#991B1B', label: 'Cancelada' },
+  por_llegar: { bg: 'var(--c-DBEAFE)', txt: 'var(--c-1E40AF)', label: 'Por llegar' },
+  hospedado: { bg: 'var(--c-D1FAE5)', txt: 'var(--c-065F46)', label: 'Hospedado' },
+  finalizada: { bg: 'var(--c-F3F4F6)', txt: 'var(--c-6B7280)', label: 'Finalizada' },
+  cancelada: { bg: 'var(--c-FEE2E2)', txt: 'var(--c-991B1B)', label: 'Cancelada' },
 };
 
 export const PS = {
-  libre: { label: 'Libre', color: '#10B981', bg: '#D1FAE5' },
-  ocupado: { label: 'Ocupado', color: '#EF4444', bg: '#FEE2E2' },
+  libre: { label: 'Libre', color: 'var(--c-10B981)', bg: 'var(--c-D1FAE5)' },
+  ocupado: { label: 'Ocupado', color: 'var(--c-EF4444)', bg: 'var(--c-FEE2E2)' },
 };
 
 export const BLOCK_COLORS = {
-  por_llegar: { bg: '#3B82F6', text: '#fff' },
-  hospedado: { bg: '#10B981', text: '#fff' },
-  finalizada: { bg: '#9CA3AF', text: '#fff' },
-  cancelada: { bg: '#F87171', text: '#fff' },
+  por_llegar: { bg: 'var(--c-3B82F6)', text: '#fff' },
+  hospedado: { bg: 'var(--c-10B981)', text: '#fff' },
+  finalizada: { bg: 'var(--c-9CA3AF)', text: '#fff' },
+  cancelada: { bg: 'var(--c-F87171)', text: '#fff' },
 };
 
 export const ALERTS = [
   {
     key: 'notes',
-    color: '#8B5CF6', // Color Violeta para identificar las Notas
+    color: 'var(--c-8B5CF6)', // Color Violeta para identificar las Notas
     label: 'Nota',
     check: (r) => r.notes && r.notes.trim() !== '' && r.status !== 'cancelada',
   },
   {
     key: 'saldo',
-    color: '#F59E0B', // Color Naranja para el Saldo Pendiente
+    color: 'var(--c-F59E0B)', // Color Naranja para el Saldo Pendiente
     label: 'Saldo',
     check: (r) => Number(r.paid) < Number(r.totalAmount) && r.status !== 'cancelada',
   },

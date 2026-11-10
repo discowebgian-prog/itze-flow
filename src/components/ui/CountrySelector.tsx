@@ -96,9 +96,9 @@ export function CountrySelector({ value, onChange }) {
                 fontSize: 13,
               }}
               onMouseOver={(e) =>
-                (e.currentTarget.style.background = '#F0F7FF')
+                (e.currentTarget.style.background = 'var(--c-F0F7FF)')
               }
-              onMouseOut={(e) => (e.currentTarget.style.background = '#fff')}
+              onMouseOut={(e) => (e.currentTarget.style.background = 'var(--card)')}
             >
               <span style={{ fontSize: 18 }}>{c.flag}</span>
               <span style={{ flex: 1, fontWeight: 600, color: 'var(--ink)' }}>

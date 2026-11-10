@@ -6,6 +6,7 @@ import AppMejorada from './App';
 import { registerSW } from './lib/push';
 // Estilo de Flow (colores, letra, formas) en un solo lugar
 import './styles/theme.css';
+import './styles/colores.css';
 
 // Service worker solo para los avisos con la app cerrada (no guarda la app en caché)
 registerSW();

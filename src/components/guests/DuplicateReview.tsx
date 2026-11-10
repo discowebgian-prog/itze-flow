@@ -162,8 +162,8 @@ export function DuplicateReview({ pairs, reservations, decisions, onDecide, onUn
               style={{
                 fontSize: 11,
                 fontWeight: 700,
-                color: '#92400E',
-                background: '#FEF3C7',
+                color: 'var(--c-92400E)',
+                background: 'var(--c-FEF3C7)',
                 padding: '2px 8px',
                 borderRadius: 20,
                 marginLeft: 4,
@@ -184,7 +184,7 @@ export function DuplicateReview({ pairs, reservations, decisions, onDecide, onUn
             <GuestSide g={current.b} reservations={reservations} />
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button disabled={busy} onClick={() => decide('misma')} style={btn('#16A34A', '#fff')}>
+            <button disabled={busy} onClick={() => decide('misma')} style={btn('var(--c-16A34A)', '#fff')}>
               <Icon name="check" size={18} />
               Es la misma persona
             </button>
@@ -204,11 +204,11 @@ export function DuplicateReview({ pairs, reservations, decisions, onDecide, onUn
       ) : (
         <div
           style={{
-            background: '#ECFDF5',
+            background: 'var(--c-ECFDF5)',
             borderRadius: 'var(--r-item)',
             padding: 16,
             fontSize: 14,
-            color: '#065F46',
+            color: 'var(--c-065F46)',
             fontWeight: 600,
           }}
         >
@@ -253,7 +253,7 @@ export function DuplicateReview({ pairs, reservations, decisions, onDecide, onUn
                   >
                     <div style={{ flex: 1, minWidth: 0, color: 'var(--ink)', overflowWrap: 'anywhere' }}>
                       {nameOf(d.clave_a)} ↔ {nameOf(d.clave_b)}
-                      <div style={{ fontSize: 12, color: d.decision === 'misma' ? '#15803D' : 'var(--red)', fontWeight: 700 }}>
+                      <div style={{ fontSize: 12, color: d.decision === 'misma' ? 'var(--c-15803D)' : 'var(--red)', fontWeight: 700 }}>
                         {d.decision === 'misma' ? 'Misma persona' : 'Son distintas'}
                         <span style={{ color: 'var(--mut)', fontWeight: 500 }}>
                           {d.decidido_por ? ` · ${d.decidido_por}` : ''}

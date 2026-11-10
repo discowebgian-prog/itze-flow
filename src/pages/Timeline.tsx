@@ -140,7 +140,7 @@ export function Timeline({
     const isPast = parseD(fmt(d)) < parseD(fmt(TODAY));
     if (fmt(d) === fmt(TODAY)) return 'var(--acc-soft)'; 
     if (isPast) return 'var(--bg)'; 
-    if (dow === 0 || dow === 6) return '#F5F3FF';
+    if (dow === 0 || dow === 6) return 'var(--c-F5F3FF)';
     return 'var(--card)';
   };
   const rows = [];
@@ -396,7 +396,7 @@ export function Timeline({
               position: 'sticky',
               top: 0,
               zIndex: 20,
-              background: 'var(--bg)',
+              background: 'var(--inset)',
               cursor: hdrDrag ? 'grabbing' : 'grab',
               touchAction: 'none',
             }}
@@ -413,7 +413,7 @@ export function Timeline({
                 cursor: 'default',
                 position: 'sticky',
                 left: 0,
-                background: 'var(--bg)',
+                background: 'var(--inset)',
                 zIndex: 30,
               }}
               onMouseDown={(e) => e.stopPropagation()}
@@ -434,7 +434,7 @@ export function Timeline({
                     padding: '5px 2px',
                     textAlign: 'center',
                     borderRight: '1px solid var(--line)',
-                    background: it ? '#DBEAFE' : getCellBg(d),
+                    background: it ? 'var(--c-DBEAFE)' : getCellBg(d),
                     pointerEvents: 'none',
                   }}
                 >
@@ -457,7 +457,7 @@ export function Timeline({
                     : isPast
                     ? 'var(--mut)'
                     : dow === 0 || dow === 6
-                    ? '#8B5CF6' 
+                    ? 'var(--c-8B5CF6)' 
                     : 'var(--ink-2)',
                     }}
                   >
@@ -508,7 +508,7 @@ export function Timeline({
                     alignItems: 'center',
                     padding: '0 12px',
                     borderRight: '1px solid var(--line)',
-                    background: row.type === 'room' ? '#FAFAFA' : '#F3F4F6',
+                    background: row.type === 'room' ? 'var(--c-FAFAFA)' : 'var(--c-F3F4F6)',
                     zIndex: 25,
                     position: 'sticky',
                     left: 0,
@@ -536,7 +536,7 @@ export function Timeline({
                         <span
                           style={{
                             fontSize: 10,
-                            color: '#C4C4C4',
+                            color: 'var(--c-C4C4C4)',
                             fontWeight: 600,
                           }}
                         >
@@ -580,7 +580,7 @@ export function Timeline({
                       height: '100%',
                       borderRight: '1px solid var(--line)',
                       background:
-                        fmt(d) === fmt(TODAY) ? '#DBEAFE' : getCellBg(d),
+                        fmt(d) === fmt(TODAY) ? 'var(--c-DBEAFE)' : getCellBg(d),
                       cursor: hdrDrag ? 'grabbing' : 'cell',
                     }}
                     onDoubleClick={() => {
@@ -934,7 +934,7 @@ export function Timeline({
             left: Math.min(tooltip.x + 12, window.innerWidth - 220),
             top: Math.max(tooltip.y - 10, 8),
             zIndex: 500,
-            background: '#1E293B',
+            background: 'var(--tip)',
             borderRadius: 10,
             padding: '10px 14px',
             boxShadow: '0 8px 32px rgba(0,0,0,.35)',
@@ -1056,7 +1056,7 @@ export function Timeline({
               {dConf.newCheckIn !== dConf.orig.checkIn && (
                 <div
                   style={{
-                    background: 'var(--bg)',
+                    background: 'var(--inset)',
                     borderRadius: 'var(--r-item)',
                     padding: '12px 14px',
                     marginBottom: 14,
@@ -1083,7 +1083,7 @@ export function Timeline({
                 dConf.newRoom !== dConf.orig.room) && (
                 <div
                   style={{
-                    background: 'var(--bg)',
+                    background: 'var(--inset)',
                     borderRadius: 'var(--r-item)',
                     padding: '12px 14px',
                     marginBottom: 14,
@@ -1111,7 +1111,7 @@ export function Timeline({
               {dConf.dragConflicts?.length > 0 && (
                 <div
                   style={{
-                    background: '#FEF2F2',
+                    background: 'var(--c-FEF2F2)',
                     borderRadius: 12,
                     padding: '10px 12px',
                     marginBottom: 12,
@@ -1128,7 +1128,7 @@ export function Timeline({
                     {ic('warning', 14)}Conflicto en el destino
                   </div>
                   {dConf.dragConflicts.map((r) => (
-                    <div key={r.id} style={{ fontSize: 11, color: '#7F1D1D' }}>
+                    <div key={r.id} style={{ fontSize: 11, color: 'var(--c-7F1D1D)' }}>
                       {r.guestName} · {dayShort(r.checkIn)} → {dayShort(r.checkOut)}
                     </div>
                   ))}
@@ -1160,7 +1160,7 @@ export function Timeline({
                     style={{
                       flex: 2,
                       padding: '11px',
-                      background: '#10B981',
+                      background: 'var(--c-10B981)',
                       border: 'none',
                       borderRadius: 10,
                       fontFamily: 'inherit',

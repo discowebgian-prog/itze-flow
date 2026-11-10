@@ -244,8 +244,8 @@ export function ResDrawer({
             borderRadius: isMobile ? 'var(--r-card)' : 0,
             // MAGIA: Si está en lista negra usa rojo oscuro, si no, usa el color exacto del estado en el calendario
             background: res.lista_negra 
-              ? '#991B1B' 
-              : (BLOCK_COLORS[res.status]?.bg || '#3B82F6'), 
+              ? 'var(--c-991B1B)' 
+              : (BLOCK_COLORS[res.status]?.bg || 'var(--c-3B82F6)'), 
             transition: 'background 0.3s ease',
           }}
         >
@@ -317,13 +317,13 @@ export function ResDrawer({
                 {res.pin_acceso && (
                   <span 
                     style={{ 
-                      background: '#10B981', 
+                      background: 'var(--c-10B981)', 
                       color: '#fff', 
                       padding: '3px 9px', 
                       borderRadius: 6, 
                       fontSize: 13, 
                       fontWeight: 900,
-                      border: '1px solid #059669',
+                      border: '1px solid var(--c-059669)',
                       lineHeight: 1,
                       display: 'flex',
                       alignItems: 'center',
@@ -377,7 +377,7 @@ export function ResDrawer({
                     fontSize: 11,
                     fontWeight: 800,
                     color: '#fff',
-                    background: '#DC2626',
+                    background: 'var(--c-DC2626)',
                     padding: '2px 8px',
                     borderRadius: 20,
                   }}
@@ -404,10 +404,10 @@ export function ResDrawer({
                   display: 'flex',
                   alignItems: 'center',
                   gap: 6,
-                  background: res.source === 'Booking' ? '#EFF6FF' : '#ECFDF5',
+                  background: res.source === 'Booking' ? 'var(--c-EFF6FF)' : 'var(--c-ECFDF5)',
                   padding: '4px 10px',
                   borderRadius: 20,
-                  border: `1.5px solid ${res.source === 'Booking' ? '#BFDBFE' : '#A7F3D0'}`,
+                  border: `1.5px solid ${res.source === 'Booking' ? 'var(--c-BFDBFE)' : 'var(--c-A7F3D0)'}`,
                 }}
               >
                 <span
@@ -422,7 +422,7 @@ export function ResDrawer({
                   style={{
                     fontSize: 12,
                     fontWeight: 800,
-                    color: res.source === 'Booking' ? '#1E40AF' : '#065F46',
+                    color: res.source === 'Booking' ? 'var(--c-1E40AF)' : 'var(--c-065F46)',
                   }}
                 >
                   {srcLabel(res.source)}
@@ -433,7 +433,7 @@ export function ResDrawer({
           {(stayLine || bday) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: -4, marginBottom: 12 }}>
               {stayLine && (
-                <div style={{ fontSize: 12.5, color: '#475569', fontWeight: 600 }}>{ic('history', 14)}{stayLine}</div>
+                <div style={{ fontSize: 12.5, color: 'var(--c-475569)', fontWeight: 600 }}>{ic('history', 14)}{stayLine}</div>
               )}
               {bday && (
                 <div
@@ -444,13 +444,13 @@ export function ResDrawer({
                     justifyContent: 'space-between',
                     gap: 8,
                     flexWrap: 'wrap',
-                    background: '#FDF2F8',
-                    border: '1.5px solid #FBCFE8',
+                    background: 'var(--c-FDF2F8)',
+                    border: '1.5px solid var(--c-FBCFE8)',
                     borderRadius: 16,
                     padding: '8px 12px',
                   }}
                 >
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#9D174D' }}>{birthdayText(bday)}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-9D174D)' }}>{birthdayText(bday)}</span>
                   {res.guestPhone && bday.today && (
                     <a
                       href={`${waLink(res.guestPhone, res.guestPhonePrefix, res.guestNationality)}?text=${encodeURIComponent(birthdayMessage(res.guestName, lang))}`}
@@ -467,7 +467,7 @@ export function ResDrawer({
                         gap: 5,
                         padding: '5px 10px',
                         borderRadius: 8,
-                        background: '#DB2777',
+                        background: 'var(--c-DB2777)',
                         color: '#fff',
                         textDecoration: 'none',
                         fontWeight: 700,
@@ -494,7 +494,7 @@ export function ResDrawer({
             >
               <div style={{ fontSize: 12, fontWeight: 800, color: GROUP_COLORS.txt, marginBottom: 8 }}>
                 {ic('link', 15)}Grupo de {bookerName}
-                {!titular && <span style={{ fontWeight: 600, color: '#4B5563' }}> · no se aloja</span>}
+                {!titular && <span style={{ fontWeight: 600, color: 'var(--c-4B5563)' }}> · no se aloja</span>}
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {members.map((m) => {
@@ -510,8 +510,8 @@ export function ResDrawer({
                         minHeight: 32,
                         padding: '4px 12px',
                         borderRadius: 8,
-                        border: `1.5px solid ${here ? GROUP_COLORS.txt : GROUP_COLORS.border}`,
-                        background: here ? GROUP_COLORS.txt : '#fff',
+                        border: `1.5px solid ${here ? GROUP_COLORS.solid : GROUP_COLORS.border}`,
+                        background: here ? GROUP_COLORS.solid : 'var(--card)',
                         color: here ? '#fff' : GROUP_COLORS.txt,
                         fontFamily: 'inherit',
                         fontWeight: 800,
@@ -535,7 +535,7 @@ export function ResDrawer({
                     marginTop: 10,
                     minHeight: 40,
                     fontSize: 13,
-                    background: '#fff',
+                    background: 'var(--card)',
                     border: `1.5px solid ${GROUP_COLORS.txt}`,
                     color: GROUP_COLORS.txt,
                   }}
@@ -565,15 +565,15 @@ export function ResDrawer({
           )}
 
           {addOpen && (() => {
-            const lbl = { display: 'block', fontSize: 10.5, fontWeight: 700, color: '#888', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.4 };
-            const inp = { width: '100%', padding: '9px 12px', border: '1.5px solid #E5E7EB', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff' };
+            const lbl = { display: 'block', fontSize: 10.5, fontWeight: 700, color: 'var(--c-888888)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.4 };
+            const inp = { width: '100%', padding: '9px 12px', border: '1.5px solid var(--c-E5E7EB)', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box', background: 'var(--card)' };
             const mine = new Set(members.length ? members.map((m) => m.room) : [res.room]);
             return (
-              <div id="add-room-panel" className="pop-in" style={{ background: '#fff', border: `1.5px solid ${GROUP_COLORS.border}`, borderRadius: 12, padding: 12, marginBottom: 12, scrollMarginTop: 12 }}>
+              <div id="add-room-panel" className="pop-in" style={{ background: 'var(--card)', border: `1.5px solid ${GROUP_COLORS.border}`, borderRadius: 12, padding: 12, marginBottom: 12, scrollMarginTop: 12 }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: GROUP_COLORS.txt, marginBottom: 4 }}>
                   {ic('plus')}Sumar habitación {inGroup ? 'al grupo' : `a la reserva de ${res.guestName}`}
                 </div>
-                <div style={{ fontSize: 11.5, color: '#6B7280', marginBottom: 10 }}>
+                <div style={{ fontSize: 11.5, color: 'var(--c-6B7280)', marginBottom: 10 }}>
                   Mismas fechas: {fmtD(res.checkIn)} → {fmtD(res.checkOut)} ({addNights} {addNights === 1 ? 'noche' : 'noches'}).
                   {!inGroup && ' Se arma un grupo con esta reserva.'} El contacto de la nueva habitación se carga al llegar.
                 </div>
@@ -597,9 +597,9 @@ export function ResDrawer({
                           padding: '8px 4px',
                           minHeight: 44,
                           borderRadius: 8,
-                          border: `1.5px solid ${on ? '#3B82F6' : '#E5E7EB'}`,
-                          background: off ? '#F3F4F6' : on ? '#EFF6FF' : '#fff',
-                          color: off ? '#9CA3AF' : on ? '#1E40AF' : '#111',
+                          border: `1.5px solid ${on ? 'var(--c-3B82F6)' : 'var(--c-E5E7EB)'}`,
+                          background: off ? 'var(--c-F3F4F6)' : on ? 'var(--c-EFF6FF)' : 'var(--card)',
+                          color: off ? 'var(--c-9CA3AF)' : on ? 'var(--c-1E40AF)' : 'var(--c-111111)',
                           fontFamily: 'inherit',
                           fontWeight: 800,
                           fontSize: 13,
@@ -628,13 +628,13 @@ export function ResDrawer({
                             width: 36,
                             height: 36,
                             borderRadius: 8,
-                            border: `2px solid ${addGuests === n ? '#3B82F6' : '#E5E7EB'}`,
-                            background: addGuests === n ? '#EFF6FF' : '#fff',
+                            border: `2px solid ${addGuests === n ? 'var(--c-3B82F6)' : 'var(--c-E5E7EB)'}`,
+                            background: addGuests === n ? 'var(--c-EFF6FF)' : 'var(--card)',
                             fontFamily: 'inherit',
                             fontWeight: 700,
                             fontSize: 14,
                             cursor: 'pointer',
-                            color: addGuests === n ? '#1E40AF' : '#6B7280',
+                            color: addGuests === n ? 'var(--c-1E40AF)' : 'var(--c-6B7280)',
                           }}
                         >
                           {n}
@@ -672,16 +672,16 @@ export function ResDrawer({
                           }}
                           style={inp}
                         />
-                        <div style={{ fontSize: 11, color: '#6B7280', marginTop: 4, marginBottom: 8 }}>
+                        <div style={{ fontSize: 11, color: 'var(--c-6B7280)', marginTop: 4, marginBottom: 8 }}>
                           {addGuests - 2 === 1 ? '1 persona extra' : `${addGuests - 2} personas extra`} (la tarifa incluye 2)
                         </div>
                       </>
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, margin: '6px 0 10px' }}>
-                      <span style={{ color: '#6B7280', fontWeight: 600 }}>Total {addRoom}</span>
+                      <span style={{ color: 'var(--c-6B7280)', fontWeight: 600 }}>Total {addRoom}</span>
                       <b>{currency(addTotal)}</b>
                     </div>
-                    <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, color: 'var(--c-6B7280)', marginBottom: 10 }}>
                       Queda por llegar y sin pagar. Acompañantes, descuento o late check-out los cargás después con Editar.
                     </div>
                   </>
@@ -696,7 +696,7 @@ export function ResDrawer({
                       flex: 2,
                       minHeight: 42,
                       fontSize: 13,
-                      background: addRoom && addRate !== '' ? GROUP_COLORS.txt : '#99D5CC',
+                      background: addRoom && addRate !== '' ? GROUP_COLORS.solid : 'var(--c-99D5CC)',
                       color: '#fff',
                     }}
                   >
@@ -705,7 +705,7 @@ export function ResDrawer({
                   <button
                     type="button"
                     onClick={() => setAddOpen(false)}
-                    style={{ ...mainBtn, flex: 1, minHeight: 42, fontSize: 13, background: '#fff', border: '1px solid #E5E7EB', color: '#374151' }}
+                    style={{ ...mainBtn, flex: 1, minHeight: 42, fontSize: 13, background: 'var(--card)', border: '1px solid var(--c-E5E7EB)', color: 'var(--c-374151)' }}
                   >
                     Cancelar
                   </button>
@@ -741,7 +741,7 @@ export function ResDrawer({
                 <div
                   style={{
                     fontSize: 9.5,
-                    color: '#9CA3AF',
+                    color: 'var(--c-9CA3AF)',
                     fontWeight: 700,
                     textTransform: 'uppercase',
                     marginBottom: 2,
@@ -749,7 +749,7 @@ export function ResDrawer({
                 >
                   {l}
                 </div>
-                <div style={{ fontWeight: 700, color: '#111', fontSize: 12.5 }}>
+                <div style={{ fontWeight: 700, color: 'var(--c-111111)', fontSize: 12.5 }}>
                   {v}
                 </div>
                 {l === 'Check-out' && lateHour(res) && (
@@ -802,8 +802,8 @@ export function ResDrawer({
                   minHeight: 32,
                   padding: '5px 12px',
                   borderRadius: 20,
-                  border: '1.5px dashed #A5B4FC',
-                  background: '#fff',
+                  border: '1.5px dashed var(--c-A5B4FC)',
+                  background: 'var(--card)',
                   color: LATE_COLORS.txt,
                   fontFamily: 'inherit',
                   fontWeight: 700,
@@ -819,7 +819,7 @@ export function ResDrawer({
             <div
               className="pop-in"
               style={{
-                background: '#F5F7FF',
+                background: 'var(--c-F5F7FF)',
                 border: `1px solid ${LATE_COLORS.border}`,
                 borderRadius: 16,
                 padding: 12,
@@ -830,7 +830,7 @@ export function ResDrawer({
                 {ic('clock')}Late check-out
               </div>
               <LatePicker hour={lh} cost={lc} onHour={setLh} onCost={setLc} />
-              <div style={{ fontSize: 11, color: '#6B7280', margin: '8px 0 10px' }}>
+              <div style={{ fontSize: 11, color: 'var(--c-6B7280)', margin: '8px 0 10px' }}>
                 El costo se suma solo al total de la reserva.
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -843,7 +843,7 @@ export function ResDrawer({
                     flex: 2,
                     minHeight: 40,
                     fontSize: 13,
-                    background: lh ? LATE_COLORS.txt : '#C7D2FE',
+                    background: lh ? LATE_COLORS.solid : 'var(--c-C7D2FE)',
                     color: '#fff',
                     cursor: lh ? 'pointer' : 'default',
                   }}
@@ -858,9 +858,9 @@ export function ResDrawer({
                     flex: 1,
                     minHeight: 40,
                     fontSize: 13,
-                    background: '#fff',
-                    border: '1px solid #E5E7EB',
-                    color: '#374151',
+                    background: 'var(--card)',
+                    border: '1px solid var(--c-E5E7EB)',
+                    color: 'var(--c-374151)',
                   }}
                 >
                   Cancelar
@@ -868,7 +868,7 @@ export function ResDrawer({
               </div>
               {lateHour(res) && (
                 <div style={{ textAlign: 'center', marginTop: 8 }}>
-                  <button type="button" onClick={() => saveLate('', 0)} style={blLink('#DC2626')}>
+                  <button type="button" onClick={() => saveLate('', 0)} style={blLink('var(--c-DC2626)')}>
                     Quitar late check-out
                   </button>
                 </div>
@@ -892,14 +892,14 @@ export function ResDrawer({
             <div
               style={{
                 fontSize: 11,
-                color: '#9CA3AF',
+                color: 'var(--c-9CA3AF)',
                 fontWeight: 700,
                 textTransform: 'uppercase',
               }}
             >
               Total Reserva
             </div>
-            <div style={{ fontWeight: 800, color: '#111', fontSize: 16 }}>
+            <div style={{ fontWeight: 800, color: 'var(--c-111111)', fontSize: 16 }}>
               {currency(res.totalAmount)}
             </div>
           </div>
@@ -907,8 +907,8 @@ export function ResDrawer({
             // Sin cargo (noches gratis que cubren todo…): no es "pagado", no hubo pago
             <div
               style={{
-                background: '#F5F3FF',
-                border: '1.5px solid #DDD6FE',
+                background: 'var(--c-F5F3FF)',
+                border: '1.5px solid var(--c-DDD6FE)',
                 borderRadius: 16,
                 padding: '12px 16px',
                 marginBottom: 10,
@@ -922,7 +922,7 @@ export function ResDrawer({
                   width: 34,
                   height: 34,
                   borderRadius: '50%',
-                  background: '#EDE9FE',
+                  background: 'var(--c-EDE9FE)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -933,21 +933,21 @@ export function ResDrawer({
                 <Icon name="gift" size={18} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 11, color: '#5B21B6', fontWeight: 800, textTransform: 'uppercase' }}>
+                <div style={{ fontSize: 11, color: 'var(--c-5B21B6)', fontWeight: 800, textTransform: 'uppercase' }}>
                   Sin cargo
                 </div>
-                <div style={{ fontWeight: 800, fontSize: 20, color: '#6D28D9' }}>
+                <div style={{ fontWeight: 800, fontSize: 20, color: 'var(--c-6D28D9)' }}>
                   {freeStayText(res) === 'Sin cargo' ? currency(0) : freeStayText(res)}
                 </div>
-                <div style={{ fontSize: 11, color: '#6B7280', marginTop: 1 }}>No hay nada que cobrar</div>
+                <div style={{ fontSize: 11, color: 'var(--c-6B7280)', marginTop: 1 }}>No hay nada que cobrar</div>
               </div>
             </div>
           ) : saldo <= 0 ? (
             // Pagado del todo: se lee primero "pagado", el saldo queda chiquito abajo
             <div
               style={{
-                background: '#D1FAE5',
-                border: '1.5px solid #A7F3D0',
+                background: 'var(--c-D1FAE5)',
+                border: '1.5px solid var(--c-A7F3D0)',
                 borderRadius: 16,
                 padding: '12px 16px',
                 marginBottom: 10,
@@ -961,7 +961,7 @@ export function ResDrawer({
                   width: 34,
                   height: 34,
                   borderRadius: '50%',
-                  background: '#10B981',
+                  background: 'var(--c-10B981)',
                   color: '#fff',
                   display: 'flex',
                   alignItems: 'center',
@@ -974,11 +974,11 @@ export function ResDrawer({
                 <Icon name="tick" size={18} strokeWidth={3} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 11, color: '#065F46', fontWeight: 800, textTransform: 'uppercase' }}>
+                <div style={{ fontSize: 11, color: 'var(--c-065F46)', fontWeight: 800, textTransform: 'uppercase' }}>
                   Pagado completo
                 </div>
-                <div style={{ fontWeight: 800, fontSize: 20, color: '#047857' }}>{currency(res.paid)}</div>
-                <div style={{ fontSize: 11, color: '#6B7280', marginTop: 1 }}>
+                <div style={{ fontWeight: 800, fontSize: 20, color: 'var(--c-047857)' }}>{currency(res.paid)}</div>
+                <div style={{ fontSize: 11, color: 'var(--c-6B7280)', marginTop: 1 }}>
                   {saldo < 0 ? `Pagó de más ${currency(-saldo)}` : 'Saldo $0'}
                   {res.paymentMethod ? ` · ${pmLabel[res.paymentMethod] || res.paymentMethod}` : ''}
                 </div>
@@ -987,7 +987,7 @@ export function ResDrawer({
           ) : (
           <div
             style={{
-              background: '#FEF3C7',
+              background: 'var(--c-FEF3C7)',
               borderRadius: 16,
               padding: '12px 16px',
               marginBottom: 10,
@@ -1000,7 +1000,7 @@ export function ResDrawer({
               <div
                 style={{
                   fontSize: 10,
-                  color: '#92400E',
+                  color: 'var(--c-92400E)',
                   fontWeight: 700,
                   textTransform: 'uppercase',
                 }}
@@ -1011,7 +1011,7 @@ export function ResDrawer({
                 style={{
                   fontWeight: 800,
                   fontSize: 20,
-                  color: '#B45309',
+                  color: 'var(--c-B45309)',
                 }}
               >
                 {currency(saldo)}
@@ -1020,19 +1020,19 @@ export function ResDrawer({
                 <button
                   type="button"
                   onClick={() => openPay('room')}
-                  style={{ ...mainBtn, minHeight: 32, padding: '4px 12px', fontSize: 12, marginTop: 6, background: '#10B981', color: '#fff' }}
+                  style={{ ...mainBtn, minHeight: 32, padding: '4px 12px', fontSize: 12, marginTop: 6, background: 'var(--c-10B981)', color: '#fff' }}
                 >
                   Cobrar {res.room}
                 </button>
               )}
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 10, color: '#6B7280', fontWeight: 700 }}>
+              <div style={{ fontSize: 10, color: 'var(--c-6B7280)', fontWeight: 700 }}>
                 Pagado
               </div>
               <div style={{ fontWeight: 700 }}>{currency(res.paid)}</div>
               {res.paymentMethod && (
-                <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>
+                <div style={{ fontSize: 11, color: 'var(--c-9CA3AF)', marginTop: 2 }}>
                   {pmLabel[res.paymentMethod] || res.paymentMethod}
                 </div>
               )}
@@ -1047,8 +1047,8 @@ export function ResDrawer({
             const owing = members.filter((m) => (Number(m.totalAmount) || 0) > (Number(m.paid) || 0));
             const cobra = isGroupPay ? groupSaldo : Math.max(0, payTarget - paid);
             return (
-              <div style={{ background: '#F0FDF4', border: '1.5px solid #A7F3D0', borderRadius: 16, padding: 12, marginBottom: 10 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: '#065F46', marginBottom: 8 }}>
+              <div style={{ background: 'var(--c-F0FDF4)', border: '1.5px solid var(--c-A7F3D0)', borderRadius: 16, padding: 12, marginBottom: 10 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--c-065F46)', marginBottom: 8 }}>
                   {isGroupPay
                     ? `Cobrar saldo del grupo (${owing.map((m) => m.room).join(', ')})`
                     : `Cobrar ${res.room}`}
@@ -1068,9 +1068,9 @@ export function ResDrawer({
                           flex: 1,
                           minHeight: 36,
                           fontSize: 12,
-                          background: payTarget === q.v ? '#10B981' : '#D1FAE5',
-                          color: payTarget === q.v ? '#fff' : '#065F46',
-                          border: '1.5px solid #10B981',
+                          background: payTarget === q.v ? 'var(--c-10B981)' : 'var(--c-D1FAE5)',
+                          color: payTarget === q.v ? '#fff' : 'var(--c-065F46)',
+                          border: '1.5px solid var(--c-10B981)',
                         }}
                       >
                         {q.k}
@@ -1079,13 +1079,13 @@ export function ResDrawer({
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
-                  <span style={{ fontSize: 12, color: '#374151', flex: 1 }}>
+                  <span style={{ fontSize: 12, color: 'var(--c-374151)', flex: 1 }}>
                     Cobra ahora <b>{currency(cobra)}</b>
                   </span>
                   <select
                     value={payMethod}
                     onChange={(e) => setPayMethod(e.target.value)}
-                    style={{ padding: '7px 8px', border: '1.5px solid #E5E7EB', borderRadius: 8, fontFamily: 'inherit', fontSize: 12, background: '#fff' }}
+                    style={{ padding: '7px 8px', border: '1.5px solid var(--c-E5E7EB)', borderRadius: 8, fontFamily: 'inherit', fontSize: 12, background: 'var(--card)' }}
                   >
                     {Object.entries(pmLabel)
                       .filter(([k]) => k !== 'vcc')
@@ -1101,14 +1101,14 @@ export function ResDrawer({
                     type="button"
                     onClick={savePay}
                     disabled={paySaving || cobra <= 0}
-                    style={{ ...mainBtn, flex: 2, minHeight: 40, fontSize: 13, background: cobra > 0 ? '#10B981' : '#A7F3D0', color: '#fff' }}
+                    style={{ ...mainBtn, flex: 2, minHeight: 40, fontSize: 13, background: cobra > 0 ? 'var(--c-10B981)' : 'var(--c-A7F3D0)', color: '#fff' }}
                   >
                     {paySaving ? 'Guardando…' : 'Guardar cobro'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setPayMode(null)}
-                    style={{ ...mainBtn, flex: 1, minHeight: 40, fontSize: 13, background: '#fff', border: '1px solid #E5E7EB', color: '#374151' }}
+                    style={{ ...mainBtn, flex: 1, minHeight: 40, fontSize: 13, background: 'var(--card)', border: '1px solid var(--c-E5E7EB)', color: 'var(--c-374151)' }}
                   >
                     Cancelar
                   </button>
@@ -1136,16 +1136,16 @@ export function ResDrawer({
                 </span>
               ) : (
                 members.every(isFreeStay) ? (
-                  <span style={{ fontWeight: 800, color: '#6D28D9' }}>{ic('link', 14)}Grupo sin cargo {ic('gift', 14)}</span>
+                  <span style={{ fontWeight: 800, color: 'var(--c-6D28D9)' }}>{ic('link', 14)}Grupo sin cargo {ic('gift', 14)}</span>
                 ) : (
-                  <span style={{ fontWeight: 800, color: '#047857' }}>{ic('link', 14)}Grupo pagado completo ✓</span>
+                  <span style={{ fontWeight: 800, color: 'var(--c-047857)' }}>{ic('link', 14)}Grupo pagado completo ✓</span>
                 )
               )}
               {groupSaldo > 0 && onPay && (
                 <button
                   type="button"
                   onClick={() => openPay('group')}
-                  style={{ ...mainBtn, minHeight: 34, padding: '4px 14px', fontSize: 12, background: GROUP_COLORS.txt, color: '#fff', whiteSpace: 'nowrap' }}
+                  style={{ ...mainBtn, minHeight: 34, padding: '4px 14px', fontSize: 12, background: GROUP_COLORS.solid, color: '#fff', whiteSpace: 'nowrap' }}
                 >
                   <Icon name="link" size={16} />Cobrar saldo del grupo
                 </button>
@@ -1154,20 +1154,20 @@ export function ResDrawer({
           )}
 
           {(res.requiresInvoice || res.notes) && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 12px', borderBottom: '.5px solid var(--line)', borderTop: '.5px solid var(--line)', marginBottom: 14, background: '#FAFAFA' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 12px', borderBottom: '.5px solid var(--line)', borderTop: '.5px solid var(--line)', marginBottom: 14, background: 'var(--c-FAFAFA)' }}>
               {res.requiresInvoice && (
-                <span style={{ fontSize: 12, color: '#7C3AED', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 12, color: 'var(--c-7C3AED)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Icon name="invoice" size={14} /> Solicita factura fiscal
                 </span>
               )}
               {res.notes && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%', marginTop: 4 }}>
                   {/* Título en mayúsculas y pequeño como indicador */}
-                  <span style={{ fontSize: 10, color: '#B45309', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 5, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                  <span style={{ fontSize: 10, color: 'var(--c-B45309)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 5, textTransform: 'uppercase', letterSpacing: 0.4 }}>
                     <Icon name="edit" size={13} /> Notas Internas
                   </span>
                   {/* Bloque de texto más grande, destacado y que respeta saltos de línea */}
-                  <div style={{ fontSize: 13.5, color: '#78350F', fontWeight: 600, background: '#FEF3C7', padding: '8px 12px', borderRadius: 8, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>
+                  <div style={{ fontSize: 13.5, color: 'var(--c-78350F)', fontWeight: 600, background: 'var(--c-FEF3C7)', padding: '8px 12px', borderRadius: 8, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>
                     {res.notes}
                   </div>
                 </div>
@@ -1176,21 +1176,21 @@ export function ResDrawer({
           )}
 
           {(res.url_ine_frente || res.url_ine_dorso) && (
-            <div style={{ background: '#F0F9FF', borderRadius: 16, padding: '12px 16px', marginBottom: 14, border: '1px solid #BAE6FD' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#0369A1', textTransform: 'uppercase', marginBottom: 8 }}>
+            <div style={{ background: 'var(--c-F0F9FF)', borderRadius: 16, padding: '12px 16px', marginBottom: 14, border: '1px solid var(--c-BAE6FD)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-0369A1)', textTransform: 'uppercase', marginBottom: 8 }}>
                 Documentos adjuntos
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 {res.url_ine_frente && (
                   <DocLink url={res.url_ine_frente} style={{ flex: 1, textDecoration: 'none' }}>
-                    <div style={{ background: '#0284C7', color: '#fff', padding: '8px', borderRadius: 8, textAlign: 'center', fontSize: 12, fontWeight: 700 }}>
+                    <div style={{ background: 'var(--c-0284C7)', color: '#fff', padding: '8px', borderRadius: 8, textAlign: 'center', fontSize: 12, fontWeight: 700 }}>
                       {ic('camera', 14)}Ver Frente
                     </div>
                   </DocLink>
                 )}
                 {res.url_ine_dorso && (
                   <DocLink url={res.url_ine_dorso} style={{ flex: 1, textDecoration: 'none' }}>
-                    <div style={{ background: '#0284C7', color: '#fff', padding: '8px', borderRadius: 8, textAlign: 'center', fontSize: 12, fontWeight: 700 }}>
+                    <div style={{ background: 'var(--c-0284C7)', color: '#fff', padding: '8px', borderRadius: 8, textAlign: 'center', fontSize: 12, fontWeight: 700 }}>
                       {ic('camera', 14)}Ver Dorso
                     </div>
                   </DocLink>
@@ -1219,7 +1219,7 @@ export function ResDrawer({
                 style={{
                   fontSize: 11,
                   fontWeight: 700,
-                  color: '#6B7280',
+                  color: 'var(--c-6B7280)',
                   textTransform: 'uppercase',
                   letterSpacing: 0.4,
                 }}
@@ -1245,11 +1245,11 @@ export function ResDrawer({
                       fontSize: 13,
                     }}
                   >
-                    <span style={{ color: '#9CA3AF' }}>{l}</span>
+                    <span style={{ color: 'var(--c-9CA3AF)' }}>{l}</span>
                     <div
                       style={{ display: 'flex', alignItems: 'center', gap: 6 }}
                     >
-                      <span style={{ fontWeight: 600, color: '#374151' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--c-374151)' }}>
                         {v}
                       </span>
                       {l === 'Teléfono' && v && (
@@ -1269,7 +1269,7 @@ export function ResDrawer({
                             width: 26,
                             height: 26,
                             borderRadius: 6,
-                            background: '#22C55E',
+                            background: 'var(--c-22C55E)',
                             color: '#fff',
                             textDecoration: 'none',
                           }}
@@ -1297,7 +1297,7 @@ export function ResDrawer({
                 style={{
                   fontSize: 11,
                   fontWeight: 700,
-                  color: '#6B7280',
+                  color: 'var(--c-6B7280)',
                   textTransform: 'uppercase',
                   marginBottom: 8,
                 }}
@@ -1320,7 +1320,7 @@ export function ResDrawer({
                       fontSize: 13,
                     }}
                   >
-                    <span style={{ fontWeight: 600, color: '#374151' }}>
+                    <span style={{ fontWeight: 600, color: 'var(--c-374151)' }}>
                       {c.name || `Acompañante ${i + 1}`}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1336,12 +1336,12 @@ export function ResDrawer({
                             gap: 4,
                             padding: '3px 8px',
                             borderRadius: 6,
-                            background: '#ECFDF5',
-                            color: '#059669',
+                            background: 'var(--c-ECFDF5)',
+                            color: 'var(--c-059669)',
                             textDecoration: 'none',
                             fontWeight: 700,
                             fontSize: 11,
-                            border: '1px solid #A7F3D0'
+                            border: '1px solid var(--c-A7F3D0)'
                           }}
                           title="WhatsApp Acompañante"
                         >
@@ -1349,7 +1349,7 @@ export function ResDrawer({
                         </a>
                       )}
                       {c.doc && (
-                        <span style={{ color: '#9CA3AF', fontSize: 12 }}>{c.doc}</span>
+                        <span style={{ color: 'var(--c-9CA3AF)', fontSize: 12 }}>{c.doc}</span>
                       )}
                     </div>
                   </div>
@@ -1361,11 +1361,11 @@ export function ResDrawer({
           {(res.checkInAt || res.checkOutAt) && (
             <div
               style={{
-                background: '#F8FAFC',
+                background: 'var(--c-F8FAFC)',
                 borderRadius: 8,
                 padding: '8px 12px',
                 fontSize: 11,
-                color: '#6B7280',
+                color: 'var(--c-6B7280)',
                 marginBottom: 14,
               }}
             >
@@ -1397,7 +1397,7 @@ export function ResDrawer({
             {res.status === 'por_llegar' && (
               <button
                 onClick={() => onCheckIn(res)}
-                style={{ ...mainBtn, flex: 2, background: '#10B981', color: '#fff' }}
+                style={{ ...mainBtn, flex: 2, background: 'var(--c-10B981)', color: '#fff' }}
               >
                 <Icon name="checkIn" size={18} /> Hacer Check-in
               </button>
@@ -1405,7 +1405,7 @@ export function ResDrawer({
             {res.status === 'hospedado' && (
               <button
                 onClick={() => onCheckOut(res)}
-                style={{ ...mainBtn, flex: 2, background: '#F59E0B', color: '#fff' }}
+                style={{ ...mainBtn, flex: 2, background: 'var(--c-F59E0B)', color: '#fff' }}
               >
                 <Icon name="checkOut" size={18} /> Hacer Check-out
               </button>
@@ -1415,9 +1415,9 @@ export function ResDrawer({
               style={{
                 ...mainBtn,
                 flex: 1,
-                background: '#fff',
-                border: '1px solid #E5E7EB',
-                color: '#374151',
+                background: 'var(--card)',
+                border: '1px solid var(--c-E5E7EB)',
+                color: 'var(--c-374151)',
               }}
             >
               <Icon name="edit" size={16} /> Editar
@@ -1429,7 +1429,7 @@ export function ResDrawer({
             <button
               type="button"
               onClick={() => onCheckIn(toCheckIn)}
-              style={{ ...mainBtn, minHeight: 38, fontSize: 13, background: '#fff', border: '1.5px solid #10B981', color: '#047857' }}
+              style={{ ...mainBtn, minHeight: 38, fontSize: 13, background: 'var(--card)', border: '1.5px solid var(--c-10B981)', color: 'var(--c-047857)' }}
             >
               <Icon name="link" size={16} />Hacer check-in de todo el grupo ({toCheckIn.length})
             </button>
@@ -1438,7 +1438,7 @@ export function ResDrawer({
             <button
               type="button"
               onClick={() => onCheckOut(toCheckOut)}
-              style={{ ...mainBtn, minHeight: 38, fontSize: 13, background: '#fff', border: '1.5px solid #F59E0B', color: '#B45309' }}
+              style={{ ...mainBtn, minHeight: 38, fontSize: 13, background: 'var(--card)', border: '1.5px solid var(--c-F59E0B)', color: 'var(--c-B45309)' }}
             >
               <Icon name="link" size={16} />Hacer check-out de todo el grupo ({toCheckOut.length})
             </button>
@@ -1453,7 +1453,7 @@ export function ResDrawer({
                 ...mainBtn,
                 minHeight: 38,
                 fontSize: 13,
-                background: '#fff',
+                background: 'var(--card)',
                 border: `1.5px dashed ${GROUP_COLORS.txt}`,
                 color: GROUP_COLORS.txt,
               }}
@@ -1464,7 +1464,7 @@ export function ResDrawer({
 
           {/* Acciones poco frecuentes, discretas al pie: Eliminar (pide confirmar en ventana) y No grato */}
           {askUngroup ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontSize: 11, color: '#6B7280', marginTop: 4, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontSize: 11, color: 'var(--c-6B7280)', marginTop: 4, flexWrap: 'wrap' }}>
               <span>
                 ¿Separar {res.room} del grupo?{members.length === 2 ? ' (el grupo deja de existir)' : ''}
               </span>
@@ -1478,12 +1478,12 @@ export function ResDrawer({
               >
                 Sí, separar
               </button>
-              <button type="button" onClick={() => setAskUngroup(false)} style={{ ...blLink('#6B7280'), padding: 0 }}>
+              <button type="button" onClick={() => setAskUngroup(false)} style={{ ...blLink('var(--c-6B7280)'), padding: 0 }}>
                 Cancelar
               </button>
             </div>
           ) : askBlacklist ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontSize: 11, color: '#6B7280', marginTop: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontSize: 11, color: 'var(--c-6B7280)', marginTop: 4 }}>
               <span>¿Marcar como no grato?</span>
               <button
                 type="button"
@@ -1491,42 +1491,42 @@ export function ResDrawer({
                   setAskBlacklist(false);
                   onToggleBlacklist(res.id, false);
                 }}
-                style={{ ...blLink('#DC2626'), fontWeight: 800, padding: 0 }}
+                style={{ ...blLink('var(--c-DC2626)'), fontWeight: 800, padding: 0 }}
               >
                 Sí, marcar
               </button>
               <button
                 type="button"
                 onClick={() => setAskBlacklist(false)}
-                style={{ ...blLink('#6B7280'), padding: 0 }}
+                style={{ ...blLink('var(--c-6B7280)'), padding: 0 }}
               >
                 Cancelar
               </button>
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
-              <button type="button" onClick={() => onDelete(res.id)} style={blLink('#9CA3AF')}>
+              <button type="button" onClick={() => onDelete(res.id)} style={blLink('var(--c-9CA3AF)')}>
                 Eliminar reserva
               </button>
-              <span style={{ color: '#D1D5DB', fontSize: 11 }}>·</span>
+              <span style={{ color: 'var(--c-D1D5DB)', fontSize: 11 }}>·</span>
               {inGroup && onUngroup && (
                 <>
-                  <button type="button" onClick={() => setAskUngroup(true)} style={blLink('#9CA3AF')}>
+                  <button type="button" onClick={() => setAskUngroup(true)} style={blLink('var(--c-9CA3AF)')}>
                     Separar del grupo
                   </button>
-                  <span style={{ color: '#D1D5DB', fontSize: 11 }}>·</span>
+                  <span style={{ color: 'var(--c-D1D5DB)', fontSize: 11 }}>·</span>
                 </>
               )}
               {res.lista_negra ? (
                 <button
                   type="button"
                   onClick={() => onToggleBlacklist(res.id, true)}
-                  style={blLink('#DC2626')}
+                  style={blLink('var(--c-DC2626)')}
                 >
                   Quitar de lista negra
                 </button>
               ) : (
-                <button type="button" onClick={() => setAskBlacklist(true)} style={blLink('#9CA3AF')}>
+                <button type="button" onClick={() => setAskBlacklist(true)} style={blLink('var(--c-9CA3AF)')}>
                   Marcar como no grato
                 </button>
               )}

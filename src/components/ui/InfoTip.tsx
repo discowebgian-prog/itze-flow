@@ -82,7 +82,7 @@ export function InfoTip({ k, light = false }) {
                 {section('Cómo sale', <div style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>{g.how}</div>)}
                 {section(
                   'Ejemplo',
-                  <div style={{ fontSize: 13, color: '#1E3A8A', lineHeight: 1.5, background: 'var(--acc-soft)', borderRadius: 12, padding: '8px 10px' }}>{g.example}</div>
+                  <div style={{ fontSize: 13, color: 'var(--c-1E3A8A)', lineHeight: 1.5, background: 'var(--acc-soft)', borderRadius: 12, padding: '8px 10px' }}>{g.example}</div>
                 )}
                 {section(
                   'Cómo usarlo',

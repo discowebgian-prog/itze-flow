@@ -189,9 +189,9 @@ export function suggestGuests(allRes, query, decisions = [], excludeId = null, m
 
 export function freqBadge(n) {
   // label sin emoji; icon = nombre de ícono Lucide (Icon.tsx), se dibuja al lado
-  if (n >= 5) return { label: 'VIP', icon: 'star', color: '#7C3AED', bg: '#EDE9FE' };
-  if (n >= 3) return { label: 'Frecuente', icon: 'star', color: '#B45309', bg: '#FEF3C7' };
-  if (n >= 2) return { label: 'Regresa', icon: 'repeat', color: '#0369A1', bg: '#E0F2FE' };
+  if (n >= 5) return { label: 'VIP', icon: 'star', color: 'var(--c-7C3AED)', bg: 'var(--c-EDE9FE)' };
+  if (n >= 3) return { label: 'Frecuente', icon: 'star', color: 'var(--c-B45309)', bg: 'var(--c-FEF3C7)' };
+  if (n >= 2) return { label: 'Regresa', icon: 'repeat', color: 'var(--c-0369A1)', bg: 'var(--c-E0F2FE)' };
   return null;
 }
 
@@ -229,7 +229,7 @@ export function stayInfo(allRes, res, decisions = []) {
 export function stayBadge(info) {
   if (!info) return null;
   if (info.number === 1) {
-    return { label: 'Primera estancia', icon: 'sparkles', color: '#475569', bg: '#F1F5F9' };
+    return { label: 'Primera estancia', icon: 'sparkles', color: 'var(--c-475569)', bg: 'var(--c-F1F5F9)' };
   }
   const f = freqBadge(info.number);
   return { label: `${info.number}ª estancia · ${f.label}`, icon: f.icon, color: f.color, bg: f.bg };
