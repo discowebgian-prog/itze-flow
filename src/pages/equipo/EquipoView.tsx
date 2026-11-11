@@ -637,6 +637,7 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
         <div><h1>{hi}</h1><div className="sub">{fecha}</div></div>
         <div className="row">
           {canQuote ? <button className="pill" onClick={() => setQuoter({})}><I n="calc" c="a" /> Cotizar</button> : null}
+          {canBook ? <button className="pill" onClick={() => setForm({ initial: null, key: Date.now() })}><I n="cal" c="a" /> Reservar</button> : null}
           {!isDueno && !pushOn ? <button className="pill" onClick={activarAvisos}><I n="bell" c="a" /> Activar avisos</button> : null}
           {isDueno ? <button className="pill" onClick={() => setView(view === 'owner' ? 'mary' : 'owner')}>{view === 'owner' ? 'Ver como Mary' : 'Volver a dueños'}</button> : null}
           {onLogout ? <button className="pill" onClick={onLogout}>Salir</button> : null}

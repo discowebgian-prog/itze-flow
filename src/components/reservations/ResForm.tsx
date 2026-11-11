@@ -1598,9 +1598,12 @@ export function ResForm({
           <Sel
             label="Descuento"
             value={f.pricing.discountType}
-            onChange={(e) =>
-              sv('pricing', { ...f.pricing, discountType: e.target.value })
-            }
+            onChange={(e) => {
+              const v = e.target.value;
+              // Noches gratis: arranca con todas las noches de la estadía (sin cargo); si son menos, se cambia el número
+              const val = v === 'noche_gratis' ? nights || 1 : f.pricing.discountValue;
+              sv('pricing', { ...f.pricing, discountType: v, discountValue: val });
+            }}
             options={[
               { value: 'ninguno', label: 'Sin descuento' },
               { value: 'porcentaje', label: '% Porcentaje' },
@@ -1724,7 +1727,8 @@ export function ResForm({
         </fieldset>
         <hr style={{ border: 'none', borderTop: '1px solid var(--line)', margin: '16px 0 14px' }} />
 
-        {(() => {
+        {/* Sin cargo (noches gratis, total $0): no hay nada que cobrar, solo queda el recuadro violeta */}
+        {!freeStay && (() => {
           // Botones rápidos de cobro: 50% (redondeado al peso) y Total (100%).
           // El que coincide con lo pagado queda resaltado.
           const totalNum = Number(f.totalAmount) || 0;
@@ -1805,7 +1809,7 @@ export function ResForm({
           );
         })()}
 
-        {isGroupNew && (
+        {isGroupNew && !freeStay && (
           <div style={{ margin: '-2px 0 10px' }}>
             <button
               type="button"
@@ -1846,6 +1850,7 @@ export function ResForm({
         )}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 4 }}>
+          {!freeStay && (
           <div style={{ flex: 1, marginRight: 14 }}>
             <Sel
               label="Forma de pago"
@@ -1861,12 +1866,14 @@ export function ResForm({
               ]}
             />
           </div>
+          )}
           <div
             style={{
+              flex: freeStay ? 1 : undefined,
               background: freeStay ? 'var(--c-F5F3FF)' : saldoPendiente > 0 ? 'var(--c-FEF2F2)' : 'var(--c-ECFDF5)',
               padding: '10px 14px',
               borderRadius: 'var(--r-item)',
-              textAlign: 'right',
+              textAlign: freeStay ? 'left' : 'right',
               minWidth: 130,
               marginBottom: 12,
             }}
