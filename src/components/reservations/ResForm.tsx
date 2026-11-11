@@ -51,6 +51,7 @@ export function ResForm({
   tarifas = [],
   initialRooms = null, // desde Cotizar: [{ room, guests }] → con 2 o más arranca como grupo
   fixedSource = '', // Equipo (paso 9): canal fijo ('Directo-Puerta'); solo se muestra ese
+  soloDatos = false, // Equipo (paso 9), reserva que no cargó: solo huésped, documento y acompañantes
   canPrice = true, // Equipo sin permiso "precio": tarifa, descuento y total quedan como el tarifario
 }) {
   const blank = {
@@ -555,11 +556,11 @@ export function ResForm({
         return;
       }
     } else {
-      if (f.pricing.ratePerNight === '' || f.pricing.ratePerNight === null) {
+      if (!soloDatos && (f.pricing.ratePerNight === '' || f.pricing.ratePerNight === null)) {
         setValErr('Falta la tarifa por noche.');
         return;
       }
-      if (!freeStay && (f.paid === '' || f.paid === null)) {
+      if (!soloDatos && !freeStay && (f.paid === '' || f.paid === null)) {
         setValErr('Falta cuánto pagó (si todavía nada, poné 0).');
         return;
       }
@@ -686,7 +687,7 @@ export function ResForm({
   // Números de los pasos (sin habitación fuera del hostel, sin Personas si no corresponde)
   const nums = {};
   let k = 0;
-  ['fechas', isHostel && 'hab', 'canal', 'huesped', showPersonas && 'personas', 'cobro', 'extras']
+  (soloDatos ? ['huesped', showPersonas && 'personas'] : ['fechas', isHostel && 'hab', 'canal', 'huesped', showPersonas && 'personas', 'cobro', 'extras'])
     .filter(Boolean)
     .forEach((id) => (nums[id] = ++k));
 
@@ -723,6 +724,7 @@ export function ResForm({
         </div>
       )}
 
+      {!soloDatos && (<>
       {/* 1 · Fechas */}
       <Step num={nums.fechas} title="Fechas" done={nights > 0}>
       <RangeCalendar
@@ -828,13 +830,14 @@ export function ResForm({
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--acc)', marginTop: -4 }}>Ahora tocá la fecha de salida.</div>
       )}
       </Step>
+      </>)}
 
       <div
         aria-hidden={picking}
         style={{ opacity: picking ? 0.4 : 1, pointerEvents: picking ? 'none' : 'auto', transition: 'opacity .2s' }}
       >
       {/* 2 · Habitación (o varias) */}
-      {isHostel && (
+      {isHostel && !soloDatos && (
         <Step num={nums.hab} title={multiOn ? 'Habitaciones' : 'Habitación'} done={roomsDone} boxRef={roomRef}>
           {multiOn && (
             <div style={{ fontSize: 12, color: 'var(--mut)', margin: '-6px 0 8px' }}>Tocá todas las del grupo.</div>
@@ -1004,7 +1007,7 @@ export function ResForm({
       {!isHostel && <ConflictWarn conflicts={conflicts} properties={visibleProps} />}
 
       {/* 3 · Estado y canal (aparece al elegir fechas y habitación) */}
-      {stage >= 2 && (
+      {stage >= 2 && !soloDatos && (
       <Step num={nums.canal} title="Estado y canal" done={!!(f.status && f.source)} glow={glowStep === 'canal'} boxRef={canalRef}>
       <ChipGroup
         label="Estado"
@@ -1498,6 +1501,7 @@ export function ResForm({
       </Step>
       )}
 
+      {!soloDatos && (<>
       {/* 6 · Tarifa y pago */}
       <Step num={nums.cobro} title="Tarifa y pago" done={cobroDone}>
       {/* ── LATE CHECK-OUT: botón chico; al activarlo, hora acordada y costo (se suma al total) ── */}
@@ -1962,7 +1966,9 @@ export function ResForm({
         );
       })()}
       </Step>
+      </>)}
 
+      {!soloDatos && (<>
       {/* 7 · Factura, notas y PIN (opcional) */}
       <Step num={nums.extras} title="Factura, notas y PIN" note="opcional" done={!!(f.requiresInvoice || (f.notes || '').trim() || f.pin_acceso)}>
       {/* ── FACTURA: botón chico; al pedir factura se despliega Empresa (opcional).
@@ -2067,6 +2073,7 @@ export function ResForm({
           </button>
         </div>
       </Step>
+      </>)}
 
         {isGroupNew && (
           <div

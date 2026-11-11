@@ -83,6 +83,8 @@ export function roomsOfDay(reservas, marks, d) {
     const late = sale && sale.late_checkout_hora ? String(sale.late_checkout_hora).slice(0, 5) : '';
     out.push({
       date: d, room: id, num: roomNum(id), status,
+      // Ids de las reservas (paso 9: tocar el nombre abre el panel de la reserva)
+      sale_id: sale ? sale.id : null, entra_id: entra ? entra.id : null, queda_id: queda ? queda.id : null,
       guest: status === 'estancia' ? queda.huesped : sale ? sale.huesped : '',
       guest_in: entra ? entra.huesped : '',
       departure: late || SALIDA,

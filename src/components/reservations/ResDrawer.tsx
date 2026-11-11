@@ -38,6 +38,7 @@ export function ResDrawer({
   onAddRoom,
   onUngroup,
   tarifas = [],
+  equipo = null, // paso 9: panel abierto desde Equipo (Mary): { onCobrar(res, monto, forma) }
 }) {
   const drag = useDragControls(); // gesto para cerrar arrastrando (ver la hoja más abajo)
   // "No grato" es un caso raro: enlace chico al pie y pide confirmar antes de marcar
@@ -778,10 +779,12 @@ export function ResDrawer({
             >
               <span style={{ fontSize: 12.5, fontWeight: 800, color: LATE_COLORS.txt }}>
                 {ic('clock')}Late check-out {lateHour(res)}
-                <span style={{ fontWeight: 600 }}>
-                  {' · '}
-                  {lateCostOf(res) > 0 ? currency(lateCostOf(res)) : 'Cortesía'}
-                </span>
+                {!res.sinMontos && (
+                  <span style={{ fontWeight: 600 }}>
+                    {' · '}
+                    {lateCostOf(res) > 0 ? currency(lateCostOf(res)) : 'Cortesía'}
+                  </span>
+                )}
               </span>
               {onSetLate && (
                 <button type="button" onClick={openLate} style={{ ...blLink(LATE_COLORS.txt), fontWeight: 800 }}>
@@ -876,6 +879,9 @@ export function ResDrawer({
             </div>
           )}
 
+          {res.sinMontos ? (
+            <EquipoSaldo res={res} onCobrar={equipo?.onCobrar} pmLabel={pmLabel} />
+          ) : (<>
           {/* FILA INFERIOR: Bloque masivo del Total General */}
           <div
             style={{
@@ -1152,6 +1158,7 @@ export function ResDrawer({
               )}
             </div>
           )}
+          </>)}
 
           {(res.requiresInvoice || res.notes) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 12px', borderBottom: '.5px solid var(--line)', borderTop: '.5px solid var(--line)', marginBottom: 14, background: 'var(--c-FAFAFA)' }}>
@@ -1394,7 +1401,7 @@ export function ResDrawer({
         >
           {/* Acción principal (Check-in/out, más ancha) y Editar en la misma fila */}
           <div style={{ display: 'flex', gap: 8 }}>
-            {res.status === 'por_llegar' && (
+            {res.status === 'por_llegar' && onCheckIn && (
               <button
                 onClick={() => onCheckIn(res)}
                 style={{ ...mainBtn, flex: 2, background: 'var(--c-10B981)', color: '#fff' }}
@@ -1402,7 +1409,7 @@ export function ResDrawer({
                 <Icon name="checkIn" size={18} /> Hacer Check-in
               </button>
             )}
-            {res.status === 'hospedado' && (
+            {res.status === 'hospedado' && onCheckOut && (
               <button
                 onClick={() => onCheckOut(res)}
                 style={{ ...mainBtn, flex: 2, background: 'var(--c-F59E0B)', color: '#fff' }}
@@ -1425,7 +1432,7 @@ export function ResDrawer({
           </div>
 
           {/* Check-in / Check-out de todo el grupo de un toque */}
-          {inGroup && res.status === 'por_llegar' && toCheckIn.length > 1 && (
+          {inGroup && onCheckIn && res.status === 'por_llegar' && toCheckIn.length > 1 && (
             <button
               type="button"
               onClick={() => onCheckIn(toCheckIn)}
@@ -1434,7 +1441,7 @@ export function ResDrawer({
               <Icon name="link" size={16} />Hacer check-in de todo el grupo ({toCheckIn.length})
             </button>
           )}
-          {inGroup && res.status === 'hospedado' && toCheckOut.length > 1 && (
+          {inGroup && onCheckOut && res.status === 'hospedado' && toCheckOut.length > 1 && (
             <button
               type="button"
               onClick={() => onCheckOut(toCheckOut)}
@@ -1463,7 +1470,7 @@ export function ResDrawer({
           )}
 
           {/* Acciones poco frecuentes, discretas al pie: Eliminar (pide confirmar en ventana) y No grato */}
-          {askUngroup ? (
+          {equipo ? null : askUngroup ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontSize: 11, color: 'var(--c-6B7280)', marginTop: 4, flexWrap: 'wrap' }}>
               <span>
                 ¿Separar {res.room} del grupo?{members.length === 2 ? ' (el grupo deja de existir)' : ''}
@@ -1569,3 +1576,85 @@ const blLink = (color) => ({
   textDecoration: 'underline',
   alignSelf: 'center',
 });
+
+// ── Paso 9: saldo de una reserva que no cargó Mary (sin ver montos: solo el saldo y cobrarlo) ──
+function EquipoSaldo({ res, onCobrar, pmLabel }) {
+  const saldo = res.saldo;
+  const [open, setOpen] = useState(false);
+  const [monto, setMonto] = useState('');
+  const [forma, setForma] = useState('efectivo');
+  const [saving, setSaving] = useState(false);
+  useEffect(() => setOpen(false), [res?.id]);
+  const box = (bg, color, children) => (
+    <div style={{ background: bg, color, borderRadius: 16, padding: '12px 14px', marginBottom: 14, fontSize: 13 }}>{children}</div>
+  );
+  if (saldo === null || saldo === undefined)
+    return box('var(--c-F3F4F6)', 'var(--c-4B5563)', <><b>Cobro de Booking</b><div style={{ marginTop: 2 }}>No disponible por el momento.</div></>);
+  if (!(saldo > 0)) return box('var(--c-ECFDF5)', 'var(--c-047857)', <b>Sin saldo pendiente ✓</b>);
+  const m = Number(monto) || 0;
+  const ok = m > 0 && m <= saldo;
+  const save = async () => {
+    if (!ok || saving || !onCobrar) return;
+    setSaving(true);
+    const done = await onCobrar(res, m, forma);
+    setSaving(false);
+    if (done) setOpen(false);
+  };
+  return box(
+    'var(--c-FFFBEB)',
+    'var(--c-92400E)',
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <span>
+          Saldo pendiente <b style={{ fontSize: 18 }}>{currency(saldo)}</b>
+        </span>
+        {onCobrar && !open && (
+          <button
+            type="button"
+            onClick={() => { setMonto(String(saldo)); setForma('efectivo'); setOpen(true); }}
+            style={{ ...mainBtn, minHeight: 36, padding: '4px 16px', fontSize: 13, background: 'var(--c-10B981)', color: '#fff' }}
+          >
+            Cobrar
+          </button>
+        )}
+      </div>
+      {open && (
+        <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="number"
+              inputMode="decimal"
+              value={monto}
+              onChange={(e) => setMonto(e.target.value)}
+              aria-label="Monto a cobrar"
+              style={{ flex: 1, minWidth: 0, padding: '8px 10px', border: '1.5px solid var(--c-E5E7EB)', borderRadius: 8, fontFamily: 'inherit', fontSize: 15, background: 'var(--card)' }}
+            />
+            <select
+              value={forma}
+              onChange={(e) => setForma(e.target.value)}
+              aria-label="Forma de pago"
+              style={{ padding: '8px', border: '1.5px solid var(--c-E5E7EB)', borderRadius: 8, fontFamily: 'inherit', fontSize: 13, background: 'var(--card)' }}
+            >
+              {Object.entries(pmLabel)
+                .filter(([k]) => k !== 'vcc')
+                .map(([k, l]) => (
+                  <option key={k} value={k}>{l}</option>
+                ))}
+            </select>
+          </div>
+          {m > saldo && <div style={{ fontSize: 12, color: 'var(--c-DC2626)' }}>Es más que el saldo ({currency(saldo)}).</div>}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" onClick={save} disabled={!ok || saving}
+              style={{ ...mainBtn, flex: 2, minHeight: 40, fontSize: 13, background: ok ? 'var(--c-10B981)' : 'var(--c-A7F3D0)', color: '#fff' }}>
+              {saving ? 'Guardando…' : 'Guardar cobro'}
+            </button>
+            <button type="button" onClick={() => setOpen(false)}
+              style={{ ...mainBtn, flex: 1, minHeight: 40, fontSize: 13, background: 'var(--card)', border: '1px solid var(--c-E5E7EB)', color: 'var(--c-374151)' }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

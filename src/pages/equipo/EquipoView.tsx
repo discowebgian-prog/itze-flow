@@ -24,6 +24,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Toast } from '../../components/ui/Toast';
 import { Quoter } from '../../components/Quoter';
 import { ResForm } from '../../components/reservations/ResForm';
+import { ResDrawer } from '../../components/reservations/ResDrawer';
 import { puede } from '../../lib/roles';
 import { prepRes } from '../../lib/resDb';
 import { PERSON_FIELDS } from '../../lib/groups';
@@ -80,6 +81,10 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
   // Paso 9: Mary cotiza y reserva (los mismos Cotizar y formulario de los dueños, canal Por puerta)
   const canQuote = !isDueno && puede(user, 'cotizar');
   const canBook = !isDueno && puede(user, 'reservar');
+  const canCheck = !isDueno && puede(user, 'checkin'); // check-in/out y cobrar el saldo
+  const canOpen = canBook || canCheck; // tocar el nombre abre el panel de la reserva
+  const [drawerId, setDrawerId] = useState(null);
+  const [editRes, setEditRes] = useState(null); // reserva a editar (propia: todo; ajena: solo datos del huésped)
   const [quoter, setQuoter] = useState(null); // { initialIn }
   const [form, setForm] = useState(null); // { initial, rooms, queue, chain, key }
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 769);
@@ -109,7 +114,7 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
   const rootRef = useRef(null);
   const load = useCallback(async () => {
     if (dragging.current) { clearTimeout(rt.current); rt.current = setTimeout(load, 400); return; }
-    try { const d = await loadEquipo({ conReservas: canQuote || canBook }); if (!dragging.current) { setData(d); setLoaded(true); setLoadErr(''); } }
+    try { const d = await loadEquipo({ conReservas: canQuote || canOpen }); if (!dragging.current) { setData(d); setLoaded(true); setLoadErr(''); } }
     catch (e) { setLoadErr(e?.message || 'sin conexión'); }
   }, [canQuote, canBook]);
   const refresh = useCallback(() => { clearTimeout(rt.current); rt.current = setTimeout(load, 80); }, [load]);
@@ -257,9 +262,78 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
     setForm({ initial: ini, rooms: first.rooms, queue: rest, chain: queue.length > 1 ? { i: 1, total: queue.length } : null, key: Date.now() });
   }
 
+  // Panel de la reserva: check-in, check-out ("Ya salieron") y cobro, por funciones de la base
+  const resById = (id) => (data.allRes || []).find((x) => String(x.id) === String(id));
+  const saldoDe = (r) => (r.sinMontos ? Number(r.saldo) || 0 : Math.max(0, (Number(r.totalAmount) || 0) - (Number(r.paid) || 0)));
+  const nombreDe = (lista) => (lista.length > 1 ? lista.length + ' habitaciones' : (lista[0].guestName || 'el huésped') + ' (' + (lista[0].room || '') + ')');
+  async function rpcTodas(fn, lista, que) {
+    for (const r of lista) {
+      const { error } = await supabase.rpc(fn, { p_id: String(r.id) });
+      if (error) { notifyError(error, que); refresh(); return false; }
+    }
+    refresh();
+    return true;
+  }
+  async function hacerCheckIn(x) {
+    const lista = Array.isArray(x) ? x : [x];
+    setDrawerId(null);
+    if (!(await confirmar('¿Ya llegó ' + nombreDe(lista) + '?', 'Sí, hacer check-in'))) return;
+    if (await rpcTodas('equipo_checkin', lista, 'hacer el check-in')) { vib(30); notify('Check-in hecho · ' + nombreDe(lista)); }
+  }
+  async function hacerCheckOut(x) {
+    const lista = Array.isArray(x) ? x : [x];
+    setDrawerId(null);
+    const debe = lista.reduce((a, r) => a + saldoDe(r), 0);
+    const txt = debe > 0 ? 'Todavía debe ' + money(debe) + '. ¿Hacer el check-out igual?' : '¿Ya salió ' + nombreDe(lista) + '?';
+    if (!(await confirmar(txt, 'Sí, hacer check-out'))) return;
+    if (await rpcTodas('equipo_checkout', lista, 'hacer el check-out')) { vib(30); notify('Check-out hecho · ' + nombreDe(lista)); }
+  }
+  async function cobrar(r, monto, forma) {
+    const { error } = await supabase.rpc('equipo_cobrar', { p_id: String(r.id), p_monto: monto, p_forma: forma });
+    if (error) { notifyError(error, 'guardar el cobro'); return false; }
+    notify('Cobro guardado · ' + money(monto));
+    refresh();
+    return true;
+  }
+  // Cobro de sus propias reservas (el panel completo manda el nuevo total pagado)
+  async function cobrarPagos(pagos) {
+    for (const p of pagos) {
+      const r = resById(p.id);
+      const delta = (Number(p.paid) || 0) - (Number(r?.paid) || 0);
+      if (!r || delta <= 0) continue;
+      if (!(await cobrar(r, delta, p.paymentMethod))) return false;
+    }
+    return true;
+  }
+  async function guardarEdicion(p) {
+    const r = editRes;
+    const { datosLimpios } = prepRes(p);
+    let error;
+    if (r.propia) ({ error } = await supabase.from('reservas').update({ ...datosLimpios, modificado_por: myName }).eq('id', r.id));
+    else {
+      const k = ['huesped', 'telefono', 'email', 'nacionalidad', 'tipo_doc', 'num_doc', 'url_ine_frente', 'url_ine_dorso', 'fecha_nacimiento', 'acompanantes'];
+      const datos = {};
+      k.forEach((c) => { if (datosLimpios[c] !== undefined) datos[c] = datosLimpios[c]; });
+      ({ error } = await supabase.rpc('equipo_contacto', { p_id: String(r.id), p_datos: datos }));
+    }
+    if (error) { notifyError(error, 'guardar los cambios', { keep: true }); return; }
+    notify('Cambios guardados · ' + (p.guestName || r.guestName || ''));
+    setEditRes(null);
+    refresh();
+  }
+
   // ── habitaciones del día ────────────────────────────────────────────────────
   async function markRoom(r, field) {
     const key = field === 'lista' ? 'ready_at' : 'out_at';
+    const sale = field === 'salieron' && !r.out_at && canCheck && r.sale_id ? resById(r.sale_id) : null;
+    if (sale && sale.status === 'hospedado') {
+      // "Ya salieron" también hace el check-out (la base marca que salieron)
+      if (saldoDe(sale) > 0 && !(await confirmar('Todavía debe ' + money(saldoDe(sale)) + '. ¿Marcar que salieron igual?', 'Sí, salieron'))) return;
+      patchLocal('marcas', (a) => [...a.filter((m) => !(m.fecha === t && m.habitacion === r.room)), { ...(a.find((m) => m.fecha === t && m.habitacion === r.room) || {}), propiedad: PROP, fecha: t, habitacion: r.room, salieron_en: new Date().toISOString(), salieron_por_nombre: myName }]);
+      vib(30);
+      await rpcTodas('equipo_checkout', [sale], 'hacer el check-out');
+      return;
+    }
     if (r[key] && !(await confirmar(field === 'lista' ? '¿Desmarcar la habitación ' + r.num + '?' : '¿Desmarcar que salieron de la habitación ' + r.num + '?', 'Sí, desmarcar'))) return;
     const now = new Date().toISOString();
     const on = !r[key];
@@ -389,9 +463,12 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
     const sub = [];
     if (tot > 1) sub.push(ready === tot ? '¡Todas listas!' : `${ready} de ${tot} listas`);
     if (!own && pendSE && pend.length > pendSE) sub.push(pendSE === 1 ? 'Empieza por la que tiene entrada :)' : 'Empieza por las que tienen entrada :)');
-    const ln = (icn, cls, lab, name, hr, hc = '') => (
-      <div className={'rln ' + cls}><I n={icn} /><span className="rlb">{lab}</span><span className="rnm">{name || ''}</span><span className={'rtm ' + hc}>{hr}</span></div>
-    );
+    const ln = (icn, cls, lab, name, hr, hc = '', id = null) => {
+      const go = canOpen && id && resById(id) ? () => setDrawerId(id) : null;
+      return (
+        <div className={'rln ' + cls + (go ? ' eq-tap' : '')} onClick={go || undefined}><I n={icn} /><span className="rlb">{lab}</span><span className="rnm">{name || ''}{go ? <I n="chev" /> : null}</span><span className={'rtm ' + hc}>{hr}</span></div>
+      );
+    };
     const row = (r) => {
       const s = RST[r.status], est = r.status === 'estancia', ok = !!r.ready_at, lin = linOn(r, r.date), dN = est ? stayDay(r, r.date) : 0;
       const islate = r.departure && r.departure.slice(0, 5) !== '11:00';
@@ -420,9 +497,9 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
           <div className="tx">
             <span className="rchip">{lin ? 'Cambio de sábanas y toallas' : s.l}</span>{own && dN ? <span className="rday">Día {dN}</span> : null}
             <div className="rls">
-              {r.status === 'salida' || r.status === 'sale_entra' ? ln('rout', 'out', 'Sale', r.guest, dep, islate ? 'late' : '') : null}
-              {r.status === 'entrada' || r.status === 'sale_entra' ? ln('rin', 'in', 'Entra', r.guest_in, arr) : null}
-              {est ? ln('rstay', 'stay', 'Se queda', r.guest, lin ? 'Limpieza profunda' : 'Repaso', lin ? 'deep' : '') : null}
+              {r.status === 'salida' || r.status === 'sale_entra' ? ln('rout', 'out', 'Sale', r.guest, dep, islate ? 'late' : '', r.sale_id) : null}
+              {r.status === 'entrada' || r.status === 'sale_entra' ? ln('rin', 'in', 'Entra', r.guest_in, arr, '', r.entra_id) : null}
+              {est ? ln('rstay', 'stay', 'Se queda', r.guest, lin ? 'Limpieza profunda' : 'Repaso', lin ? 'deep' : '', r.queda_id) : null}
             </div>
             {act}
           </div>
@@ -542,7 +619,7 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
         <button className="dopt mo" onClick={() => { setDial(false); setSup({}); }}><span>Insumos</span><i>🧴</i></button>
         <button className="dopt" onClick={() => { setDial(false); setSheet({}); }}><span>Notas</span><i>📝</i></button>
       </div>
-      {loaded ? <button className="fab" aria-label="Agregar" onClick={() => setDial(!dial)}>＋</button> : null}
+      {loaded && !drawerId && !editRes && !form && !quoter ? <button className="fab" aria-label="Agregar" onClick={() => setDial(!dial)}>＋</button> : null}
 
       {sheet ? <NoteSheet key={sheet.edit?.id || 'new'} edit={sheet.edit} owner={view === 'owner'} role={role} myName={myName} tareas={tareas} fotos={fotos}
         onClose={(saved) => { const wasFin = fin; setSheet(null); refresh(); if (wasFin === 'note') setFin(saved && !sheet.edit ? 'again' : finStep.current); }} /> : null}
@@ -552,7 +629,7 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
         onYes={() => { if (fin === 'warn') setFin('first'); else if (fin === 'sup') { setFin(null); setSup({ fin: true }); } else { finStep.current = fin; setFin('note'); setSheet({}); } }}
         onNo={() => { if (fin === 'warn') setFin(null); else if (fin === 'sup') closeDay(); else setFin('sup'); }}
         onClose={() => setFin(null)} /> : null}
-      {(canQuote || canBook) && typeof document !== 'undefined' ? createPortal(<div style={{ fontFamily: 'var(--font)', color: 'var(--ink)', WebkitFontSmoothing: 'antialiased' }}>
+      {(canQuote || canOpen) && typeof document !== 'undefined' ? createPortal(<div style={{ fontFamily: 'var(--font)', color: 'var(--ink)', WebkitFontSmoothing: 'antialiased' }}>
         <AnimatePresence>{quoter && (
           <Modal key="quoter" title="Cotizar" icon="calculator" onClose={() => setQuoter(null)} isMobile={isMobile} tall>
             <Quoter allRes={data.allRes || []} tarifas={tarifas} initialIn={quoter.initialIn || ''} onClose={() => setQuoter(null)}
@@ -578,6 +655,23 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
                 const ch = form.chain || { i: 1, total: q.length + 1 };
                 setForm({ initial: { ...next.initial, ...carry }, rooms: next.rooms, queue: rest, chain: { i: ch.i + 1, total: ch.total }, key: Date.now() });
               }} />
+          </Modal>
+        )}</AnimatePresence>
+        <AnimatePresence>{drawerId && resById(drawerId) && (
+          <ResDrawer key="drawer" res={resById(drawerId)} onClose={() => setDrawerId(null)}
+            onEdit={(r) => { setDrawerId(null); setEditRes(r); }}
+            onDelete={() => {}} onToggleBlacklist={() => {}}
+            onOpenRes={(r) => setDrawerId(r.id)}
+            onCheckIn={canCheck ? hacerCheckIn : undefined} onCheckOut={canCheck ? hacerCheckOut : undefined}
+            onPay={canCheck ? cobrarPagos : undefined}
+            properties={PROPS} allRes={data.allRes || []} guestDecisions={[]} isMobile={isMobile} tarifas={tarifas}
+            equipo={{ onCobrar: canCheck ? cobrar : null }} />
+        )}</AnimatePresence>
+        <AnimatePresence>{editRes && (
+          <Modal key="edit" title={editRes.propia ? 'Editar reserva' : 'Datos del huésped'} onClose={() => setEditRes(null)} isMobile={isMobile} tall>
+            <ResForm initial={editRes} visibleProps={PROPS} allRes={data.allRes || []} guestDecisions={[]} tarifas={tarifas}
+              soloDatos={!editRes.propia} canPrice={puede(user, 'precio')} fixedSource={editRes.propia ? 'Directo-Puerta' : ''}
+              onClose={() => setEditRes(null)} onSave={guardarEdicion} />
           </Modal>
         )}</AnimatePresence>
       </div>, document.body) : null}

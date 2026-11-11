@@ -20,3 +20,7 @@
 .eq .rfr.eq-tap { cursor: pointer; border-radius: 10px; transition: background .15s; }
 .eq .rfr.eq-tap:active { background: var(--fill); }
 .eq button.rfwa { border: 0; font-family: inherit; }
+/* Paso 9: el nombre del huésped abre el panel de la reserva */
+.eq .rln.eq-tap { cursor: pointer; border-radius: 8px; }
+.eq .rln.eq-tap:active { background: rgba(0,0,0,.05); }
+.eq .rln.eq-tap .rnm svg { width: 13px; height: 13px; opacity: .45; vertical-align: -2px; margin-left: 3px; }
