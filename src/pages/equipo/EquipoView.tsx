@@ -16,8 +16,21 @@ import { ROOMS } from '../../lib/constants';
 import { fmt } from '../../lib/dates';
 import { TIPS, careLine, WATER_NUDGE, waterText, HELP } from '../../lib/equipoVoz';
 import { I } from './icons';
+import { movTexto, cuando, visoTexto } from '../../lib/movimientos';
 import { pushSupported, pushGranted, pushBlocked, isIOS, isStandalone, enablePush, syncPush } from '../../lib/push';
 import Sortable from 'sortablejs';
+import { createPortal } from 'react-dom';
+import { AnimatePresence } from 'motion/react';
+import { Modal } from '../../components/ui/Modal';
+import { Toast } from '../../components/ui/Toast';
+import { Quoter } from '../../components/Quoter';
+import { ResForm } from '../../components/reservations/ResForm';
+import { ResDrawer } from '../../components/reservations/ResDrawer';
+import { puede } from '../../lib/roles';
+import { prepRes } from '../../lib/resDb';
+import { PERSON_FIELDS } from '../../lib/groups';
+import { PROPS } from '../../lib/constants';
+import { SAVED } from '../../lib/voice';
 import './limpieza-base.css';
 import './equipo.css';
 
@@ -59,13 +72,28 @@ function burst() {
   }
 }
 
-export function EquipoView({ user, who = '', standalone = false, onLogout = null }) {
+export function EquipoView({ user, who = '', standalone = false, onLogout = null, movs = [], onOpenMov = null, onVisto = null }) {
   const isDueno = user?.role === 'dueno';
   const role = isDueno ? 'owner' : 'mary';
   const myName = isDueno ? who || 'Dueños' : user?.name || 'Mary';
   const maryName = isDueno ? 'Mary' : myName;
   const [view, setView] = useState(isDueno ? 'owner' : 'mary');
   const own = isDueno && view === 'owner';
+  // Paso 9: Mary cotiza y reserva (los mismos Cotizar y formulario de los dueños, canal Por puerta)
+  const canQuote = !isDueno && puede(user, 'cotizar');
+  const canBook = !isDueno && puede(user, 'reservar');
+  const canCheck = !isDueno && puede(user, 'checkin'); // check-in/out y cobrar el saldo
+  const canOpen = canBook || canCheck; // tocar el nombre abre el panel de la reserva
+  const [drawerId, setDrawerId] = useState(null);
+  const [editRes, setEditRes] = useState(null); // reserva a editar (propia: todo; ajena: solo datos del huésped)
+  const [quoter, setQuoter] = useState(null); // { initialIn }
+  const [form, setForm] = useState(null); // { initial, rooms, queue, chain, key }
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 769);
+  useEffect(() => {
+    const r = () => setIsMobile(window.innerWidth < 769);
+    window.addEventListener('resize', r);
+    return () => window.removeEventListener('resize', r);
+  }, []);
 
   const [data, setData] = useState({ tareas: [], fotos: {}, dia: null, insumos: [], marcas: [], reservas: [], tarifas: [] });
   const [loaded, setLoaded] = useState(false);
@@ -87,9 +115,9 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
   const rootRef = useRef(null);
   const load = useCallback(async () => {
     if (dragging.current) { clearTimeout(rt.current); rt.current = setTimeout(load, 400); return; }
-    try { const d = await loadEquipo(); if (!dragging.current) { setData(d); setLoaded(true); setLoadErr(''); } }
+    try { const d = await loadEquipo({ conReservas: canQuote || canOpen }); if (!dragging.current) { setData(d); setLoaded(true); setLoadErr(''); } }
     catch (e) { setLoadErr(e?.message || 'sin conexión'); }
-  }, []);
+  }, [canQuote, canBook]);
   const refresh = useCallback(() => { clearTimeout(rt.current); rt.current = setTimeout(load, 80); }, [load]);
   useEffect(() => {
     load();
@@ -213,9 +241,100 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
     setFin(null); setSup(null); setShowDay(false); burst(); refresh();
   }
 
+  // ── Reservas de Mary (paso 9) ───────────────────────────────────────────────
+  // Guarda como los dueños (prepRes); la base anota quién la cargó y avisa a los dueños.
+  async function guardarReserva(input) {
+    const lista = Array.isArray(input) ? input : [input];
+    const momento = new Date().toLocaleString('es-MX', { timeZone: 'America/Merida', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const filas = lista.map((r) => {
+      const p = prepRes({ ...r, source: r.source || 'Directo-Puerta' });
+      return { ...p.datosLimpios, fecha_carga: momento, usuario_carga: myName, modificado_por: myName };
+    });
+    const { error } = await supabase.from('reservas').insert(filas);
+    if (error) { notifyError(error, lista.length > 1 ? 'guardar el grupo' : 'guardar la reserva', { keep: true }); return false; }
+    notify(lista.length > 1 ? SAVED.grupo(lista) : SAVED.reserva(lista[0]));
+    refresh();
+    return true;
+  }
+  function abrirReserva(queue) {
+    const [first, ...rest] = queue;
+    const ini = { ...first.initial, source: 'Directo-Puerta' };
+    if (!ini.status) ini.status = ini.checkIn === t ? 'hospedado' : 'por_llegar';
+    setForm({ initial: ini, rooms: first.rooms, queue: rest, chain: queue.length > 1 ? { i: 1, total: queue.length } : null, key: Date.now() });
+  }
+
+  // Panel de la reserva: check-in, check-out ("Ya salieron") y cobro, por funciones de la base
+  const resById = (id) => (data.allRes || []).find((x) => String(x.id) === String(id));
+  const saldoDe = (r) => (r.sinMontos ? Number(r.saldo) || 0 : Math.max(0, (Number(r.totalAmount) || 0) - (Number(r.paid) || 0)));
+  const nombreDe = (lista) => (lista.length > 1 ? lista.length + ' habitaciones' : (lista[0].guestName || 'el huésped') + ' (' + (lista[0].room || '') + ')');
+  async function rpcTodas(fn, lista, que) {
+    for (const r of lista) {
+      const { error } = await supabase.rpc(fn, { p_id: String(r.id) });
+      if (error) { notifyError(error, que); refresh(); return false; }
+    }
+    refresh();
+    return true;
+  }
+  async function hacerCheckIn(x) {
+    const lista = Array.isArray(x) ? x : [x];
+    setDrawerId(null);
+    if (!(await confirmar('¿Ya llegó ' + nombreDe(lista) + '?', 'Sí, hacer check-in'))) return;
+    if (await rpcTodas('equipo_checkin', lista, 'hacer el check-in')) { vib(30); notify('Check-in hecho · ' + nombreDe(lista)); }
+  }
+  async function hacerCheckOut(x) {
+    const lista = Array.isArray(x) ? x : [x];
+    setDrawerId(null);
+    const debe = lista.reduce((a, r) => a + saldoDe(r), 0);
+    const txt = debe > 0 ? 'Todavía debe ' + money(debe) + '. ¿Hacer el check-out igual?' : '¿Ya salió ' + nombreDe(lista) + '?';
+    if (!(await confirmar(txt, 'Sí, hacer check-out'))) return;
+    if (await rpcTodas('equipo_checkout', lista, 'hacer el check-out')) { vib(30); notify('Check-out hecho · ' + nombreDe(lista)); }
+  }
+  async function cobrar(r, monto, forma) {
+    const { error } = await supabase.rpc('equipo_cobrar', { p_id: String(r.id), p_monto: monto, p_forma: forma });
+    if (error) { notifyError(error, 'guardar el cobro'); return false; }
+    notify('Cobro guardado · ' + money(monto));
+    refresh();
+    return true;
+  }
+  // Cobro de sus propias reservas (el panel completo manda el nuevo total pagado)
+  async function cobrarPagos(pagos) {
+    for (const p of pagos) {
+      const r = resById(p.id);
+      const delta = (Number(p.paid) || 0) - (Number(r?.paid) || 0);
+      if (!r || delta <= 0) continue;
+      if (!(await cobrar(r, delta, p.paymentMethod))) return false;
+    }
+    return true;
+  }
+  async function guardarEdicion(p) {
+    const r = editRes;
+    const { datosLimpios } = prepRes(p);
+    let error;
+    if (r.propia) ({ error } = await supabase.from('reservas').update({ ...datosLimpios, modificado_por: myName }).eq('id', r.id));
+    else {
+      const k = ['huesped', 'telefono', 'email', 'nacionalidad', 'tipo_doc', 'num_doc', 'url_ine_frente', 'url_ine_dorso', 'fecha_nacimiento', 'acompanantes'];
+      const datos = {};
+      k.forEach((c) => { if (datosLimpios[c] !== undefined) datos[c] = datosLimpios[c]; });
+      ({ error } = await supabase.rpc('equipo_contacto', { p_id: String(r.id), p_datos: datos }));
+    }
+    if (error) { notifyError(error, 'guardar los cambios', { keep: true }); return; }
+    notify('Cambios guardados · ' + (p.guestName || r.guestName || ''));
+    setEditRes(null);
+    refresh();
+  }
+
   // ── habitaciones del día ────────────────────────────────────────────────────
   async function markRoom(r, field) {
     const key = field === 'lista' ? 'ready_at' : 'out_at';
+    const sale = field === 'salieron' && !r.out_at && canCheck && r.sale_id ? resById(r.sale_id) : null;
+    if (sale && sale.status === 'hospedado') {
+      // "Ya salieron" también hace el check-out (la base marca que salieron)
+      if (saldoDe(sale) > 0 && !(await confirmar('Todavía debe ' + money(saldoDe(sale)) + '. ¿Marcar que salieron igual?', 'Sí, salieron'))) return;
+      patchLocal('marcas', (a) => [...a.filter((m) => !(m.fecha === t && m.habitacion === r.room)), { ...(a.find((m) => m.fecha === t && m.habitacion === r.room) || {}), propiedad: PROP, fecha: t, habitacion: r.room, salieron_en: new Date().toISOString(), salieron_por_nombre: myName }]);
+      vib(30);
+      await rpcTodas('equipo_checkout', [sale], 'hacer el check-out');
+      return;
+    }
     if (r[key] && !(await confirmar(field === 'lista' ? '¿Desmarcar la habitación ' + r.num + '?' : '¿Desmarcar que salieron de la habitación ' + r.num + '?', 'Sí, desmarcar'))) return;
     const now = new Date().toISOString();
     const on = !r[key];
@@ -283,6 +402,38 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
   const sec = (key, title, a, c) => (a.length ? <div key={key} className={'grp ' + c} data-grp={c}><h2>{title}</h2>{a.map((x) => item(x, c))}</div> : null);
   const obsSec = (key, title, a) => (a.length ? <div key={key}><h2 className="hl">{title}</h2>{a.map((x) => item(x, 'obs'))}</div> : null);
 
+  // Movimientos de Mary con reservas (paso 9, solo dueños): los que faltan ver quedan hasta tocar "Visto";
+  // los vistos de hoy quedan abajo en gris y al día siguiente se limpian (como Limpieza)
+  const MOV_I = { nueva: 'cal', edicion: 'pencil', cancelacion: 'alert', checkin: 'rin', checkout: 'rout', cobro: 'check' };
+  const movSec = () => {
+    if (!own || !movs.length) return null;
+    const pend = movs.filter((m) => !m.visto), vis = movs.filter((m) => m.visto);
+    const mi = (m) => {
+      const tx = movTexto(m);
+      return (
+        <div key={m.id} className={'it eq-mov ' + (m.visto ? 'seen' : 'obs')} onClick={() => onOpenMov && onOpenMov(m)}>
+          <span className="ico"><I n={MOV_I[m.tipo] || 'pencil'} c={m.visto ? 'm' : m.tipo === 'cancelacion' ? 'r' : 'a'} /></span>
+          <div className="tx">
+            <b>{tx.title}</b>
+            <div className="eq-movb">{tx.body}</div>
+            <div className="eq-movt">{cuando(m.creado_en)}</div>
+            {m.visto
+              ? <div className="ack ok"><I n="tick" /> {visoTexto(m)}</div>
+              : <button className="btn okb" onClick={(e) => { e.stopPropagation(); onVisto && onVisto([m.id]); }}><I n="tick" /> Visto</button>}
+          </div>
+        </div>
+      );
+    };
+    return (
+      <div key="movs">
+        <h2 className="hl"><I n="eye" />Movimientos de Mary{pend.length ? ` (${pend.length})` : ''}</h2>
+        {pend.map(mi)}
+        {pend.length > 1 ? <button className="fdlink eq-movall" onClick={() => onVisto && onVisto(pend.map((m) => m.id))}>Marcar todos como vistos</button> : null}
+        {vis.length ? <><div className="zl">Vistos hoy</div>{vis.map(mi)}</> : null}
+      </div>
+    );
+  };
+
   // Tu momento
   const care = () => {
     const day = Math.floor(Date.now() / 864e5), pick = (a) => a[day % a.length];
@@ -322,19 +473,18 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
       const x = list.find((q) => q.room === r.id);
       return { n: r.id.replace(/^P/, ''), ok: !x || !!x.ready_at, rate: priceToday(r.id, t, tarifas) };
     });
-    const wa = 'whatsapp://send?phone=' + WA.Gian + '&text=' + encodeURIComponent('Hola, preguntan por una habitación para hoy. ¿Hay alguna promo vigente?');
     const freeSec = (
       <div className="rfree">
         <div className="rfh"><I n="key" />Libres hoy</div>
         {free.length ? <>
           {!own ? <div className="muted rfs">Revisa que estén todas ok, por cualquier detalle :)</div> : null}
           {free.map((fr) => (
-            <div className="rfr" key={fr.n}>
+            <div className={'rfr' + (canQuote ? ' eq-tap' : '')} key={fr.n} onClick={canQuote ? () => setQuoter({ initialIn: t }) : undefined}>
               <div className="rft"><b>Hab {fr.n}</b><span className={'rfst ' + (fr.ok ? 'ok' : '')}>{fr.ok ? 'lista' : 'falta limpiar'}</span><span className={'rfp ' + (fr.rate ? '' : 'rfq')}>{fr.rate ? money(fr.rate.price) : 'consultar precio'}</span></div>
               {fr.rate ? <div className="muted rfd">Tarifa para {fr.rate.guests} personas{fr.rate.extra ? ' · ' + money(fr.rate.extra) + ' por persona adicional' : ''}</div> : null}
             </div>
           ))}
-          {!own ? <><div className="muted rfm">Precio por noche de hoy. Para promos o varias noches, consulta antes :)</div><a className="pill rfwa" href={wa}><img src="/whatsapp.png" alt="" /> Preguntar por WhatsApp</a></> : null}
+          {!own ? <><div className="muted rfm">{canQuote ? 'Precio por noche de hoy. Para varias noches, más personas o promos, toca Cotizar :)' : 'Precio por noche de hoy. Para promos o varias noches, consulta antes :)'}</div>{canQuote ? <button className="pill rfwa" onClick={() => setQuoter({ initialIn: t })}><I n="calc" c="a" /> Cotizar</button> : null}</> : null}
         </> : <div className="muted">Hoy no queda ninguna libre.</div>}
       </div>
     );
@@ -346,9 +496,12 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
     const sub = [];
     if (tot > 1) sub.push(ready === tot ? '¡Todas listas!' : `${ready} de ${tot} listas`);
     if (!own && pendSE && pend.length > pendSE) sub.push(pendSE === 1 ? 'Empieza por la que tiene entrada :)' : 'Empieza por las que tienen entrada :)');
-    const ln = (icn, cls, lab, name, hr, hc = '') => (
-      <div className={'rln ' + cls}><I n={icn} /><span className="rlb">{lab}</span><span className="rnm">{name || ''}</span><span className={'rtm ' + hc}>{hr}</span></div>
-    );
+    const ln = (icn, cls, lab, name, hr, hc = '', id = null) => {
+      const go = canOpen && id && resById(id) ? () => setDrawerId(id) : null;
+      return (
+        <div className={'rln ' + cls + (go ? ' eq-tap' : '')} onClick={go || undefined}><I n={icn} /><span className="rlb">{lab}</span><span className="rnm">{name || ''}{go ? <I n="chev" /> : null}</span><span className={'rtm ' + hc}>{hr}</span></div>
+      );
+    };
     const row = (r) => {
       const s = RST[r.status], est = r.status === 'estancia', ok = !!r.ready_at, lin = linOn(r, r.date), dN = est ? stayDay(r, r.date) : 0;
       const islate = r.departure && r.departure.slice(0, 5) !== '11:00';
@@ -377,9 +530,9 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
           <div className="tx">
             <span className="rchip">{lin ? 'Cambio de sábanas y toallas' : s.l}</span>{own && dN ? <span className="rday">Día {dN}</span> : null}
             <div className="rls">
-              {r.status === 'salida' || r.status === 'sale_entra' ? ln('rout', 'out', 'Sale', r.guest, dep, islate ? 'late' : '') : null}
-              {r.status === 'entrada' || r.status === 'sale_entra' ? ln('rin', 'in', 'Entra', r.guest_in, arr) : null}
-              {est ? ln('rstay', 'stay', 'Se queda', r.guest, lin ? 'Limpieza profunda' : 'Repaso', lin ? 'deep' : '') : null}
+              {r.status === 'salida' || r.status === 'sale_entra' ? ln('rout', 'out', 'Sale', r.guest, dep, islate ? 'late' : '', r.sale_id) : null}
+              {r.status === 'entrada' || r.status === 'sale_entra' ? ln('rin', 'in', 'Entra', r.guest_in, arr, '', r.entra_id) : null}
+              {est ? ln('rstay', 'stay', 'Se queda', r.guest, lin ? 'Limpieza profunda' : 'Repaso', lin ? 'deep' : '', r.queda_id) : null}
             </div>
             {act}
           </div>
@@ -453,6 +606,7 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
         {view === 'mary' && total && !done ? <div className="hint"><I n="check" /> Toca el círculo en cuanto termines cada tarea :)</div> : null}
         {view === 'mary' ? (closed ? <div className="closed"><I n="check" c="g" /> Día cerrado · Gracias por todo 💛</div> : all ? <button className="btn fin2" onClick={() => role === 'mary' && setFin(pendNames.length ? 'warn' : 'first')}><I n="moon" /> Cerrar el día</button> : null) : null}
       </div>
+      {movSec()}
       {view === 'owner'
         ? <>{obsSec('am', <><I n="pencil" />Avisos de Mary</>, obsM)}{obsSec('mm', <><I n="megaphone" />Mensajes para Mary</>, obsO)}</>
         : <>{obsSec('mt', <><I n="megaphone" />Mensajes para ti</>, obsO)}{obsSec('la', <><I n="pencil" />Lo que anotaste hoy</>, obsM)}</>}
@@ -482,6 +636,8 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
       <div className="top">
         <div><h1>{hi}</h1><div className="sub">{fecha}</div></div>
         <div className="row">
+          {canQuote ? <button className="pill" onClick={() => setQuoter({})}><I n="calc" c="a" /> Cotizar</button> : null}
+          {canBook ? <button className="pill" onClick={() => setForm({ initial: null, key: Date.now() })}><I n="cal" c="a" /> Reservar</button> : null}
           {!isDueno && !pushOn ? <button className="pill" onClick={activarAvisos}><I n="bell" c="a" /> Activar avisos</button> : null}
           {isDueno ? <button className="pill" onClick={() => setView(view === 'owner' ? 'mary' : 'owner')}>{view === 'owner' ? 'Ver como Mary' : 'Volver a dueños'}</button> : null}
           {onLogout ? <button className="pill" onClick={onLogout}>Salir</button> : null}
@@ -498,7 +654,7 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
         <button className="dopt mo" onClick={() => { setDial(false); setSup({}); }}><span>Insumos</span><i>🧴</i></button>
         <button className="dopt" onClick={() => { setDial(false); setSheet({}); }}><span>Notas</span><i>📝</i></button>
       </div>
-      {loaded ? <button className="fab" aria-label="Agregar" onClick={() => setDial(!dial)}>＋</button> : null}
+      {loaded && !drawerId && !editRes && !form && !quoter ? <button className="fab" aria-label="Agregar" onClick={() => setDial(!dial)}>＋</button> : null}
 
       {sheet ? <NoteSheet key={sheet.edit?.id || 'new'} edit={sheet.edit} owner={view === 'owner'} role={role} myName={myName} tareas={tareas} fotos={fotos}
         onClose={(saved) => { const wasFin = fin; setSheet(null); refresh(); if (wasFin === 'note') setFin(saved && !sheet.edit ? 'again' : finStep.current); }} /> : null}
@@ -508,6 +664,53 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
         onYes={() => { if (fin === 'warn') setFin('first'); else if (fin === 'sup') { setFin(null); setSup({ fin: true }); } else { finStep.current = fin; setFin('note'); setSheet({}); } }}
         onNo={() => { if (fin === 'warn') setFin(null); else if (fin === 'sup') closeDay(); else setFin('sup'); }}
         onClose={() => setFin(null)} /> : null}
+      {(canQuote || canOpen) && typeof document !== 'undefined' ? createPortal(<div style={{ fontFamily: 'var(--font)', color: 'var(--ink)', WebkitFontSmoothing: 'antialiased' }}>
+        <AnimatePresence>{quoter && (
+          <Modal key="quoter" title="Cotizar" icon="calculator" onClose={() => setQuoter(null)} isMobile={isMobile} tall>
+            <Quoter allRes={data.allRes || []} tarifas={tarifas} initialIn={quoter.initialIn || ''} onClose={() => setQuoter(null)}
+              onReserve={({ queue }) => { setQuoter(null); if (canBook) abrirReserva(queue); }} />
+          </Modal>
+        )}</AnimatePresence>
+        <AnimatePresence>{form && (
+          <Modal key="new" title={form.chain ? `Nueva reserva · ${form.chain.i} de ${form.chain.total} (cambio de habitación)` : 'Nueva reserva'} onClose={() => setForm(null)} isMobile={isMobile} tall>
+            <ResForm key={form.key} visibleProps={PROPS} prefillProp="hostel" prefillDate={form.initial?.checkIn || t}
+              initial={form.initial} initialRooms={form.rooms || null} allRes={data.allRes || []} guestDecisions={[]} tarifas={tarifas}
+              fixedSource="Directo-Puerta" canPrice={puede(user, 'precio')}
+              onClose={() => setForm(null)}
+              onSave={async (p) => {
+                const ok = await guardarReserva(p);
+                if (!ok) return;
+                const q = form.queue || [];
+                if (!q.length) { setForm(null); return; }
+                // Cambio de habitación: abre la siguiente con los mismos datos del huésped
+                const g = Array.isArray(p) ? p[0] : p;
+                const carry = {};
+                [...PERSON_FIELDS, 'source', 'requiresInvoice', 'company', 'status'].forEach((k) => { if (g && g[k] !== undefined) carry[k] = g[k]; });
+                const [next, ...rest] = q;
+                const ch = form.chain || { i: 1, total: q.length + 1 };
+                setForm({ initial: { ...next.initial, ...carry }, rooms: next.rooms, queue: rest, chain: { i: ch.i + 1, total: ch.total }, key: Date.now() });
+              }} />
+          </Modal>
+        )}</AnimatePresence>
+        <AnimatePresence>{drawerId && resById(drawerId) && (
+          <ResDrawer key="drawer" res={resById(drawerId)} onClose={() => setDrawerId(null)}
+            onEdit={(r) => { setDrawerId(null); setEditRes(r); }}
+            onDelete={() => {}} onToggleBlacklist={() => {}}
+            onOpenRes={(r) => setDrawerId(r.id)}
+            onCheckIn={canCheck ? hacerCheckIn : undefined} onCheckOut={canCheck ? hacerCheckOut : undefined}
+            onPay={canCheck ? cobrarPagos : undefined}
+            properties={PROPS} allRes={data.allRes || []} guestDecisions={[]} isMobile={isMobile} tarifas={tarifas}
+            equipo={{ onCobrar: canCheck ? cobrar : null }} />
+        )}</AnimatePresence>
+        <AnimatePresence>{editRes && (
+          <Modal key="edit" title={editRes.propia ? 'Editar reserva' : 'Datos del huésped'} onClose={() => setEditRes(null)} isMobile={isMobile} tall>
+            <ResForm initial={editRes} visibleProps={PROPS} allRes={data.allRes || []} guestDecisions={[]} tarifas={tarifas}
+              soloDatos={!editRes.propia} canPrice={puede(user, 'precio')} fixedSource={editRes.propia ? 'Directo-Puerta' : ''}
+              onClose={() => setEditRes(null)} onSave={guardarEdicion} />
+          </Modal>
+        )}</AnimatePresence>
+      </div>, document.body) : null}
+      {standalone ? <Toast isMobile={isMobile} /> : null}
       {zoom ? <div className="zoom on" onClick={() => setZoom('')}><img src={zoom} alt="" /></div> : null}
       {ask ? (
         <div className="sheet on" onClick={(e) => { if (e.target === e.currentTarget) { ask.resolve(false); setAsk(null); } }}>

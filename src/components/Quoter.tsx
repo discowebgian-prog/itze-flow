@@ -128,7 +128,7 @@ export function Step({ num, title, done = false, glow = false, boxRef = undefine
   );
 }
 
-export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
+export function Quoter({ allRes = [], tarifas = [], onReserve, onClose, initialIn = '' }) {
   // Arranca sin fechas: Personas aparece recién al elegir entrada y salida
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
@@ -143,7 +143,8 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose }) {
   const [planOn, setPlanOn] = useState(false); // cotizar con cambio de habitación
   const [calKey, setCalKey] = useState(0); // para que el almanaque salte al mes de las fechas sugeridas
   // Entrada tocada, esperando la salida: lo de abajo sigue con las fechas anteriores (atenuado) para que nada salte
-  const [draftIn, setDraftIn] = useState(null);
+  // initialIn (Equipo, desde Libres hoy): arranca con la entrada elegida, falta tocar la salida
+  const [draftIn, setDraftIn] = useState(initialIn || null);
   const picking = draftIn !== null;
   // Recorrido guiado: fechas → Personas (resaltado) → habitaciones → cotización
   const [glowKey, setGlowKey] = useState(0); // sube al elegir fechas: Personas entra con resaltado

@@ -7,6 +7,7 @@ import { nowMerida } from './voice';
 import { fmt, addDays } from './dates';
 import { ROOMS } from './constants';
 import { roomTypeOf, nightPrice, BASE_GUESTS } from './rates';
+import { rowToRes } from './resMap';
 
 export const PROP = 'hostel'; // por ahora una sola propiedad (las tablas ya guardan cuál)
 
@@ -82,6 +83,8 @@ export function roomsOfDay(reservas, marks, d) {
     const late = sale && sale.late_checkout_hora ? String(sale.late_checkout_hora).slice(0, 5) : '';
     out.push({
       date: d, room: id, num: roomNum(id), status,
+      // Ids de las reservas (paso 9: tocar el nombre abre el panel de la reserva)
+      sale_id: sale ? sale.id : null, entra_id: entra ? entra.id : null, queda_id: queda ? queda.id : null,
       guest: status === 'estancia' ? queda.huesped : sale ? sale.huesped : '',
       guest_in: entra ? entra.huesped : '',
       departure: late || SALIDA,
@@ -119,16 +122,18 @@ export function priceToday(roomId, d, tarifas) {
 
 // ── Carga ─────────────────────────────────────────────────────────────────────
 let spawned = '';
-export async function loadEquipo() {
+// conReservas (Mary, paso 9): también todas las reservas sin montos ajenos (equipo_reservas_todas) para Cotizar y Reservar
+export async function loadEquipo({ conReservas = false } = {}) {
   const hoy = hoyStr();
   if (spawned !== hoy) { spawned = hoy; await supabase.rpc('equipo_programadas_hoy'); }
-  const [t, d, s, m, r, ta] = await Promise.all([
+  const [t, d, s, m, r, ta, all] = await Promise.all([
     supabase.from('equipo_tareas').select('*').eq('propiedad', PROP).order('creada_en', { ascending: false }).limit(300),
     supabase.from('equipo_dias').select('*').eq('propiedad', PROP).eq('fecha', hoy).maybeSingle(),
     supabase.from('equipo_insumos').select('*').eq('propiedad', PROP).order('creado_en', { ascending: false }).limit(100),
     supabase.from('equipo_habitaciones').select('*').eq('propiedad', PROP).in('fecha', [prevOf(hoy), hoy, mananaStr()]),
     supabase.rpc('equipo_reservas', { p_desde: prevOf(hoy), p_hasta: mananaStr() }),
     supabase.from('tarifas').select('*'),
+    conReservas ? supabase.rpc('equipo_reservas_todas') : Promise.resolve({ data: null }),
   ]);
   if (t.error) throw t.error;
   const tareas = t.data || [];
@@ -147,6 +152,7 @@ export async function loadEquipo() {
     reservas: (r.error ? [] : r.data || []).filter((x) => (x.propiedad || PROP) === PROP),
     tarifas: ta.error ? [] : ta.data || [],
     sinReservas: !!r.error,
+    allRes: Array.isArray(all.data) ? all.data.map(rowToRes) : [],
     errReservas: r.error ? [r.error.code, r.error.message, r.error.details, r.error.hint].filter(Boolean).join(' · ') : '',
   };
 }

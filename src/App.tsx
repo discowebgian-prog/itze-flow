@@ -31,6 +31,8 @@ import { syncPush, sendPush } from './lib/push';
 import { ROLES, esDueno, puede } from './lib/roles';
 import { EquipoHome } from './pages/EquipoHome';
 import { EquipoView } from './pages/equipo/EquipoView';
+import { prepRes } from './lib/resDb';
+import { useMovimientos } from './lib/movimientos';
 
 
 // ── APP ───────────────────────────────────────────────────────────────────────
@@ -174,6 +176,9 @@ export default function AppMejorada() {
           grupoId: item.grupo_id || null,
           grupoTitular: item.grupo_titular === true,
           grupoReservante: item.grupo_reservante || null,
+          // Paso 9: la cargó alguien del equipo ("Cargada por Mary" en el panel)
+          cargadaPor: item.cargada_por || null,
+          cargadaPorNombre: item.cargada_por_nombre || '',
         };
       });
 
@@ -365,6 +370,9 @@ export default function AppMejorada() {
   // Animación al cambiar de pantalla: de qué lado entra la nueva (según el orden del menú)
   const prevTabRef = useRef(tab);
   const tabDirRef = useRef(0);
+  // Movimientos de Mary con reservas (paso 9): solo dueños; lista para marcar "Visto" en Inicio y en Equipo
+  const movs = useMovimientos(!!user && esDueno(user));
+
   if (!user) return <Login onLogin={setUser} />;
   // Equipo (y staff, sin uso todavía): no ve nada del resto de Flow.
   // Con el permiso "limpieza" (Mary) ve su sección Equipo, igual que hoy en Itzé Limpieza (paso 5).
@@ -393,6 +401,16 @@ export default function AppMejorada() {
     boxSizing: 'border-box',
   };
   const dupCount = isAdmin ? dupPairs.length : 0;
+  // Numeritos rojos del menú: Huéspedes = posibles duplicados; Equipo = movimientos de Mary sin ver
+  const navDots = { huespedes: dupCount, equipo: movs.pendientes.length };
+  const navDotTitle = { huespedes: 'Posibles huéspedes duplicados para revisar', equipo: 'Movimientos de Mary para marcar como vistos' };
+  // Tocar un movimiento de Mary abre el panel de esa reserva
+  const openMov = (m) => {
+    const r = res.find((x) => String(x.id) === String(m.reserva_id));
+    if (r) setDrawer(r);
+    else notify('Esa reserva ya no está en Flow (puede que se haya eliminado).', 'info');
+  };
+  const marcarVisto = (ids) => movs.marcarVisto(ids, who);
 
   // Guarda la decisión de un admin sobre un par de huéspedes
   const decideGuests = async (pair, decision) => {
@@ -476,76 +494,7 @@ export default function AppMejorada() {
     }
   };
   // Convierte una reserva de la app al formato de la base (y al de la pantalla)
-  const prepRes = (newRes) => {
-      // Evaluamos si el tilde está activo en cualquiera de sus variantes
-      const tieneFactura = newRes.requiresInvoice === true || newRes.requiresInvoice === 'true' || newRes.solicita_factura === true || newRes.solicita_factura === 'true';
-      
-      // Limpieza preventiva antes de guardar por si el usuario repitió el prefijo a mano
-      let telefonoLimpioGuardar = (newRes.guestPhone || '').trim();
-      if (newRes.guestPhonePrefix && telefonoLimpioGuardar.startsWith(newRes.guestPhonePrefix)) {
-        telefonoLimpioGuardar = telefonoLimpioGuardar.replace(newRes.guestPhonePrefix, '').trim();
-      }
-
-      // Empresa: solo se guarda si pidió factura (quien pide factura se considera Empresa)
-      const empresaGuardar = tieneFactura ? String(newRes.company || '').trim() : '';
-
-      const datosLimpios = {
-          huesped: newRes.guestName || 'Sin nombre',
-          habitacion: newRes.room || null,
-          fecha_ingreso: newRes.checkIn,
-          fecha_salida: newRes.checkOut,
-          estado: newRes.status || 'por_llegar',
-          monto: String(newRes.totalAmount || ''),
-          monto_pagado: String(newRes.paid || ''),
-          canal: newRes.source || 'Directo — Puerta',
-          nacionalidad: newRes.guestNationality || '',
-          tipo_doc: newRes.guestDocType || '',
-          num_doc: newRes.guestDoc || '',
-          telefono: newRes.guestPhonePrefix ? `${newRes.guestPhonePrefix} ${telefonoLimpioGuardar}` : telefonoLimpioGuardar,
-          email: newRes.guestEmail || '',
-          empresa: empresaGuardar,
-          late_checkout_hora: newRes.lateCheckout || null,
-          late_checkout_costo: newRes.lateCheckout ? Number(newRes.lateCost) || 0 : null,
-          cantidad_huespedes: String(newRes.totalGuests || 1),
-          acompanantes: newRes.companions || [],
-          forma_pago: newRes.paymentMethod || 'Efectivo',
-          notas: String(newRes.notes || newRes.notas || ''),
-          url_ine_frente: newRes.url_ine_frente || null,
-          url_ine_dorso: newRes.url_ine_dorso || null,
-          tarifa_base: String(newRes.pricing?.ratePerNight || ''),
-          descuento: String(newRes.pricing?.discountValue || 0),
-          tipo_descuento: newRes.pricing?.discountType || 'ninguno',
-          motivo_descuento: newRes.pricing?.discountReason || '',
-          adicionales: newRes.pricing?.additionals || [],
-            solicita_factura: tieneFactura ? 'true' : 'false',
-            lista_negra: newRes.lista_negra || false,
-            pin_acceso: newRes.pin_acceso || ''
-          };
-      // Las columnas de grupo solo se mandan si la reserva es de un grupo
-      // (así las reservas comunes se siguen guardando aunque falte correr grupos.sql)
-      // Fecha de nacimiento (supabase/fecha_nacimiento.sql): solo se manda si hay una cargada
-      if (newRes.birthDate) datosLimpios.fecha_nacimiento = newRes.birthDate;
-      if (newRes.grupoId) {
-        datosLimpios.grupo_id = newRes.grupoId;
-        datosLimpios.grupo_titular = !!newRes.grupoTitular;
-        if (newRes.grupoReservante) datosLimpios.grupo_reservante = newRes.grupoReservante;
-      }
-
-        // Mantenemos duplicados los formatos en el estado de React para no romper las vistas
-        const reservaParaEstado = {
-          ...newRes,
-          notes: newRes.notes || newRes.notas || '',
-          notas: newRes.notes || newRes.notas || '',
-          requiresInvoice: tieneFactura,
-          solicita_factura: tieneFactura, 
-          company: empresaGuardar,
-          lateCheckout: newRes.lateCheckout || '',
-          lateCost: newRes.lateCheckout ? Number(newRes.lateCost) || 0 : '',
-          lista_negra: newRes.lista_negra || false,
-          pin_acceso: newRes.pin_acceso || ''
-        };
-      return { datosLimpios, reservaParaEstado };
-  };
+  // prepRes (fila de la base) vive en src/lib/resDb.ts: lo usan también Equipo (paso 9)
 
   // Guarda una reserva, o varias:
   // - input es un array → reserva de grupo nueva (todas las habitaciones en un solo pedido:
@@ -1105,8 +1054,8 @@ const toggleBlacklist = async (id, currentStatus) => {
                 )}
                 <span style={{ display: 'flex', flexShrink: 0, position: 'relative' }}>
                   <Icon name={t.icon} size={20} />
-                  {t.id === 'huespedes' && dupCount > 0 && isTablet && (
-                    <span style={dupDotStyle}>{dupCount}</span>
+                  {navDots[t.id] > 0 && isTablet && (
+                    <span style={dupDotStyle}>{navDots[t.id]}</span>
                   )}
                 </span>
                 <span
@@ -1115,12 +1064,12 @@ const toggleBlacklist = async (id, currentStatus) => {
                 >
                   {t.label}
                 </span>
-                {t.id === 'huespedes' && dupCount > 0 && !isTablet && (
+                {navDots[t.id] > 0 && !isTablet && (
                   <span
-                    title="Posibles huéspedes duplicados para revisar"
+                    title={navDotTitle[t.id]}
                     style={{ ...dupDotStyle, position: 'static' }}
                   >
-                    {dupCount}
+                    {navDots[t.id]}
                   </span>
                 )}
               </button>
@@ -1211,6 +1160,9 @@ const toggleBlacklist = async (id, currentStatus) => {
               deviceName={deviceName}
               onWho={() => setWhoOpen(true)}
               decisions={guestDecisions}
+              movs={movs.pendientes}
+              onOpenMov={openMov}
+              onVisto={marcarVisto}
             />
           )}
           {tab === 'calendario' && (
@@ -1251,7 +1203,7 @@ const toggleBlacklist = async (id, currentStatus) => {
               focusBirthday={guestFocus}
             />
           )}
-          {tab === 'equipo' && <EquipoView user={user} who={who} />}
+          {tab === 'equipo' && <EquipoView user={user} who={who} movs={movs.movs} onOpenMov={openMov} onVisto={marcarVisto} />}
           {tab === 'tarifas' && (
             <RatesPage
               periods={tarifas}
@@ -1328,8 +1280,8 @@ const toggleBlacklist = async (id, currentStatus) => {
               }}
             >
               <Icon name={t.icon} size={22} />
-              {t.id === 'huespedes' && dupCount > 0 && (
-                <span style={dupDotStyle}>{dupCount}</span>
+              {navDots[t.id] > 0 && (
+                <span style={dupDotStyle}>{navDots[t.id]}</span>
               )}
             </motion.span>
             <span

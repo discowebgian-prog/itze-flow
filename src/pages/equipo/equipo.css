@@ -16,3 +16,16 @@
   .eq.eq-tab .fab { bottom: calc(env(safe-area-inset-bottom, 0px) + 104px); }
   .eq.eq-tab .dopts { bottom: calc(env(safe-area-inset-bottom, 0px) + 176px); }
 }
+/* Paso 9: habitaciones de Libres hoy tocables (abren Cotizar con entrada hoy) */
+.eq .rfr.eq-tap { cursor: pointer; border-radius: 10px; transition: background .15s; }
+.eq .rfr.eq-tap:active { background: var(--fill); }
+.eq button.rfwa { border: 0; font-family: inherit; }
+/* Paso 9: el nombre del huésped abre el panel de la reserva */
+.eq .rln.eq-tap { cursor: pointer; border-radius: 8px; }
+.eq .rln.eq-tap:active { background: rgba(0,0,0,.05); }
+.eq .rln.eq-tap .rnm svg { width: 13px; height: 13px; opacity: .45; vertical-align: -2px; margin-left: 3px; }
+/* Paso 9, parte 4: movimientos de Mary (vista de dueños) */
+.eq .it.eq-mov { cursor: pointer; }
+.eq .it.eq-mov .eq-movb { font-size: 14px; color: var(--ink-2, inherit); margin-top: 2px; line-height: 1.35; }
+.eq .it.eq-mov .eq-movt { font-size: 12.5px; color: var(--mut); margin-top: 2px; }
+.eq .fdlink.eq-movall { margin: 0 0 8px auto; padding: 4px 6px; font-size: 14px; color: var(--acc); text-decoration: none; }
