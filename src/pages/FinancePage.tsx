@@ -64,7 +64,30 @@ export function FinancePage({ reservations, allRes, properties, user, restoreRes
   const pending = reservations.filter(
     (r) => r.status !== 'cancelada' && r.paid < r.totalAmount
   );
-  const deleted = (allRes || []).filter((r) => r.deleted);
+  // ── PAPELERA: reservas eliminadas (la carga general no las trae; se piden al abrir) ──
+  const [trash, setTrash] = useState(null); // null = todavía sin pedir
+  const [restoring, setRestoring] = useState(null);
+  const elimKey = (r) => {
+    // fecha_eliminacion se guarda como "11/11/2026, 16:20" (hora de Progreso)
+    const m = String(r.fecha_eliminacion || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s*(\d{1,2}):(\d{2})/);
+    return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')} ${m[4].padStart(2, '0')}:${m[5]}` : String(r.fecha_eliminacion || '');
+  };
+  const loadTrash = async () => {
+    const { data, error } = await supabase.from('reservas').select('*').not('fecha_eliminacion', 'is', null).limit(300);
+    if (error) { notifyError(error, 'abrir la papelera'); return; }
+    setTrash((data || []).sort((a, b) => elimKey(b).localeCompare(elimKey(a))));
+  };
+  useEffect(() => { if (esDueno(user)) loadTrash(); }, []);
+  const deleted = trash || [];
+  const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const dCorto = (d) => { const [, m, dd] = String(d || '').slice(0, 10).split('-').map(Number); return m ? `${dd} ${MES[m - 1]}` : '—'; };
+  const recuperar = async (row) => {
+    if (!restoreRes || restoring) return;
+    setRestoring(row.id);
+    const ok = await restoreRes(row);
+    setRestoring(null);
+    if (ok) setTrash((prev) => (prev || []).filter((x) => x.id !== row.id));
+  };
   const currentMonthKey = `${TODAY.getFullYear()}-${String(TODAY.getMonth() + 1).padStart(2, '0')}`;
 
   useEffect(() => {
@@ -435,9 +458,9 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <h2 style={{ margin: 0, fontSize: 30, fontWeight: 'var(--w-title)', color: 'var(--ink)', letterSpacing: 'var(--ls-title)' }}>Finanzas</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {esDueno(user) && deleted.length > 0 && (
+          {esDueno(user) && (
             <button
-              onClick={() => setShowTrash((x) => !x)}
+              onClick={() => { if (!showTrash) loadTrash(); setShowTrash((x) => !x); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px',
                 background: showTrash ? 'var(--c-FEF2F2)' : 'var(--fill)', border: 'none',
@@ -462,6 +485,44 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
           </button>
         </div>
       </div>
+
+      {/* PAPELERA: reservas eliminadas, con Recuperar */}
+      {showTrash && (
+        <div className="ui-card pop-in" style={{ padding: '4px 0 8px', marginBottom: 24 }}>
+          <h3 style={{ ...H3, margin: '14px 18px 6px' }}>
+            <Icon name="trash" size={20} color="var(--red)" />Papelera
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--mut)', marginLeft: 6 }}>
+              {trash === null ? 'Cargando…' : deleted.length ? `${deleted.length} reserva${deleted.length > 1 ? 's' : ''} eliminada${deleted.length > 1 ? 's' : ''}` : ''}
+            </span>
+          </h3>
+          {trash !== null && !deleted.length && (
+            <div style={{ padding: '6px 18px 10px', color: 'var(--mut)', fontSize: 14.5 }}>La papelera está vacía.</div>
+          )}
+          {deleted.map((r, i) => (
+            <div key={r.id} className="li-in" style={{ '--i': Math.min(i, 12), display: 'flex', alignItems: 'center', gap: 12, padding: '10px 18px', borderTop: i ? '.5px solid var(--line)' : 'none' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 600, fontSize: 15.5, color: 'var(--ink)' }}>{r.huesped || 'Sin nombre'}</span>
+                  {r.habitacion && <span style={{ background: 'var(--fill)', color: 'var(--ink-2)', padding: '2px 7px', borderRadius: 7, fontSize: 12, fontWeight: 700 }}>{r.habitacion}</span>}
+                  <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>{dCorto(r.fecha_ingreso)} → {dCorto(r.fecha_salida)}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{currency(Number(r.monto) || 0)}</span>
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--mut)', marginTop: 2 }}>
+                  Eliminada{r.usuario_eliminacion ? ' por ' + r.usuario_eliminacion : ''}{r.fecha_eliminacion ? ' · ' + String(r.fecha_eliminacion).replace(',', '') : ''}
+                </div>
+              </div>
+              <button
+                className="tap"
+                onClick={() => recuperar(r)}
+                disabled={restoring === r.id}
+                style={{ flexShrink: 0, border: 'none', borderRadius: 18, padding: '8px 14px', minHeight: 36, background: 'var(--acc-soft)', color: 'var(--acc)', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+              >
+                {restoring === r.id ? 'Recuperando…' : 'Recuperar'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* MÓDULO DE EGRESOS */}
       <div style={{ background: 'var(--card)', borderRadius: 'var(--r-card)', padding: '16px 18px', marginBottom: 24, boxShadow: 'var(--shadow)' }}>

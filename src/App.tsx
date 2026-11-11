@@ -33,6 +33,7 @@ import { EquipoHome } from './pages/EquipoHome';
 import { EquipoView } from './pages/equipo/EquipoView';
 import { prepRes } from './lib/resDb';
 import { useMovimientos } from './lib/movimientos';
+import { rowToRes } from './lib/resMap';
 
 
 // ── APP ───────────────────────────────────────────────────────────────────────
@@ -179,6 +180,8 @@ export default function AppMejorada() {
           // Paso 9: la cargó alguien del equipo ("Cargada por Mary" en el panel)
           cargadaPor: item.cargada_por || null,
           cargadaPorNombre: item.cargada_por_nombre || '',
+          // Nota para el equipo (la ve Mary en Habitaciones de hoy); undefined si falta la columna
+          notaEquipo: 'nota_equipo' in item ? item.nota_equipo || '' : undefined,
         };
       });
 
@@ -757,29 +760,22 @@ export default function AppMejorada() {
     notify(afterPay(pagos.map((p) => p.id), res.map(apply)), 'ok', { center: true });
     return true;
   };
-  const restoreRes = async (id) => {
-    // 1. Le avisamos a Supabase que la reserva vuelve a la vida
-    const { error } = await rdb.update({ 
-        estado: 'por_llegar', 
-        fecha_eliminacion: null, 
-        usuario_eliminacion: null 
-      })
-      .eq('id', id);
-
+  // Recuperar de la Papelera (Finanzas): vuelve según sus fechas (ya terminó → Finalizada;
+  // empezó antes de hoy y sigue → Hospedado; si no → Por llegar). row = fila de la base.
+  const restoreRes = async (row) => {
+    const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Merida' });
+    const ci = String(row.fecha_ingreso || '').slice(0, 10), co = String(row.fecha_salida || '').slice(0, 10);
+    const estado = co && co < hoy ? 'finalizada' : ci && ci < hoy ? 'hospedado' : 'por_llegar';
+    const { error } = await rdb.update({ estado, fecha_eliminacion: null, usuario_eliminacion: null }).eq('id', row.id);
     if (error) {
       notifyError(error, 'recuperar la reserva');
-      return;
+      return false;
     }
     notify(SAVED.restaurada);
-
-    // 2. La revivimos en la pantalla
-    setRes(
-      res.map((r) =>
-        r.id === id
-          ? { ...r, deleted: false, status: 'por_llegar', deletedAt: null, deletedBy: null }
-          : r
-      )
-    );
+    // Vuelve a la pantalla al instante (el tiempo real la recarga después con todos sus datos)
+    const back = rowToRes({ ...row, estado, fecha_eliminacion: null, usuario_eliminacion: null });
+    setRes((prev) => [...prev.filter((x) => x.id !== row.id), back]);
+    return true;
   };
 const toggleBlacklist = async (id, currentStatus) => {
     const newStatus = !currentStatus;
@@ -819,6 +815,19 @@ const toggleBlacklist = async (id, currentStatus) => {
     setRes((prev) => prev.map((x) => (x.id === id ? { ...x, ...changes } : x)));
     setDrawer((prev) => (prev && prev.id === id ? { ...prev, ...changes } : prev));
     notify(SAVED.late(hora));
+    return true;
+  };
+  // Nota para el equipo desde el panel (sin abrir Editar)
+  const saveNotaEquipo = async (r, texto) => {
+    const { error } = await rdb.update({ nota_equipo: texto || null }).eq('id', r.id);
+    if (error) {
+      notifyError(error, 'guardar la nota para el equipo');
+      return false;
+    }
+    const changes = { notaEquipo: texto || '' };
+    setRes((prev) => prev.map((x) => (x.id === r.id ? { ...x, ...changes } : x)));
+    setDrawer((prev) => (prev && prev.id === r.id ? { ...prev, ...changes } : prev));
+    notify(texto ? 'Nota para el equipo guardada · ' + (r.guestName || '') : 'Nota para el equipo borrada');
     return true;
   };
   const handleCI = (r) => {
@@ -1337,6 +1346,7 @@ const toggleBlacklist = async (id, currentStatus) => {
           onCheckIn={handleCI}
           onCheckOut={handleCO}
           onSetLate={setLateCheckout}
+          onNotaEquipo={saveNotaEquipo}
         />
       )}</AnimatePresence>
       <AnimatePresence>{modal?.type === 'confirmDel' && (

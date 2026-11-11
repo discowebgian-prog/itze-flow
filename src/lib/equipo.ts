@@ -87,6 +87,8 @@ export function roomsOfDay(reservas, marks, d) {
       sale_id: sale ? sale.id : null, entra_id: entra ? entra.id : null, queda_id: queda ? queda.id : null,
       guest: status === 'estancia' ? queda.huesped : sale ? sale.huesped : '',
       guest_in: entra ? entra.huesped : '',
+      // Nota para el equipo de cada reserva de la habitación (supabase/nota_equipo.sql)
+      notas: [sale, entra, queda].filter((x, i, a) => x && x.nota_equipo && a.indexOf(x) === i).map((x) => ({ quien: x.huesped || '', texto: x.nota_equipo })),
       departure: late || SALIDA,
       arrival: LLEGADA,
       checkin: stay ? stay.fecha_ingreso : entra ? entra.fecha_ingreso : '',

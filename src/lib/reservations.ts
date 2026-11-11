@@ -43,7 +43,7 @@ export function calcStayTotal(pricing, nights, lateCost = 0) {
 // Hora normal de salida (el check-out automático la usa si no hay late check-out)
 export const CHECKOUT_HOUR = 14;
 // Horas de un toque que se ofrecen en el formulario y en el panel
-export const LATE_HOURS = ['13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+export const LATE_HOURS = ['12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
 
 // Hora de late check-out de la reserva ('16:00') o '' si no tiene
 export const lateHour = (r) => (r && r.lateCheckout ? String(r.lateCheckout).slice(0, 5) : '');

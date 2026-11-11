@@ -51,6 +51,8 @@ export function prepRes(newRes) {
       // (así las reservas comunes se siguen guardando aunque falte correr grupos.sql)
       // Fecha de nacimiento (supabase/fecha_nacimiento.sql): solo se manda si hay una cargada
       if (newRes.birthDate) datosLimpios.fecha_nacimiento = newRes.birthDate;
+      // Nota para el equipo (supabase/nota_equipo.sql): solo se manda si la reserva ya la conoce (columna creada)
+      if (newRes.notaEquipo !== undefined) datosLimpios.nota_equipo = String(newRes.notaEquipo || '').trim() || null;
       if (newRes.grupoId) {
         datosLimpios.grupo_id = newRes.grupoId;
         datosLimpios.grupo_titular = !!newRes.grupoTitular;

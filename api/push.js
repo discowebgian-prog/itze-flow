@@ -225,6 +225,7 @@ export function equipoMensaje({ table, type, record: r, old_record: o, hab }) {
     if (r.tipo === 'checkin') return { target: 'dueno', title: `${por} hizo el check-in`, body: quien };
     if (r.tipo === 'cancelacion') return { target: 'dueno', title: `${por} canceló una reserva`, body: quien };
     if (r.tipo === 'edicion') return { target: 'dueno', title: `${por} cambió una reserva`, body: quien };
+    if (r.tipo === 'nota') return { target: 'dueno', title: r.nota ? `${por} dejó una nota para el equipo` : `${por} borró la nota para el equipo`, body: r.nota ? `${quien}: “${String(r.nota).slice(0, 200)}”` : quien };
     return null; // check-out: ya avisa "Hab N: ya salieron"
   }
   if (table === 'equipo_habitaciones') {
