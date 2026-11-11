@@ -12,6 +12,7 @@ import { buildGuestDB } from '../lib/guests';
 import { birthdayList, wasGreeted } from '../lib/guestMessages';
 import { PushButton } from '../components/ui/PushButton';
 import { Icon } from '../components/ui/Icon';
+import { MOV_TIPO, movTexto, cuando } from '../lib/movimientos';
 
   // Grupo tipo lista de iPhone: tarjeta blanca con título y filas separadas por una línea fina.
 // Va afuera de Dashboard para que no se rearme en cada render (si no, las filas repiten la animación de entrada).
@@ -37,6 +38,9 @@ export function Dashboard({
   deviceName = '',
   onWho = null,
   decisions = [],
+  movs = [], // movimientos de Mary sin ver (paso 9)
+  onOpenMov = null,
+  onVisto = null,
 }) {
   // Saludo y resumen del día: se actualizan solos cada minuto (la hora cambia el saludo)
   const [now, setNow] = useState(nowMerida);
@@ -319,6 +323,51 @@ export function Dashboard({
           </div>
         ))}
       </div>
+
+      {/* Movimientos de Mary sin ver: arriba de todo lo del día, hasta que se marcan "Visto" */}
+      {movs.length > 0 && (
+        <section className="ui-card pop-in" style={{ padding: '4px 0 6px', marginBottom: 16 }}>
+          <h3 style={{ margin: '14px 16px 6px', fontSize: 18, fontWeight: 'var(--w-title)', letterSpacing: '-.01em', color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Icon name="sparkles" size={20} color="var(--acc-limpieza)" strokeWidth={2.2} />
+            <span style={{ flex: 1 }}>Movimientos de Mary</span>
+            <span style={{ minWidth: 22, height: 22, padding: '0 6px', borderRadius: 11, background: 'var(--red)', color: '#fff', fontSize: 12.5, fontWeight: 800, lineHeight: '22px', textAlign: 'center', boxSizing: 'border-box' }}>
+              {movs.length}
+            </span>
+          </h3>
+          {movs.map((m, liI) => {
+            const tp = MOV_TIPO[m.tipo] || MOV_TIPO.edicion;
+            const tx = movTexto(m);
+            return (
+              <div className="li-in dash-row" key={m.id} style={{ '--i': liI }} onClick={() => onOpenMov && onOpenMov(m)}>
+                {dot(tp.icon, tp.col, tp.bg, 32)}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--ink)', lineHeight: 1.3 }}>{tx.title}</div>
+                  <div style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 2, lineHeight: 1.35 }}>{tx.body}</div>
+                  <div style={{ fontSize: 12, color: 'var(--mut)', marginTop: 2 }}>{cuando(m.creado_en)}</div>
+                </div>
+                <button
+                  className="tap"
+                  onClick={(e) => { e.stopPropagation(); onVisto && onVisto([m.id]); }}
+                  style={{ flexShrink: 0, border: 'none', borderRadius: 18, padding: '8px 14px', minHeight: 36, background: 'var(--acc-soft)', color: 'var(--acc)', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                >
+                  <Icon name="check" size={15} strokeWidth={2.6} /> Visto
+                </button>
+              </div>
+            );
+          })}
+          {movs.length > 1 && (
+            <div style={{ padding: '8px 16px 6px', textAlign: 'right' }}>
+              <button
+                className="tap"
+                onClick={() => onVisto && onVisto(movs.map((m) => m.id))}
+                style={{ border: 'none', background: 'none', color: 'var(--acc)', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '6px 0' }}
+              >
+                Marcar todos como vistos
+              </button>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Llegan hoy */}
       {ciToday.length > 0 && (

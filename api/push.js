@@ -267,7 +267,10 @@ async function equipoAviso(req, res, { url, anonKey, keys }) {
   const to = subs.filter((s) => (s.rol || 'dueno') === msg.target);
   webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'https://itze-flow.vercel.app', keys.pub, keys.priv);
   // Cada aviso por separado (tag único) y queda hasta que se toca, como en Limpieza
-  const payload = JSON.stringify({ title: msg.title.slice(0, 80), body: msg.body.slice(0, 300), url: '/', tag: 'itze-eq-' + Date.now(), sticky: true, badge: true });
+  // Numerito del ícono: a Mary, todos sus avisos (se borra al abrir); a los dueños, solo los movimientos de Mary
+  // con reservas ('mov': suma 1 y al abrir Flow queda en los que faltan marcar "Visto")
+  const badge = msg.target === 'equipo' ? true : (req.body || {}).table === 'equipo_movimientos' ? 'mov' : false;
+  const payload = JSON.stringify({ title: msg.title.slice(0, 80), body: msg.body.slice(0, 300), url: '/', tag: 'itze-eq-' + Date.now(), sticky: true, badge, vib: true });
   let sent = 0;
   const gone = [];
   await Promise.all(

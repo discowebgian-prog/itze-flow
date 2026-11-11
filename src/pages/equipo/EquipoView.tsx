@@ -16,6 +16,7 @@ import { ROOMS } from '../../lib/constants';
 import { fmt } from '../../lib/dates';
 import { TIPS, careLine, WATER_NUDGE, waterText, HELP } from '../../lib/equipoVoz';
 import { I } from './icons';
+import { movTexto, cuando, visoTexto } from '../../lib/movimientos';
 import { pushSupported, pushGranted, pushBlocked, isIOS, isStandalone, enablePush, syncPush } from '../../lib/push';
 import Sortable from 'sortablejs';
 import { createPortal } from 'react-dom';
@@ -71,7 +72,7 @@ function burst() {
   }
 }
 
-export function EquipoView({ user, who = '', standalone = false, onLogout = null }) {
+export function EquipoView({ user, who = '', standalone = false, onLogout = null, movs = [], onOpenMov = null, onVisto = null }) {
   const isDueno = user?.role === 'dueno';
   const role = isDueno ? 'owner' : 'mary';
   const myName = isDueno ? who || 'Dueños' : user?.name || 'Mary';
@@ -401,6 +402,38 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
   const sec = (key, title, a, c) => (a.length ? <div key={key} className={'grp ' + c} data-grp={c}><h2>{title}</h2>{a.map((x) => item(x, c))}</div> : null);
   const obsSec = (key, title, a) => (a.length ? <div key={key}><h2 className="hl">{title}</h2>{a.map((x) => item(x, 'obs'))}</div> : null);
 
+  // Movimientos de Mary con reservas (paso 9, solo dueños): los que faltan ver quedan hasta tocar "Visto";
+  // los vistos de hoy quedan abajo en gris y al día siguiente se limpian (como Limpieza)
+  const MOV_I = { nueva: 'cal', edicion: 'pencil', cancelacion: 'alert', checkin: 'rin', checkout: 'rout', cobro: 'check' };
+  const movSec = () => {
+    if (!own || !movs.length) return null;
+    const pend = movs.filter((m) => !m.visto), vis = movs.filter((m) => m.visto);
+    const mi = (m) => {
+      const tx = movTexto(m);
+      return (
+        <div key={m.id} className={'it eq-mov ' + (m.visto ? 'seen' : 'obs')} onClick={() => onOpenMov && onOpenMov(m)}>
+          <span className="ico"><I n={MOV_I[m.tipo] || 'pencil'} c={m.visto ? 'm' : m.tipo === 'cancelacion' ? 'r' : 'a'} /></span>
+          <div className="tx">
+            <b>{tx.title}</b>
+            <div className="eq-movb">{tx.body}</div>
+            <div className="eq-movt">{cuando(m.creado_en)}</div>
+            {m.visto
+              ? <div className="ack ok"><I n="tick" /> {visoTexto(m)}</div>
+              : <button className="btn okb" onClick={(e) => { e.stopPropagation(); onVisto && onVisto([m.id]); }}><I n="tick" /> Visto</button>}
+          </div>
+        </div>
+      );
+    };
+    return (
+      <div key="movs">
+        <h2 className="hl"><I n="eye" />Movimientos de Mary{pend.length ? ` (${pend.length})` : ''}</h2>
+        {pend.map(mi)}
+        {pend.length > 1 ? <button className="fdlink eq-movall" onClick={() => onVisto && onVisto(pend.map((m) => m.id))}>Marcar todos como vistos</button> : null}
+        {vis.length ? <><div className="zl">Vistos hoy</div>{vis.map(mi)}</> : null}
+      </div>
+    );
+  };
+
   // Tu momento
   const care = () => {
     const day = Math.floor(Date.now() / 864e5), pick = (a) => a[day % a.length];
@@ -573,6 +606,7 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
         {view === 'mary' && total && !done ? <div className="hint"><I n="check" /> Toca el círculo en cuanto termines cada tarea :)</div> : null}
         {view === 'mary' ? (closed ? <div className="closed"><I n="check" c="g" /> Día cerrado · Gracias por todo 💛</div> : all ? <button className="btn fin2" onClick={() => role === 'mary' && setFin(pendNames.length ? 'warn' : 'first')}><I n="moon" /> Cerrar el día</button> : null) : null}
       </div>
+      {movSec()}
       {view === 'owner'
         ? <>{obsSec('am', <><I n="pencil" />Avisos de Mary</>, obsM)}{obsSec('mm', <><I n="megaphone" />Mensajes para Mary</>, obsO)}</>
         : <>{obsSec('mt', <><I n="megaphone" />Mensajes para ti</>, obsO)}{obsSec('la', <><I n="pencil" />Lo que anotaste hoy</>, obsM)}</>}

@@ -400,6 +400,22 @@ export function ResDrawer({
                   {ic(freq.icon, 12)}{freq.label}
                 </span>
               )}
+              {/* Paso 9: la cargó alguien del equipo (solo lo ven los dueños) */}
+              {!equipo && res.cargadaPorNombre && (
+                <span
+                  title="Esta reserva la cargó el equipo desde su vista"
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: 'var(--c-9A3412)',
+                    background: 'var(--c-FFEDD5)',
+                    padding: '2px 8px',
+                    borderRadius: 20,
+                  }}
+                >
+                  {ic('user', 12)}Cargada por {res.cargadaPorNombre}
+                </span>
+              )}
               <div
                 style={{
                   display: 'flex',

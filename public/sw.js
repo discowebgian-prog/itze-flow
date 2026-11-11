@@ -18,10 +18,20 @@ self.addEventListener('push', (e) => {
       // Buen día de las 8:00: reemplaza al de ayer y avisa igual (renotify); queda hasta que se cierra
       renotify: !!d.tag,
       requireInteraction: !!d.sticky,
-      vibrate: d.badge ? [200, 100, 200, 100, 200] : [120, 60, 120],
+      vibrate: d.vib || d.badge ? [200, 100, 200, 100, 200] : [120, 60, 120],
     });
-    // Avisos de Equipo: numerito en el ícono con los avisos sin ver (como Limpieza; se borra al abrir)
-    if (d.badge) {
+    // Dueños: movimientos de Mary sin ver. Suma 1 al número que dejó la app (caché 'itze-badge');
+    // al abrir Flow se pone el número exacto (src/lib/movimientos.ts, setIconBadge)
+    if (d.badge === 'mov') {
+      try {
+        const c = await caches.open('itze-badge');
+        const r = await c.match('/__mov');
+        const n = (parseInt(r ? await r.text() : '0', 10) || 0) + 1;
+        await c.put('/__mov', new Response(String(n)));
+        if (self.navigator.setAppBadge) await self.navigator.setAppBadge(n);
+      } catch (_) {}
+    } else if (d.badge) {
+      // Mary: numerito en el ícono con los avisos sin ver (como Limpieza; se borra al abrir)
       try {
         const n = (await self.registration.getNotifications()).length;
         if (self.navigator.setAppBadge) await self.navigator.setAppBadge(n || undefined);
