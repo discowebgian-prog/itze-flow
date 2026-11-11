@@ -28,8 +28,9 @@ import { notify, notifyError, humanError, SAVED, checkInText, checkOutText, dele
 import { WhoAmI } from './components/ui/WhoAmI';
 import { getDeviceName, setDeviceName } from './lib/device';
 import { syncPush, sendPush } from './lib/push';
-import { ROLES, esDueno } from './lib/roles';
+import { ROLES, esDueno, puede } from './lib/roles';
 import { EquipoHome } from './pages/EquipoHome';
+import { EquipoView } from './pages/equipo/EquipoView';
 
 
 // ── APP ───────────────────────────────────────────────────────────────────────
@@ -365,8 +366,11 @@ export default function AppMejorada() {
   const prevTabRef = useRef(tab);
   const tabDirRef = useRef(0);
   if (!user) return <Login onLogin={setUser} />;
-  // Equipo (y staff, sin uso todavía): no ve nada del resto de Flow
-  if (!esDueno(user)) return <EquipoHome user={user} onLogout={handleLogout} />;
+  // Equipo (y staff, sin uso todavía): no ve nada del resto de Flow.
+  // Con el permiso "limpieza" (Mary) ve su sección Equipo, igual que hoy en Itzé Limpieza (paso 5).
+  if (!esDueno(user)) return puede(user, 'limpieza')
+    ? <EquipoView user={user} standalone onLogout={handleLogout} />
+    : <EquipoHome user={user} onLogout={handleLogout} />;
 
   const isAdmin = esDueno(user);
   // Nombre para anotar quién cargó/eliminó/decidió algo
@@ -435,6 +439,8 @@ export default function AppMejorada() {
     { id: 'huespedes', label: 'Huéspedes', icon: 'users' },
     { id: 'finanzas', label: 'Finanzas', icon: 'finance' },
     { id: 'tarifas', label: 'Tarifas', icon: 'tag' },
+    // Equipo (paso 5): la ex Itzé Limpieza, con "Ver como Mary". Mary la ve a pantalla completa.
+    { id: 'equipo', label: 'Equipo', icon: 'sparkles' },
   ];
   if (prevTabRef.current !== tab) {
     const ix = (id) => TABS_ALL.findIndex((t) => t.id === id);
@@ -1245,6 +1251,7 @@ const toggleBlacklist = async (id, currentStatus) => {
               focusBirthday={guestFocus}
             />
           )}
+          {tab === 'equipo' && <EquipoView user={user} who={who} />}
           {tab === 'tarifas' && (
             <RatesPage
               periods={tarifas}

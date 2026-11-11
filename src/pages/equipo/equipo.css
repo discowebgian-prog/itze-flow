@@ -1,0 +1,18 @@
+/* Equipo: lo que suma Flow sobre los estilos de Limpieza (limpieza-base.css) */
+.eq.eq-solo { min-height: 100vh; padding-top: calc(env(safe-area-inset-top, 0px) + 14px); }
+.eq .eq-supl { margin: 12px 4px 6px; }
+.eq h2 .ic { margin-right: 8px; }
+/* confeti: va en document.body (fuera de .eq) */
+.eq-conf { position: fixed; top: -30px; font-size: 26px; animation: eq-f 2.2s ease-in forwards; z-index: 400; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .eq-conf { display: none; } }
+/* "Se queda" con nombre largo: si no entra con "Limpieza profunda", la cápsula baja de renglón (en Limpieza el nombre se cortaba) */
+.eq .rln.stay { flex-wrap: wrap; }
+.eq .rln.stay .rnm { flex: 1 0 auto; max-width: 100%; }
+/* Como pestaña de Flow (dueños): el botón + arriba del menú de abajo del celular */
+.eq.eq-tab { padding-top: 4px; }
+@media (max-width: 768px) {
+  /* Flow ya deja 12 px a los costados: + 4 = los 16 px de Limpieza (antes quedaban 28 y se veía estrecho) */
+  .eq.eq-tab { padding-left: 4px; padding-right: 4px; padding-bottom: 20px; }
+  .eq.eq-tab .fab { bottom: calc(env(safe-area-inset-bottom, 0px) + 104px); }
+  .eq.eq-tab .dopts { bottom: calc(env(safe-area-inset-bottom, 0px) + 176px); }
+}

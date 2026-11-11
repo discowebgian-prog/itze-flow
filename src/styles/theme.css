@@ -75,6 +75,8 @@
 
 /* Sin margen del navegador alrededor (antes del login se veía un marco blanco, en oscuro gris) */
 html, body { margin: 0; background: var(--bg); }
+/* Sin zoom con doble toque ni con dos dedos (como app nativa). Lo que necesita su propio gesto (calendario, hojas) pone touch-action: none */
+html { touch-action: pan-x pan-y; }
 
 /* Sin la letra redondeada (Windows, Android, Chrome en Mac) la letra del sistema en 800 se ve tosca */
 html.no-rounded { --w-title: 700; --ls-title: -.01em; }

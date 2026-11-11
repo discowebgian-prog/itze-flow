@@ -29,6 +29,11 @@ if (typeof document !== 'undefined') {
     document.head.appendChild(metaViewport);
   }
   metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+  // El iPhone ignora user-scalable=no desde iOS 10: se frena a mano el zoom con dos dedos en toda la app
+  // (el calendario ya lo frenaba por su touch-action). El doble toque lo frena el CSS (touch-action en html).
+  const stop = (e) => e.preventDefault();
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach((ev) => document.addEventListener(ev, stop, { passive: false }));
+  document.addEventListener('touchmove', (e) => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
 
   // 3. En iPhone, :active (efecto al apretar un botón) solo funciona si hay un listener de toque
   document.addEventListener('touchstart', () => {}, { passive: true });
