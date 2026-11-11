@@ -335,9 +335,9 @@ export function ResDrawer({
                     style={{ 
                       background: 'rgba(255, 255, 255, 0.25)',
                       color: '#fff', 
-                      padding: '3px 9px', 
-                      borderRadius: 6, 
-                      fontSize: 13, 
+                      padding: '5px 11px',
+                      borderRadius: 8,
+                      fontSize: 16,
                       fontWeight: 900,
                       border: '1px solid rgba(255, 255, 255, 0.2)',
                       lineHeight: 1
