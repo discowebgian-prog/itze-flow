@@ -1181,6 +1181,12 @@ export function Timeline({
             {fmtD(tooltip.r.checkIn)} → {fmtD(tooltip.r.checkOut)} ·{' '}
             {diffDays(tooltip.r.checkIn, tooltip.r.checkOut)}n
           </div>
+          {/* Se va mañana: abajito de las fechas, para prepararse */}
+          {tooltip.r.status !== 'finalizada' && tooltip.r.checkOut === fmt(addDays(TODAY, 1)) && (
+            <div style={{ fontSize: 12, fontWeight: 800, color: '#FCD34D', marginTop: -4, marginBottom: 8 }}>
+              {ic('checkOut', 12)}Sale mañana
+            </div>
+          )}
           {tooltip.r.grupoId && (() => {
             const g = groupOf(reservations, tooltip.r);
             return g.length > 1 ? (
