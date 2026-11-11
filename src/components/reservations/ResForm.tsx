@@ -50,6 +50,8 @@ export function ResForm({
   focusDoc = false,
   tarifas = [],
   initialRooms = null, // desde Cotizar: [{ room, guests }] → con 2 o más arranca como grupo
+  fixedSource = '', // Equipo (paso 9): canal fijo ('Directo-Puerta'); solo se muestra ese
+  canPrice = true, // Equipo sin permiso "precio": tarifa, descuento y total quedan como el tarifario
 }) {
   const blank = {
     propertyId: prefillProp || visibleProps[0]?.id || '',
@@ -69,7 +71,7 @@ export function ResForm({
     totalAmount: '',
     paid: '',
     paymentMethod: 'efectivo',
-    source: '', // se elige al cargar (abre el resto del formulario)
+    source: fixedSource || '', // se elige al cargar (abre el resto del formulario); Equipo: fijo
     notes: '',
     room: '',
     totalGuests: 1,
@@ -1019,7 +1021,7 @@ export function ResForm({
         label="Canal"
         value={f.source}
         onChange={(v) => sv('source', v)}
-        options={SOURCES.map((s) => ({
+        options={SOURCES.filter((s) => !fixedSource || s.value === fixedSource).map((s) => ({
           value: s.value,
           label: s.short || s.label,
           ...(s.value === 'Booking'
@@ -1553,6 +1555,12 @@ export function ResForm({
 
       <div>
 
+        {!canPrice && (
+          <div style={{ fontSize: 12.5, color: 'var(--mut)', margin: '0 0 10px', lineHeight: 1.4 }}>
+            El precio sale del tarifario. Para un descuento o un precio distinto, consulta con Gian o Marce :)
+          </div>
+        )}
+        <fieldset disabled={!canPrice} style={{ border: 0, padding: 0, margin: 0, minWidth: 0, opacity: canPrice ? 1 : 0.6 }}>
         {/* Con varias habitaciones la tarifa va en cada tarjeta (pueden ser de distinto tipo) */}
         <div style={{ display: 'grid', gridTemplateColumns: multiOn ? '1fr' : '1fr 1fr', gap: 10 }}>
           {!multiOn && <Inp
@@ -1709,6 +1717,7 @@ export function ResForm({
           </div>
         )}
 
+        </fieldset>
         <hr style={{ border: 'none', borderTop: '1px solid var(--line)', margin: '16px 0 14px' }} />
 
         {(() => {
@@ -1732,7 +1741,7 @@ export function ResForm({
           ];
           return (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 10, alignItems: 'end' }}>
-              {multiOn ? (
+              {multiOn || !canPrice ? (
                 <ReadBox label={isGroupNew ? 'Total del grupo' : 'Total a cobrar'} value={currency(totalNum)} />
               ) : (
               <Inp

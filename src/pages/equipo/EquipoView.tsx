@@ -18,6 +18,17 @@ import { TIPS, careLine, WATER_NUDGE, waterText, HELP } from '../../lib/equipoVo
 import { I } from './icons';
 import { pushSupported, pushGranted, pushBlocked, isIOS, isStandalone, enablePush, syncPush } from '../../lib/push';
 import Sortable from 'sortablejs';
+import { createPortal } from 'react-dom';
+import { AnimatePresence } from 'motion/react';
+import { Modal } from '../../components/ui/Modal';
+import { Toast } from '../../components/ui/Toast';
+import { Quoter } from '../../components/Quoter';
+import { ResForm } from '../../components/reservations/ResForm';
+import { puede } from '../../lib/roles';
+import { prepRes } from '../../lib/resDb';
+import { PERSON_FIELDS } from '../../lib/groups';
+import { PROPS } from '../../lib/constants';
+import { SAVED } from '../../lib/voice';
 import './limpieza-base.css';
 import './equipo.css';
 
@@ -66,6 +77,17 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
   const maryName = isDueno ? 'Mary' : myName;
   const [view, setView] = useState(isDueno ? 'owner' : 'mary');
   const own = isDueno && view === 'owner';
+  // Paso 9: Mary cotiza y reserva (los mismos Cotizar y formulario de los dueños, canal Por puerta)
+  const canQuote = !isDueno && puede(user, 'cotizar');
+  const canBook = !isDueno && puede(user, 'reservar');
+  const [quoter, setQuoter] = useState(null); // { initialIn }
+  const [form, setForm] = useState(null); // { initial, rooms, queue, chain, key }
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 769);
+  useEffect(() => {
+    const r = () => setIsMobile(window.innerWidth < 769);
+    window.addEventListener('resize', r);
+    return () => window.removeEventListener('resize', r);
+  }, []);
 
   const [data, setData] = useState({ tareas: [], fotos: {}, dia: null, insumos: [], marcas: [], reservas: [], tarifas: [] });
   const [loaded, setLoaded] = useState(false);
@@ -87,9 +109,9 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
   const rootRef = useRef(null);
   const load = useCallback(async () => {
     if (dragging.current) { clearTimeout(rt.current); rt.current = setTimeout(load, 400); return; }
-    try { const d = await loadEquipo(); if (!dragging.current) { setData(d); setLoaded(true); setLoadErr(''); } }
+    try { const d = await loadEquipo({ conReservas: canQuote || canBook }); if (!dragging.current) { setData(d); setLoaded(true); setLoadErr(''); } }
     catch (e) { setLoadErr(e?.message || 'sin conexión'); }
-  }, []);
+  }, [canQuote, canBook]);
   const refresh = useCallback(() => { clearTimeout(rt.current); rt.current = setTimeout(load, 80); }, [load]);
   useEffect(() => {
     load();
@@ -213,6 +235,28 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
     setFin(null); setSup(null); setShowDay(false); burst(); refresh();
   }
 
+  // ── Reservas de Mary (paso 9) ───────────────────────────────────────────────
+  // Guarda como los dueños (prepRes); la base anota quién la cargó y avisa a los dueños.
+  async function guardarReserva(input) {
+    const lista = Array.isArray(input) ? input : [input];
+    const momento = new Date().toLocaleString('es-MX', { timeZone: 'America/Merida', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const filas = lista.map((r) => {
+      const p = prepRes({ ...r, source: r.source || 'Directo-Puerta' });
+      return { ...p.datosLimpios, fecha_carga: momento, usuario_carga: myName, modificado_por: myName };
+    });
+    const { error } = await supabase.from('reservas').insert(filas);
+    if (error) { notifyError(error, lista.length > 1 ? 'guardar el grupo' : 'guardar la reserva', { keep: true }); return false; }
+    notify(lista.length > 1 ? SAVED.grupo(lista) : SAVED.reserva(lista[0]));
+    refresh();
+    return true;
+  }
+  function abrirReserva(queue) {
+    const [first, ...rest] = queue;
+    const ini = { ...first.initial, source: 'Directo-Puerta' };
+    if (!ini.status) ini.status = ini.checkIn === t ? 'hospedado' : 'por_llegar';
+    setForm({ initial: ini, rooms: first.rooms, queue: rest, chain: queue.length > 1 ? { i: 1, total: queue.length } : null, key: Date.now() });
+  }
+
   // ── habitaciones del día ────────────────────────────────────────────────────
   async function markRoom(r, field) {
     const key = field === 'lista' ? 'ready_at' : 'out_at';
@@ -322,19 +366,18 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
       const x = list.find((q) => q.room === r.id);
       return { n: r.id.replace(/^P/, ''), ok: !x || !!x.ready_at, rate: priceToday(r.id, t, tarifas) };
     });
-    const wa = 'whatsapp://send?phone=' + WA.Gian + '&text=' + encodeURIComponent('Hola, preguntan por una habitación para hoy. ¿Hay alguna promo vigente?');
     const freeSec = (
       <div className="rfree">
         <div className="rfh"><I n="key" />Libres hoy</div>
         {free.length ? <>
           {!own ? <div className="muted rfs">Revisa que estén todas ok, por cualquier detalle :)</div> : null}
           {free.map((fr) => (
-            <div className="rfr" key={fr.n}>
+            <div className={'rfr' + (canQuote ? ' eq-tap' : '')} key={fr.n} onClick={canQuote ? () => setQuoter({ initialIn: t }) : undefined}>
               <div className="rft"><b>Hab {fr.n}</b><span className={'rfst ' + (fr.ok ? 'ok' : '')}>{fr.ok ? 'lista' : 'falta limpiar'}</span><span className={'rfp ' + (fr.rate ? '' : 'rfq')}>{fr.rate ? money(fr.rate.price) : 'consultar precio'}</span></div>
               {fr.rate ? <div className="muted rfd">Tarifa para {fr.rate.guests} personas{fr.rate.extra ? ' · ' + money(fr.rate.extra) + ' por persona adicional' : ''}</div> : null}
             </div>
           ))}
-          {!own ? <><div className="muted rfm">Precio por noche de hoy. Para promos o varias noches, consulta antes :)</div><a className="pill rfwa" href={wa}><img src="/whatsapp.png" alt="" /> Preguntar por WhatsApp</a></> : null}
+          {!own ? <><div className="muted rfm">{canQuote ? 'Precio por noche de hoy. Para varias noches, más personas o promos, toca Cotizar :)' : 'Precio por noche de hoy. Para promos o varias noches, consulta antes :)'}</div>{canQuote ? <button className="pill rfwa" onClick={() => setQuoter({ initialIn: t })}><I n="calc" c="a" /> Cotizar</button> : null}</> : null}
         </> : <div className="muted">Hoy no queda ninguna libre.</div>}
       </div>
     );
@@ -482,6 +525,7 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
       <div className="top">
         <div><h1>{hi}</h1><div className="sub">{fecha}</div></div>
         <div className="row">
+          {canQuote ? <button className="pill" onClick={() => setQuoter({})}><I n="calc" c="a" /> Cotizar</button> : null}
           {!isDueno && !pushOn ? <button className="pill" onClick={activarAvisos}><I n="bell" c="a" /> Activar avisos</button> : null}
           {isDueno ? <button className="pill" onClick={() => setView(view === 'owner' ? 'mary' : 'owner')}>{view === 'owner' ? 'Ver como Mary' : 'Volver a dueños'}</button> : null}
           {onLogout ? <button className="pill" onClick={onLogout}>Salir</button> : null}
@@ -508,6 +552,36 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
         onYes={() => { if (fin === 'warn') setFin('first'); else if (fin === 'sup') { setFin(null); setSup({ fin: true }); } else { finStep.current = fin; setFin('note'); setSheet({}); } }}
         onNo={() => { if (fin === 'warn') setFin(null); else if (fin === 'sup') closeDay(); else setFin('sup'); }}
         onClose={() => setFin(null)} /> : null}
+      {(canQuote || canBook) && typeof document !== 'undefined' ? createPortal(<div style={{ fontFamily: 'var(--font)', color: 'var(--ink)', WebkitFontSmoothing: 'antialiased' }}>
+        <AnimatePresence>{quoter && (
+          <Modal key="quoter" title="Cotizar" icon="calculator" onClose={() => setQuoter(null)} isMobile={isMobile} tall>
+            <Quoter allRes={data.allRes || []} tarifas={tarifas} initialIn={quoter.initialIn || ''} onClose={() => setQuoter(null)}
+              onReserve={({ queue }) => { setQuoter(null); if (canBook) abrirReserva(queue); }} />
+          </Modal>
+        )}</AnimatePresence>
+        <AnimatePresence>{form && (
+          <Modal key="new" title={form.chain ? `Nueva reserva · ${form.chain.i} de ${form.chain.total} (cambio de habitación)` : 'Nueva reserva'} onClose={() => setForm(null)} isMobile={isMobile} tall>
+            <ResForm key={form.key} visibleProps={PROPS} prefillProp="hostel" prefillDate={form.initial?.checkIn || t}
+              initial={form.initial} initialRooms={form.rooms || null} allRes={data.allRes || []} guestDecisions={[]} tarifas={tarifas}
+              fixedSource="Directo-Puerta" canPrice={puede(user, 'precio')}
+              onClose={() => setForm(null)}
+              onSave={async (p) => {
+                const ok = await guardarReserva(p);
+                if (!ok) return;
+                const q = form.queue || [];
+                if (!q.length) { setForm(null); return; }
+                // Cambio de habitación: abre la siguiente con los mismos datos del huésped
+                const g = Array.isArray(p) ? p[0] : p;
+                const carry = {};
+                [...PERSON_FIELDS, 'source', 'requiresInvoice', 'company', 'status'].forEach((k) => { if (g && g[k] !== undefined) carry[k] = g[k]; });
+                const [next, ...rest] = q;
+                const ch = form.chain || { i: 1, total: q.length + 1 };
+                setForm({ initial: { ...next.initial, ...carry }, rooms: next.rooms, queue: rest, chain: { i: ch.i + 1, total: ch.total }, key: Date.now() });
+              }} />
+          </Modal>
+        )}</AnimatePresence>
+      </div>, document.body) : null}
+      {standalone ? <Toast isMobile={isMobile} /> : null}
       {zoom ? <div className="zoom on" onClick={() => setZoom('')}><img src={zoom} alt="" /></div> : null}
       {ask ? (
         <div className="sheet on" onClick={(e) => { if (e.target === e.currentTarget) { ask.resolve(false); setAsk(null); } }}>

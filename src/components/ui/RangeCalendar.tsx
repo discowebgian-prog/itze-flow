@@ -13,7 +13,8 @@ const dayTxt = (d) =>
 export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows = false }) {
   const [base, setBase] = useState(checkIn ? parseD(checkIn) : TODAY);
   const [hover, setHover] = useState(null);
-  const [step, setStep] = useState(checkIn && checkOut ? 2 : 0);
+  // Con entrada y sin salida (Cotizar desde Libres hoy) el próximo toque elige la salida
+  const [step, setStep] = useState(checkIn && checkOut ? 2 : checkIn ? 1 : 0);
 
   // Candado inteligente: Si le pasamos una fecha mínima (ej. checkIn en el pasado), usa esa. Si no, usa HOY.
   const minD = null;

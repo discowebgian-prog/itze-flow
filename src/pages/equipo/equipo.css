@@ -16,3 +16,7 @@
   .eq.eq-tab .fab { bottom: calc(env(safe-area-inset-bottom, 0px) + 104px); }
   .eq.eq-tab .dopts { bottom: calc(env(safe-area-inset-bottom, 0px) + 176px); }
 }
+/* Paso 9: habitaciones de Libres hoy tocables (abren Cotizar con entrada hoy) */
+.eq .rfr.eq-tap { cursor: pointer; border-radius: 10px; transition: background .15s; }
+.eq .rfr.eq-tap:active { background: var(--fill); }
+.eq button.rfwa { border: 0; font-family: inherit; }
