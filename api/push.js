@@ -8,6 +8,9 @@
 //   POST /api/push → manda el aviso
 //   POST /api/push con encabezado x-flow-clave → "Buen día" de las 8:00 (lo dispara Supabase, ver
 //        supabase/buen_dia.sql): a cada celular, su nombre y el día en palabras de Inicio.
+//   POST /api/push con x-flow-clave y { tipo: 'equipo' } → aviso de Equipo (lo disparan las tablas
+//        equipo_*, ver supabase/equipo_avisos.sql): a los dueños o al equipo, como Itzé Limpieza.
+// Cada aparato tiene su rol (push_subs.rol): los avisos de reservas y el Buen día van solo a los dueños.
 //
 // - Solo responde a usuarios con sesión válida de Supabase.
 // - Lee las suscripciones de push_subs con la sesión del usuario (RLS) y avisa a todas
@@ -47,7 +50,10 @@ export default async function handler(req, res) {
   if (!url || !anonKey) return res.status(500).json({ error: 'Falta la configuración de Supabase en Vercel.' });
   if (!keys) return res.status(500).json({ error: 'Falta CLAUDE_API_KEY en Vercel.' });
 
-  if (req.headers['x-flow-clave']) return buenDia(req, res, { url, anonKey, keys });
+  if (req.headers['x-flow-clave']) {
+    if ((req.body || {}).tipo === 'equipo') return equipoAviso(req, res, { url, anonKey, keys });
+    return buenDia(req, res, { url, anonKey, keys });
+  }
 
   const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   if (!token) return res.status(401).json({ error: 'Sesión no válida.' });
@@ -58,9 +64,10 @@ export default async function handler(req, res) {
   const { title = 'Itzé Flow', body = '', from = '' } = req.body || {};
   if (!body) return res.status(400).json({ error: 'Falta el texto del aviso.' });
 
-  const subsResp = await fetch(`${url}/rest/v1/push_subs?select=endpoint,p256dh,auth,quien`, { headers });
+  const subsResp = await fetch(`${url}/rest/v1/push_subs?select=*`, { headers });
   if (!subsResp.ok) return res.status(502).json({ error: 'No se pudieron leer las suscripciones (¿falta correr supabase/push.sql?).' });
-  const subs = (await subsResp.json()).filter((s) => !from || s.quien !== from);
+  // Avisos de reservas: solo a los dueños (el equipo recibe solo lo de Equipo) y no a quien hizo el cambio
+  const subs = (await subsResp.json()).filter((s) => s.rol !== 'equipo' && (!from || s.quien !== from));
 
   webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'https://itze-flow.vercel.app', keys.pub, keys.priv);
   const payload = JSON.stringify({ title: String(title).slice(0, 80), body: String(body).slice(0, 300), url: '/' });
@@ -116,6 +123,11 @@ async function buenDia(req, res, { url, anonKey, keys }) {
   const data = await r.json();
   if (!data) return res.status(401).json({ error: 'Clave no válida.' });
 
+  // Solo a los dueños: el equipo no recibe el resumen de reservas
+  const roles = await subsConRol(url, anonKey, String(req.headers['x-flow-clave']));
+  const deEquipo = new Set((roles || []).filter((s) => s.rol === 'equipo').map((s) => s.endpoint));
+  data.subs = (data.subs || []).filter((s) => !deEquipo.has(s.endpoint));
+
   const now = nowMerida();
   const lines = daySummary((data.reservas || []).map(toRes), now);
   const body = lines.join('\n') || 'Día tranquilo: nadie entra ni sale hoy.';
@@ -135,4 +147,119 @@ async function buenDia(req, res, { url, anonKey, keys }) {
     })
   );
   return res.status(200).json({ sent, lines: lines.length });
+}
+
+// ── Avisos de Equipo (paso 7) ─────────────────────────────────────────────────
+// Las mismas reglas y textos que la Edge Function "notify" de Itzé Limpieza, con los nombres de Flow.
+async function subsConRol(url, anonKey, clave, borrar = null) {
+  const r = await fetch(`${url}/rest/v1/rpc/flow_avisos_subs`, {
+    method: 'POST',
+    headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_clave: clave, p_borrar: borrar }),
+  }).catch(() => null);
+  if (!r || !r.ok) return null;
+  return r.json();
+}
+
+// "8:05 am" / "1:20 pm" (como las horas de Limpieza, sin "a.m." con punto que se pisa con el del final)
+const horaMx = (iso) => {
+  const [h, m] = new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Merida' }).split(':').map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`;
+};
+const hoyMx = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Merida' });
+const dn = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
+
+// { table, type, record, old_record, hab } → { target: 'dueno' | 'equipo', title, body } o null
+export function equipoMensaje({ table, type, record: r, old_record: o, hab }) {
+  if (!r) return null;
+  if (table === 'equipo_tareas') {
+    if (r.tipo === 'programada' || (type === 'INSERT' && r.plantilla_id)) return null;
+    const lugar = r.zona ? ` (${r.zona})` : '';
+    const deEquipo = r.de_rol === 'equipo';
+    const quien = r.creada_por_nombre || 'Mary';
+    if (type === 'INSERT') {
+      if (r.tipo === 'mensaje' && deEquipo) return { target: 'dueno', title: `${quien} dice`, body: r.texto + lugar };
+      if (r.tipo === 'mensaje') return { target: 'equipo', title: 'Mensaje para ti', body: r.texto + lugar };
+      if (r.tipo === 'rutina') return { target: 'equipo', title: 'Nueva rutina diaria', body: r.texto + lugar };
+      return { target: 'equipo', title: r.fecha > hoyMx() ? 'Nueva tarea para mañana' : 'Nueva tarea para hoy', body: r.texto + lugar };
+    }
+    if (r.editada_en && r.editada_en !== o?.editada_en) {
+      if (r.editada_por_rol === 'equipo') return { target: 'dueno', title: `${r.editada_por_nombre || 'Mary'} corrigió una nota`, body: r.texto + lugar };
+      if (!deEquipo) return { target: 'equipo', title: r.tipo === 'mensaje' ? 'Se cambió un mensaje para ti' : 'Se cambió una tarea', body: r.texto + lugar };
+      return null;
+    }
+    if (r.tipo === 'mensaje' && !deEquipo && r.hecha && !o?.hecha) {
+      return { target: 'dueno', title: `${r.hecha_por_nombre || 'Mary'} vio tu mensaje`, body: r.texto };
+    }
+    return null;
+  }
+  if (table === 'equipo_insumos') {
+    if (type === 'INSERT') return { target: 'dueno', title: `${r.creado_por_nombre || 'Mary'} avisa: falta un insumo`, body: `${r.nombre} — ${r.urgente ? 'se acabó' : 'queda poco'}` };
+    if (r.estado === 'repuesto' && o?.estado === 'falta') return { target: 'equipo', title: 'Insumo repuesto', body: `${r.nombre} ya está disponible` };
+    return null;
+  }
+  if (table === 'equipo_dias') {
+    if (r.cerrado && (type === 'INSERT' || !o?.cerrado)) {
+      const n = Number(r.pendientes) || 0;
+      return { target: 'dueno', title: `${r.cerrado_por_nombre || 'Mary'} finalizó el día`, body: n ? `Cerró el día con ${n} pendiente${n > 1 ? 's' : ''}. Pasan para mañana.` : 'Cerró el día con todo listo.' };
+    }
+    if (r.empezo_en && !o?.empezo_en) return { target: 'dueno', title: 'Mary empezó su día ☀️', body: 'Llegó a las ' + horaMx(r.empezo_en) + '.' };
+    return null;
+  }
+  if (table === 'equipo_habitaciones') {
+    const h = hab || {};
+    const num = String(r.habitacion || '').replace(/^P/i, '');
+    // Lista: a los dueños, una por habitación (si venden la habitación, saben al instante que ya puede entrar)
+    if (r.lista_en && !o?.lista_en) {
+      const est = h.status === 'estancia', entra = h.status === 'sale_entra' || h.status === 'entrada';
+      let lin = false;
+      if (est) {
+        if (r.sabanas === true || r.sabanas === false) lin = r.sabanas;
+        else if (h.checkin) { const n = dn(h.checkin, r.fecha) + 1; lin = n >= 5 && n % 5 === 0 && !(h.checkout && dn(r.fecha, h.checkout) < 2); }
+      }
+      const quien = r.lista_por_nombre || 'Mary';
+      return {
+        target: 'dueno',
+        title: lin ? `Hab ${num}: cambio de sábanas listo ✓` : est ? `Hab ${num}: repaso listo ✓` : `Hab ${num} lista ✓`,
+        body: entra ? (h.guest_in ? `Ya puede entrar ${h.guest_in}.` : 'Ya puede entrar el huésped.')
+          : lin ? `${quien} cambió sábanas y toallas e hizo limpieza profunda.` : est ? `${quien} terminó el repaso.` : `${quien} la dejó lista.`,
+      };
+    }
+    if (r.salieron_en && !o?.salieron_en) {
+      const quien = h.guest ? `Salió ${h.guest}` : 'Salieron los huéspedes';
+      if (r.salieron_por_rol === 'dueno') return { target: 'equipo', title: `Hab ${num}: ya salieron`, body: `${quien}. Ya puedes prepararla :)` };
+      return {
+        target: 'dueno', title: `Hab ${num}: ya salieron`,
+        body: `${quien} a las ${horaMx(r.salieron_en)}.` + (h.status === 'sale_entra' ? ` ${r.salieron_por_nombre || 'Mary'} la prepara para ${h.guest_in || 'el que entra'}.` : ''),
+      };
+    }
+  }
+  return null;
+}
+
+async function equipoAviso(req, res, { url, anonKey, keys }) {
+  const clave = String(req.headers['x-flow-clave']);
+  const subs = await subsConRol(url, anonKey, clave);
+  if (!subs) return res.status(401).json({ error: 'Clave no válida.' });
+  const msg = equipoMensaje(req.body || {});
+  if (!msg) return res.status(200).json({ sent: 0, skip: true });
+  const to = subs.filter((s) => (s.rol || 'dueno') === msg.target);
+  webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'https://itze-flow.vercel.app', keys.pub, keys.priv);
+  // Cada aviso por separado (tag único) y queda hasta que se toca, como en Limpieza
+  const payload = JSON.stringify({ title: msg.title.slice(0, 80), body: msg.body.slice(0, 300), url: '/', tag: 'itze-eq-' + Date.now(), sticky: true, badge: true });
+  let sent = 0;
+  const gone = [];
+  await Promise.all(
+    to.map(async (s) => {
+      try {
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 12 * 3600 });
+        sent++;
+      } catch (e) {
+        if (e && (e.statusCode === 404 || e.statusCode === 410)) gone.push(s.endpoint);
+        else console.error('Aviso de Equipo no enviado', e && e.statusCode);
+      }
+    })
+  );
+  if (gone.length) await subsConRol(url, anonKey, clave, gone);
+  return res.status(200).json({ sent, removed: gone.length, target: msg.target });
 }

@@ -8,8 +8,8 @@ self.addEventListener('push', (e) => {
   try {
     d = e.data.json();
   } catch (_) {}
-  e.waitUntil(
-    self.registration.showNotification(d.title || 'Itzé Flow', {
+  e.waitUntil((async () => {
+    await self.registration.showNotification(d.title || 'Itzé Flow', {
       body: d.body || '',
       icon: '/icon-192.png',
       badge: '/icon-192.png',
@@ -18,9 +18,16 @@ self.addEventListener('push', (e) => {
       // Buen día de las 8:00: reemplaza al de ayer y avisa igual (renotify); queda hasta que se cierra
       renotify: !!d.tag,
       requireInteraction: !!d.sticky,
-      vibrate: [120, 60, 120],
-    })
-  );
+      vibrate: d.badge ? [200, 100, 200, 100, 200] : [120, 60, 120],
+    });
+    // Avisos de Equipo: numerito en el ícono con los avisos sin ver (como Limpieza; se borra al abrir)
+    if (d.badge) {
+      try {
+        const n = (await self.registration.getNotifications()).length;
+        if (self.navigator.setAppBadge) await self.navigator.setAppBadge(n || undefined);
+      } catch (_) {}
+    }
+  })());
 });
 
 // Tocar el aviso abre (o trae al frente) la app

@@ -53,6 +53,10 @@ async function subscription() {
 
 async function saveSub(sub, quien) {
   const j = sub.toJSON();
+  // push_anotar (equipo_avisos.sql): deja el aparato a nombre de quien entró, dueños o equipo
+  const rpc = await supabase.rpc('push_anotar', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_quien: quien || '' });
+  if (!rpc.error) return;
+  if (rpc.error.code !== 'PGRST202') throw rpc.error; // si la función todavía no existe, como antes
   const { error } = await supabase.from('push_subs').upsert(
     [{ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, quien: quien || '', actualizado_en: new Date().toISOString() }],
     { onConflict: 'endpoint' }
