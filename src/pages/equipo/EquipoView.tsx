@@ -323,6 +323,19 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
     refresh();
   }
 
+  // Nota para el equipo desde el panel: en las suyas directo; en las ajenas por equipo_contacto (la base avisa a los dueños)
+  async function notaEquipo(r, texto) {
+    const { error } = r.propia
+      ? await supabase.from('reservas').update({ nota_equipo: texto || null, modificado_por: myName }).eq('id', r.id)
+      : await supabase.rpc('equipo_contacto', { p_id: String(r.id), p_datos: { nota_equipo: texto || '' } });
+    if (error) { notifyError(error, 'guardar la nota', { keep: true }); return false; }
+    setData((d) => ({ ...d, allRes: (d.allRes || []).map((x) => (x.id === r.id ? { ...x, notaEquipo: texto || '' } : x)),
+      reservas: (d.reservas || []).map((x) => (String(x.id) === String(r.id) ? { ...x, nota_equipo: texto || null } : x)) }));
+    notify(texto ? 'Nota guardada · ' + (r.guestName || '') : 'Nota borrada');
+    refresh();
+    return true;
+  }
+
   // ── habitaciones del día ────────────────────────────────────────────────────
   async function markRoom(r, field) {
     const key = field === 'lista' ? 'ready_at' : 'out_at';
@@ -404,7 +417,7 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
 
   // Movimientos de Mary con reservas (paso 9, solo dueños): los que faltan ver quedan hasta tocar "Visto";
   // los vistos de hoy quedan abajo en gris y al día siguiente se limpian (como Limpieza)
-  const MOV_I = { nueva: 'cal', edicion: 'pencil', cancelacion: 'alert', checkin: 'rin', checkout: 'rout', cobro: 'check' };
+  const MOV_I = { nueva: 'cal', edicion: 'pencil', cancelacion: 'alert', checkin: 'rin', checkout: 'rout', cobro: 'check', nota: 'pencil' };
   const movSec = () => {
     if (!own || !movs.length) return null;
     const pend = movs.filter((m) => !m.visto), vis = movs.filter((m) => m.visto);
@@ -534,6 +547,9 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
               {r.status === 'entrada' || r.status === 'sale_entra' ? ln('rin', 'in', 'Entra', r.guest_in, arr, '', r.entra_id) : null}
               {est ? ln('rstay', 'stay', 'Se queda', r.guest, lin ? 'Limpieza profunda' : 'Repaso', lin ? 'deep' : '', r.queda_id) : null}
             </div>
+            {(r.notas || []).map((n, i) => (
+              <div key={i} className="eq-nota"><I n="pencil" c="a" /><span>{r.notas.length > 1 && n.quien ? <b>{n.quien.split(' ')[0]}: </b> : null}{n.texto}</span></div>
+            ))}
             {act}
           </div>
         </div>
@@ -700,7 +716,7 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
             onCheckIn={canCheck ? hacerCheckIn : undefined} onCheckOut={canCheck ? hacerCheckOut : undefined}
             onPay={canCheck ? cobrarPagos : undefined}
             properties={PROPS} allRes={data.allRes || []} guestDecisions={[]} isMobile={isMobile} tarifas={tarifas}
-            equipo={{ onCobrar: canCheck ? cobrar : null }} />
+            equipo={{ onCobrar: canCheck ? cobrar : null }} onNotaEquipo={canOpen ? notaEquipo : null} />
         )}</AnimatePresence>
         <AnimatePresence>{editRes && (
           <Modal key="edit" title={editRes.propia ? 'Editar reserva' : 'Datos del huésped'} onClose={() => setEditRes(null)} isMobile={isMobile} tall>

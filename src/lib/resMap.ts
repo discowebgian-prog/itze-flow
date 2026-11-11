@@ -58,6 +58,8 @@ export function rowToRes(item) {
   // Paso 9: quién la cargó, si es de Mary (propia) y el saldo de las ajenas (sin montos)
   r.cargadaPor = item.cargada_por || null;
   r.cargadaPorNombre = item.cargada_por_nombre || '';
+  // Nota para el equipo: undefined si la columna todavía no existe (así no se manda al guardar)
+  r.notaEquipo = 'nota_equipo' in item ? item.nota_equipo || '' : undefined;
   r.propia = item.propia === true;
   r.saldo = item.saldo === undefined ? undefined : item.saldo === null ? null : Number(item.saldo);
   r.sinMontos = item.propia === false;

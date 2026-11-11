@@ -67,7 +67,7 @@ export function LatePicker({ hour, cost, onHour, onCost }) {
         <button
           type="button"
           onClick={() => setShowOther(true)}
-          style={{ ...chip(showOther), gridColumn: 'span 2' }}
+          style={chip(showOther)}
         >
           Otra hora
         </button>

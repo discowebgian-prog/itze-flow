@@ -20,6 +20,52 @@ import { quoteRoom, pricingMatches } from '../../lib/rates';
 import { QuoteInfo } from './QuoteInfo';
 
 // ── DRAWER ────────────────────────────────────────────────────────────────────
+// Recuadro "Nota para el equipo" del panel: se lee y se cambia con el lápiz, sin abrir Editar.
+function NotaEquipoBox({ res, onSave }) {
+  const [edit, setEdit] = useState(false);
+  const [txt, setTxt] = useState(res.notaEquipo || '');
+  const [saving, setSaving] = useState(false);
+  const nota = (res.notaEquipo || '').trim();
+  const save = async () => {
+    if (!onSave || saving) return;
+    setSaving(true);
+    const ok = await onSave(res, txt.trim());
+    setSaving(false);
+    if (ok) setEdit(false);
+  };
+  const btn = (bg, col) => ({ border: 'none', borderRadius: 10, padding: '8px 14px', minHeight: 36, background: bg, color: col, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' });
+  return (
+    <div style={{ background: 'var(--c-FFF7ED)', border: '1px solid var(--c-FDBA74)', borderRadius: 16, padding: '10px 14px', marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ flex: 1, fontSize: 11, fontWeight: 800, color: 'var(--c-9A3412)', textTransform: 'uppercase', letterSpacing: 0.4, display: 'flex', alignItems: 'center', gap: 5 }}>
+          <Icon name="chat" size={13} /> Nota para el equipo
+        </span>
+        {onSave && !edit && (
+          <button type="button" className="tap" onClick={() => { setTxt(res.notaEquipo || ''); setEdit(true); }}
+            style={{ border: 'none', background: 'none', color: 'var(--c-EA580C)', fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', padding: '4px 0', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Icon name="edit" size={14} />{nota ? 'Cambiar' : 'Escribir'}
+          </button>
+        )}
+      </div>
+      {edit ? (
+        <>
+          <textarea autoFocus value={txt} onChange={(e) => setTxt(e.target.value)} rows={3}
+            placeholder="Ej. Dejar toallas extra"
+            style={{ width: '100%', marginTop: 8, padding: '10px 12px', border: '1px solid var(--c-FDBA74)', borderRadius: 'var(--r-field)', background: 'var(--card)', color: 'var(--ink)', fontSize: 14, fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
+          <div style={{ display: 'flex', gap: 8, marginTop: 8, justifyContent: 'flex-end' }}>
+            <button type="button" className="tap" onClick={() => setEdit(false)} style={btn('var(--fill)', 'var(--ink)')}>Cancelar</button>
+            <button type="button" className="tap" onClick={save} disabled={saving} style={btn('var(--c-EA580C)', '#fff')}>{saving ? 'Guardando…' : 'Guardar'}</button>
+          </div>
+        </>
+      ) : nota ? (
+        <div style={{ marginTop: 4, fontSize: 14, color: 'var(--ink)', fontWeight: 600, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{nota}</div>
+      ) : (
+        <div style={{ marginTop: 4, fontSize: 13, color: 'var(--mut)' }}>Sin nota todavía.</div>
+      )}
+    </div>
+  );
+}
+
 export function ResDrawer({
   res,
   onClose,
@@ -39,6 +85,7 @@ export function ResDrawer({
   onUngroup,
   tarifas = [],
   equipo = null, // paso 9: panel abierto desde Equipo (Mary): { onCobrar(res, monto, forma) }
+  onNotaEquipo = null, // (res, texto) => Promise<boolean>: guardar la nota para el equipo sin abrir Editar
 }) {
   const drag = useDragControls(); // gesto para cerrar arrastrando (ver la hoja más abajo)
   // "No grato" es un caso raro: enlace chico al pie y pide confirmar antes de marcar
@@ -893,6 +940,11 @@ export function ResDrawer({
                 </div>
               )}
             </div>
+          )}
+
+          {/* Nota para el equipo: la ven y la escriben los dueños y Mary (supabase/nota_equipo.sql) */}
+          {res.notaEquipo !== undefined && (onNotaEquipo || res.notaEquipo) && (
+            <NotaEquipoBox key={res.id} res={res} onSave={onNotaEquipo} />
           )}
 
           {res.sinMontos ? (

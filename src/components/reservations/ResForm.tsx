@@ -1977,7 +1977,7 @@ export function ResForm({
 
       {!soloDatos && (<>
       {/* 7 · Factura, notas y PIN (opcional) */}
-      <Step num={nums.extras} title="Factura, notas y PIN" note="opcional" done={!!(f.requiresInvoice || (f.notes || '').trim() || f.pin_acceso)}>
+      <Step num={nums.extras} title="Factura, notas y PIN" note="opcional" done={!!(f.requiresInvoice || (f.notes || '').trim() || (f.notaEquipo || '').trim() || f.pin_acceso)}>
       {/* ── FACTURA: botón chico; al pedir factura se despliega Empresa (opcional).
              Con nombre de empresa cuenta como Empresa; vacío (persona física) queda Particular ── */}
       <div style={{ marginBottom: f.requiresInvoice ? 8 : 14 }}>
@@ -2015,6 +2015,32 @@ export function ResForm({
         />
       )}
 
+      {/* Nota para el equipo (supabase/nota_equipo.sql): la ve Mary en Habitaciones de hoy; las notas internas no */}
+      <div style={{ marginBottom: 14 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--c-EA580C)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+          {ic('chat', 13)}Nota para el equipo
+        </label>
+        <textarea
+          value={f.notaEquipo || ''}
+          onChange={(e) => sv('notaEquipo', e.target.value)}
+          rows={2}
+          placeholder="Ej. Dejar toallas extra · Llegan tarde, dejar la luz de la entrada prendida"
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            border: '1px solid var(--c-FDBA74)',
+            borderRadius: 'var(--r-field)',
+            background: 'var(--card)',
+            color: 'var(--ink)',
+            fontSize: 13,
+            fontFamily: 'inherit',
+            outline: 'none',
+            resize: 'vertical',
+            boxSizing: 'border-box',
+          }}
+        />
+        <div style={{ fontSize: 11.5, color: 'var(--mut)', marginTop: 3 }}>La ve Mary en "Habitaciones de hoy". Las notas internas no.</div>
+      </div>
 
       <div style={{ marginBottom: 20 }}>
         <label

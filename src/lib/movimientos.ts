@@ -25,6 +25,7 @@ export const MOV_TIPO = {
   checkin: { icon: 'checkIn', col: 'var(--c-059669)', bg: 'var(--c-ECFDF5)' },
   checkout: { icon: 'checkOut', col: 'var(--c-EA580C)', bg: 'var(--c-FFF7ED)' },
   cobro: { icon: 'money', col: 'var(--c-059669)', bg: 'var(--c-ECFDF5)' },
+  nota: { icon: 'chat', col: 'var(--c-EA580C)', bg: 'var(--c-FFF7ED)' },
 };
 
 // Lo mismo que dice el aviso al celular (api/push.js, equipoMensaje), más el check-out
@@ -39,6 +40,7 @@ export function movTexto(m) {
     case 'cobro': return { title: `${por} cobró ${plata(m.monto)} en ${forma}`, body: quien };
     case 'checkin': return { title: `${por} hizo el check-in`, body: quien };
     case 'checkout': return { title: `${por} hizo el check-out`, body: quien };
+    case 'nota': return m.nota ? { title: `${por} dejó una nota para el equipo`, body: `${quien}: “${m.nota}”` } : { title: `${por} borró la nota para el equipo`, body: quien };
     case 'cancelacion': return { title: `${por} canceló una reserva`, body: quien + fechas };
     default: return { title: `${por} cambió una reserva`, body: quien + fechas };
   }
