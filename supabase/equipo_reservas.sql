@@ -12,16 +12,18 @@ returns table (
   fecha_ingreso date, fecha_salida date, estado text, late_checkout_hora text, grupo_id text
 )
 language sql stable security definer set search_path = public as $$
-  select r.id::text, coalesce(nullif(r.propiedad::text, ''), 'hostel'), r.habitacion::text, r.huesped::text,
-         nullif(r.fecha_ingreso::text, '')::date, nullif(r.fecha_salida::text, '')::date,
-         r.estado::text, nullif(r.late_checkout_hora::text, ''), r.grupo_id::text
-  from public.reservas r
+  -- Se lee cada dato con to_jsonb: si una columna no existe (ej. propiedad), queda vacía en vez de dar error.
+  with r as (select to_jsonb(x) as j from public.reservas x)
+  select j->>'id', coalesce(nullif(j->>'propiedad', ''), 'hostel'), j->>'habitacion', j->>'huesped',
+         left(j->>'fecha_ingreso', 10)::date, left(j->>'fecha_salida', 10)::date,
+         j->>'estado', nullif(j->>'late_checkout_hora', ''), j->>'grupo_id'
+  from r
   where public.tiene_permiso('limpieza')
-    and coalesce(r.estado::text, '') not in ('cancelada', 'eliminada')
-    and nullif(r.fecha_ingreso::text, '') is not null
-    and nullif(r.fecha_salida::text, '') is not null
-    and nullif(r.fecha_ingreso::text, '')::date <= p_hasta
-    and nullif(r.fecha_salida::text, '')::date >= p_desde
+    and coalesce(j->>'estado', '') not in ('cancelada', 'eliminada')
+    and nullif(j->>'fecha_ingreso', '') is not null
+    and nullif(j->>'fecha_salida', '') is not null
+    and left(j->>'fecha_ingreso', 10)::date <= p_hasta
+    and left(j->>'fecha_salida', 10)::date >= p_desde
     and p_hasta - p_desde <= 31;  -- solo unos días, no todo el historial
 $$;
 
