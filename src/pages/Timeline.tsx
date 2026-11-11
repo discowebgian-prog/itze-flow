@@ -1215,7 +1215,7 @@ export function Timeline({
                 }}
               />
               <span style={{ color: 'rgba(255,255,255,.85)', fontWeight: 600 }}>
-                {a.label}
+                {a.key === 'notes' ? 'Tiene nota' : a.label}
               </span>
               {a.key === 'saldo' && (
                 <span
@@ -1230,6 +1230,23 @@ export function Timeline({
               )}
             </div>
           ))}
+          {/* Abajo de todo, en palabras: si está en el hostel o si ya se fue */}
+          {(tooltip.r.status === 'hospedado' || tooltip.r.status === 'finalizada') && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11, marginTop: 6 }}>
+              <div
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  background: BLOCK_COLORS[tooltip.r.status].bg,
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ color: '#fff', fontWeight: 700 }}>
+                {tooltip.r.status === 'hospedado' ? 'En casa' : 'Ya salió'}
+              </span>
+            </div>
+          )}
         </div>
       )}
       <AnimatePresence>{dConf && (
