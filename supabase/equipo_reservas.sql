@@ -30,11 +30,7 @@ $$;
 revoke all on function public.equipo_reservas(date, date) from public, anon;
 grant execute on function public.equipo_reservas(date, date) to authenticated;
 
--- Comprobar: lo que ve el equipo (usuario de prueba de Mary) de ayer a mañana: nombres y fechas, sin montos.
--- Si hace falta, cambiá el correo. No deja nada guardado.
-begin;
-select from set_config('request.jwt.claims',
-  json_build_object('sub', (select id from auth.users where email = 'gianpadula@outlook.com'), 'role', 'authenticated')::text, true);
-set local role authenticated;
-select * from public.equipo_reservas(public.equipo_hoy() - 1, public.equipo_hoy() + 1) order by habitacion, fecha_ingreso;
-rollback;
+-- Comprobar que quedó creada: tiene que aparecer un renglón "equipo_reservas".
+-- (Para ver lo que ve Mary, correr después supabase/equipo_reservas_comprobar.sql en otra consulta.)
+notify pgrst, 'reload schema';
+select proname as funcion_creada from pg_proc where proname = 'equipo_reservas';
