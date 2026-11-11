@@ -8,3 +8,9 @@
 /* "Se queda" con nombre largo: si no entra con "Limpieza profunda", la cápsula baja de renglón (en Limpieza el nombre se cortaba) */
 .eq .rln.stay { flex-wrap: wrap; }
 .eq .rln.stay .rnm { flex: 1 0 auto; max-width: 100%; }
+/* Como pestaña de Flow (dueños): el botón + arriba del menú de abajo del celular */
+.eq.eq-tab { padding-top: 4px; }
+@media (max-width: 768px) {
+  .eq.eq-tab .fab { bottom: calc(env(safe-area-inset-bottom, 0px) + 104px); }
+  .eq.eq-tab .dopts { bottom: calc(env(safe-area-inset-bottom, 0px) + 176px); }
+}

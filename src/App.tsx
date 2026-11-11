@@ -439,6 +439,8 @@ export default function AppMejorada() {
     { id: 'huespedes', label: 'Huéspedes', icon: 'users' },
     { id: 'finanzas', label: 'Finanzas', icon: 'finance' },
     { id: 'tarifas', label: 'Tarifas', icon: 'tag' },
+    // Equipo (paso 5): la ex Itzé Limpieza, con "Ver como Mary". Mary la ve a pantalla completa.
+    { id: 'equipo', label: 'Equipo', icon: 'sparkles' },
   ];
   if (prevTabRef.current !== tab) {
     const ix = (id) => TABS_ALL.findIndex((t) => t.id === id);
@@ -1249,6 +1251,7 @@ const toggleBlacklist = async (id, currentStatus) => {
               focusBirthday={guestFocus}
             />
           )}
+          {tab === 'equipo' && <EquipoView user={user} who={who} />}
           {tab === 'tarifas' && (
             <RatesPage
               periods={tarifas}

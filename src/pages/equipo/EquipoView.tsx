@@ -16,6 +16,7 @@ import { ROOMS } from '../../lib/constants';
 import { fmt } from '../../lib/dates';
 import { TIPS, careLine, WATER_NUDGE, waterText, HELP } from '../../lib/equipoVoz';
 import { I } from './icons';
+import Sortable from 'sortablejs';
 import './limpieza-base.css';
 import './equipo.css';
 
@@ -81,8 +82,11 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
 
   // ── carga y tiempo real ─────────────────────────────────────────────────────
   const rt = useRef(null);
+  const dragging = useRef(false);
+  const rootRef = useRef(null);
   const load = useCallback(async () => {
-    try { const d = await loadEquipo(); setData(d); setLoaded(true); setLoadErr(''); }
+    if (dragging.current) { clearTimeout(rt.current); rt.current = setTimeout(load, 400); return; }
+    try { const d = await loadEquipo(); if (!dragging.current) { setData(d); setLoaded(true); setLoadErr(''); } }
     catch (e) { setLoadErr(e?.message || 'sin conexión'); }
   }, []);
   const refresh = useCallback(() => { clearTimeout(rt.current); rt.current = setTimeout(load, 80); }, [load]);
@@ -127,6 +131,28 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
     if (loaded && all && !lastAll.current) burst();
     lastAll.current = all;
   }, [loaded, all]);
+
+  useEffect(() => {
+    if (!own || !rootRef.current) return undefined;
+    const list = [...rootRef.current.querySelectorAll('.grp')].map((g) => {
+      let before = [];
+      return Sortable.create(g, {
+        draggable: '.it', animation: 180, forceFallback: true, delay: 350, delayOnTouchOnly: true, touchStartThreshold: 6,
+        ghostClass: 'drag-ghost', chosenClass: 'drag-chosen', filter: '.ck, .x, .okb, .ph', preventOnFilter: false,
+        onChoose: () => { dragging.current = true; vib(25); before = [...g.querySelectorAll('.it[data-id]')]; },
+        onUnchoose: () => setTimeout(() => { dragging.current = false; }, 0),
+        onEnd: async () => {
+          const ids = [...g.querySelectorAll('.it[data-id]')].map((el) => el.dataset.id);
+          before.forEach((el) => g.appendChild(el)); // React vuelve a ordenar con el estado nuevo
+          dragging.current = false;
+          patchLocal('tareas', (a) => a.map((q) => (ids.includes(q.id) ? { ...q, orden: ids.indexOf(q.id) } : q)));
+          const res = await Promise.all(ids.map((id, i) => supabase.from('equipo_tareas').update({ orden: i }).eq('id', id)));
+          const err = res.find((r) => r.error); if (err) fail(err.error);
+        },
+      });
+    });
+    return () => list.forEach((x) => x.destroy());
+  });
 
   async function tog(x) {
     if (role === 'owner' && !(x.tipo === 'mensaje')) return; // los dueños no tildan tareas (solo Mary)
@@ -421,7 +447,7 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
   }
 
   return (
-    <div className={'eq ' + (own ? 'own ' : '') + (dial ? 'dial-open ' : '') + (standalone ? 'eq-solo' : '')}>
+    <div ref={rootRef} className={'eq ' + (own ? 'own ' : '') + (dial ? 'dial-open ' : '') + (standalone ? 'eq-solo' : 'eq-tab')}>
       <div className="top">
         <div><h1>{hi}</h1><div className="sub">{fecha}</div></div>
         <div className="row">
