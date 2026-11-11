@@ -6,7 +6,7 @@ import { FADE, SPRING_SHEET, shouldClose, dragStartOk } from '../ui/Motion';
 import { Badge } from '../ui/Badge';
 import { Icon } from '../ui/Icon';
 import { srcLabel, srcColor, BLOCK_COLORS, ROOMS } from '../../lib/constants';
-import { fmtD, fmtDT, diffDays, currency } from '../../lib/dates';
+import { fmtD, fmtDT, diffDays, currency, fmt, addDays } from '../../lib/dates';
 import { waLink, stayInfo, stayBadge, guestKey, makeResolver } from '../../lib/guests';
 import { lastVisitText, birthdayInStay, birthdayText, birthdayMessage, companionWelcome, langFor, markGreeted } from '../../lib/guestMessages';
 import { DocLink } from '../ui/DocLink';
@@ -816,6 +816,15 @@ export function ResDrawer({
                 <div style={{ fontWeight: 700, color: 'var(--c-111111)', fontSize: 12.5 }}>
                   {v}
                 </div>
+                {/* Se va mañana: aviso corto debajo de la fecha (con la fecha de hoy del aparato, por si la app quedó abierta de un día al otro) */}
+                {l === 'Check-out' &&
+                  res.checkOut === fmt(addDays(new Date(), 1)) &&
+                  res.status !== 'finalizada' &&
+                  res.status !== 'cancelada' && (
+                    <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--c-EA580C)', marginTop: 2 }}>
+                      ¡Mañana!
+                    </div>
+                  )}
                 {l === 'Check-out' && lateHour(res) && (
                   <div style={{ fontSize: 10.5, fontWeight: 800, color: LATE_COLORS.txt, marginTop: 2 }}>
                     {ic('clock', 13)}Late {lateHour(res)}
