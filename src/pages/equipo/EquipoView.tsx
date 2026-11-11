@@ -282,7 +282,7 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
       </div>
     );
     const head = <div className="rmh"><h2><I n="bed" />Habitaciones de hoy</h2></div>;
-    if (data.sinReservas) return <div className="rgrp" key="rooms">{head}<div className="muted rme">No se pudieron leer las reservas. Avisa a Gian o Marce :)</div></div>;
+    if (data.sinReservas) return <div className="rgrp" key="rooms">{head}<div className="muted rme">No se pudieron leer las reservas. Avisa a Gian o Marce :){data.errReservas ? <div style={{ marginTop: 6, fontSize: 12 }}>Detalle: {data.errReservas}</div> : null}</div></div>;
     if (!list.length) return <div className="rgrp" key="rooms">{head}<div className="muted rme">Hoy no hay salidas, entradas ni huéspedes.</div>{freeSec}</div>;
     const tot = list.length, ready = list.filter((r) => r.ready_at).length;
     const pend = list.filter((r) => !r.ready_at), pendSE = pend.filter((r) => r.status === 'sale_entra').length;

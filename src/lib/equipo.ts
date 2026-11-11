@@ -147,6 +147,7 @@ export async function loadEquipo() {
     reservas: (r.error ? [] : r.data || []).filter((x) => (x.propiedad || PROP) === PROP),
     tarifas: ta.error ? [] : ta.data || [],
     sinReservas: !!r.error,
+    errReservas: r.error ? [r.error.code, r.error.message, r.error.details, r.error.hint].filter(Boolean).join(' · ') : '',
   };
 }
 
