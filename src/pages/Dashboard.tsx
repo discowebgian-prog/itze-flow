@@ -64,6 +64,10 @@ export function Dashboard({
   const active = reservations.filter(isNow);
   const ciToday = reservations.filter((r) => r.checkIn === fmt(TODAY));
   const coToday = reservations.filter((r) => r.checkOut === fmt(TODAY));
+  // Se van mañana (para organizar la limpieza y los check-outs del día siguiente)
+  const coTomorrow = reservations.filter(
+    (r) => r.checkOut === fmt(addDays(TODAY, 1)) && r.status !== 'cancelada' && r.status !== 'finalizada'
+  );
   const pending = reservations.filter(
     (r) => r.status !== 'cancelada' && r.paid < r.totalAmount
   );
@@ -387,7 +391,16 @@ export function Dashboard({
         </Group>
       )}
 
-      {/* VCC de Booking por cobrar */}
+      {/* Se van mañana */}
+      {coTomorrow.length > 0 && (
+        <Group title={`Se van mañana (${coTomorrow.length})`} icon="rout" col="var(--c-EA580C)">
+          {coTomorrow.map((r, liI) =>
+            row(r, liI, { icon: 'rout', col: 'var(--c-EA580C)', bg: 'var(--c-FFF7ED)', after: <LateBadge r={r} /> })
+          )}
+        </Group>
+      )}
+
+            {/* VCC de Booking por cobrar */}
       {vccPending.length > 0 && (
         <Group title={`VCC de Booking por cobrar (${vccPending.length})`} icon="card" col="var(--c-1E40AF)">
           {vccPending.map((r, liI) =>
