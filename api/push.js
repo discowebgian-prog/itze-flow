@@ -167,6 +167,9 @@ const horaMx = (iso) => {
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`;
 };
 const hoyMx = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Merida' });
+const PAGO = { efectivo: 'efectivo', transferencia: 'transferencia', debito: 'débito', credito: 'crédito', vcc: 'tarjeta virtual', otro: 'otro medio' };
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const diaCorto = (d) => { const [, m, dd] = String(d).slice(0, 10).split('-').map(Number); return `${dd} ${MESES[m - 1]}`; };
 const dn = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
 
 // { table, type, record, old_record, hab } → { target: 'dueno' | 'equipo', title, body } o null
@@ -205,6 +208,24 @@ export function equipoMensaje({ table, type, record: r, old_record: o, hab }) {
     }
     if (r.empezo_en && !o?.empezo_en) return { target: 'dueno', title: 'Mary empezó su día ☀️', body: 'Llegó a las ' + horaMx(r.empezo_en) + '.' };
     return null;
+  }
+  // Reservas que toca el equipo (paso 9): a los dueños, para que se enteren y lo marquen "Visto"
+  if (table === 'equipo_movimientos') {
+    const por = r.por_nombre || 'Mary';
+    const hab = r.habitacion ? ` (${r.habitacion})` : '';
+    const quien = (r.huesped || 'Sin nombre') + hab;
+    const plata = (n) => '$' + Math.round(Number(n) || 0).toLocaleString('es-MX');
+    const forma = PAGO[String(r.forma_pago || '').toLowerCase()] || String(r.forma_pago || 'efectivo').toLowerCase();
+    if (r.tipo === 'nueva') {
+      const fechas = r.fecha_ingreso && r.fecha_salida ? ` · ${diaCorto(r.fecha_ingreso)} → ${diaCorto(r.fecha_salida)}` : '';
+      const pago = Number(r.pagado) > 0 ? ` · pagó ${plata(r.pagado)} en ${forma}` : ' · sin pago todavía';
+      return { target: 'dueno', title: `${por} cargó una reserva`, body: quien + fechas + pago };
+    }
+    if (r.tipo === 'cobro') return { target: 'dueno', title: `${por} cobró ${plata(r.monto)} en ${forma}`, body: quien };
+    if (r.tipo === 'checkin') return { target: 'dueno', title: `${por} hizo el check-in`, body: quien };
+    if (r.tipo === 'cancelacion') return { target: 'dueno', title: `${por} canceló una reserva`, body: quien };
+    if (r.tipo === 'edicion') return { target: 'dueno', title: `${por} cambió una reserva`, body: quien };
+    return null; // check-out: ya avisa "Hab N: ya salieron"
   }
   if (table === 'equipo_habitaciones') {
     const h = hab || {};
