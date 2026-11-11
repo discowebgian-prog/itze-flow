@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ROOMS, srcShort, RS, PS, BLOCK_COLORS, ALERTS, getAlerts } from '../lib/constants';
 import { TODAY, fmt, fmtD, addDays, diffDays, parseD, currency, MONTHS, DAYS } from '../lib/dates';
 import { findConflicts, lateHour } from '../lib/reservations';
@@ -96,7 +96,69 @@ export function Timeline({
   const [tooltip, setTooltip] = useState(null);
   const [hdrDrag, setHdrDrag] = useState(null);
   const [gridEl, setGridEl] = useState(null);
-  const lpt = useState(null);
+
+  // ── Arrastre de reservas ──
+  // En el celular: mantener apretada la barra (350 ms) la "levanta"; recién ahí se arrastra.
+  // Deslizar sin esperar mueve el calendario como siempre. En la compu: arrastrar con el mouse.
+  const dragRef = useRef(null); // arrastre en curso (lo mismo que `drag`, pero siempre al día)
+  const pressRef = useRef(null); // toque largo o clic esperando que empiece el arrastre
+  const scrollRef = useRef(null); // el recuadro que se desliza a los costados
+  const headRef = useRef(null); // fila de los días (para saber dónde empiezan las habitaciones)
+  const pillRef = useRef(null); // cartelito que sigue al dedo
+  const tapRef = useRef(null); // dónde empezó el toque (para no confundir deslizar con doble toque)
+  const noClickUntil = useRef(0); // al soltar una barra, que no se abra la reserva
+  const auto = useRef({ v: 0, raf: 0, x: 0, y: 0 }); // desplazamiento solo cerca de los bordes
+  const fn = useRef({}); // funciones del arrastre con los datos de este render
+
+  useEffect(() => {
+    if (!gridEl) return;
+    // Escuchas propias (no pasivas): así el arrastre puede frenar el desplazamiento de la página.
+    const tm = (e) => {
+      const t = e.touches[0];
+      if (!t) return;
+      const p = pressRef.current;
+      if (p && !dragRef.current) {
+        // Se movió antes de levantar la barra: es un deslizamiento normal
+        if (Math.hypot(t.clientX - p.x, t.clientY - p.y) > 8) {
+          clearTimeout(p.timer);
+          pressRef.current = null;
+        }
+        return;
+      }
+      if (dragRef.current) {
+        if (e.cancelable) e.preventDefault();
+        fn.current.move(t.clientX, t.clientY);
+      }
+    };
+    const te = (e) => {
+      if (pressRef.current) {
+        clearTimeout(pressRef.current.timer);
+        pressRef.current = null;
+      }
+      if (dragRef.current) fn.current.end(e.type === 'touchcancel');
+    };
+    const cm = (e) => {
+      if (pressRef.current || dragRef.current) e.preventDefault();
+    };
+    gridEl.addEventListener('touchmove', tm, { passive: false });
+    gridEl.addEventListener('touchend', te);
+    gridEl.addEventListener('touchcancel', te);
+    gridEl.addEventListener('contextmenu', cm);
+    return () => {
+      gridEl.removeEventListener('touchmove', tm);
+      gridEl.removeEventListener('touchend', te);
+      gridEl.removeEventListener('touchcancel', te);
+      gridEl.removeEventListener('contextmenu', cm);
+    };
+  }, [gridEl]);
+
+  useEffect(
+    () => () => {
+      if (pressRef.current) clearTimeout(pressRef.current.timer);
+      cancelAnimationFrame(auto.current.raf);
+    },
+    []
+  );
 
   if (calView === 'lista')
     return (
@@ -185,72 +247,173 @@ export function Timeline({
       .filter(Boolean);
   };
 
-  const startDrag = (e, r, row) => {
-    if (e && e.stopPropagation) e.stopPropagation();
-    setHdrDrag(null);
-    const cx = e.touches ? e.touches[0].clientX : e.clientX,
-      cy = e.touches ? e.touches[0].clientY : e.clientY;
-    const gt = gridEl ? gridEl.getBoundingClientRect().top : 0;
-    setDrag({
+  // Levanta la barra: desde acá la reserva sigue al dedo (o al mouse)
+  const beginDrag = (cx, cy, r, row) => {
+    if (!gridEl) return;
+    const rect = gridEl.getBoundingClientRect();
+    const room = row.type === 'room' ? row.room.id : '';
+    const d = {
       id: r.id,
       guestName: r.guestName,
-      orig: {
-        checkIn: r.checkIn,
-        checkOut: r.checkOut,
-        propId: row.prop.id,
-        room: row.type === 'room' ? row.room.id : '',
-      },
-      startX: cx,
-      startY: cy,
-      startCol: r.colStart,
+      status: r.status,
+      orig: { checkIn: r.checkIn, checkOut: r.checkOut, propId: row.prop.id, room },
+      nights: diffDays(r.checkIn, r.checkOut),
+      // columna de la entrada (negativa si empieza antes de lo que se ve)
+      colIn: diffDays(fmt(addDays(TODAY, offset)), r.checkIn),
+      // dónde se agarró, medido dentro de la grilla (así no importa si se desliza el calendario)
+      startGX: cx - rect.left,
+      startCX: cx,
+      delta: 0,
       origRowIdx: rows.indexOf(row),
       currentRowIdx: rows.indexOf(row),
-      width: r.width,
       newPropId: row.prop.id,
-      newRoom: row.type === 'room' ? row.room.id : '',
+      newRoom: room,
       newCheckIn: r.checkIn,
-      gridTop: gt,
-    });
-  };
-
-  const onMove = (e) => {
-    if (drag) {
-      const cx = e.touches ? e.touches[0].clientX : e.clientX,
-        cy = e.touches ? e.touches[0].clientY : e.clientY;
-      const cd = Math.round((cx - drag.startX) / COL);
-      const ri = Math.max(
-        0,
-        Math.min(rows.length - 1, Math.floor((cy - drag.gridTop - 36) / ROW))
-      );
-      const nc = Math.max(0, Math.min(NCOLS - drag.width, drag.startCol + cd));
-      const nr = rows[ri];
-      setDrag((d) => ({
-        ...d,
-        currentCol: nc,
-        currentRowIdx: ri,
-        newPropId: nr.prop.id,
-        newRoom: nr.type === 'room' ? nr.room.id : '',
-        newCheckIn: fmt(addDays(addDays(TODAY, offset), nc)),
-      }));
-    }
-    if (hdrDrag) {
-      const cx = e.touches ? e.touches[0].clientX : e.clientX;
-      const dd = -Math.round((cx - hdrDrag.startX) / COL);
-      setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
-    }
-  };
-
-  const endDrag = () => {
-    if (drag) {
-      const ch =
-        drag.newCheckIn !== drag.orig.checkIn ||
-        drag.newPropId !== drag.orig.propId ||
-        drag.newRoom !== drag.orig.room;
-      if (ch) setDConf(drag);
-      setDrag(null);
-    }
+      newCheckOut: r.checkOut,
+      conflicts: [],
+    };
+    dragRef.current = d;
+    auto.current.x = cx;
+    auto.current.y = cy;
+    setTooltip(null);
     setHdrDrag(null);
+    setDrag(d);
+    placePill(cx, cy);
   };
+
+  // El cartelito va arriba del dedo (si no, el dedo lo tapa); se mueve sin redibujar el calendario
+  const placePill = (cx, cy) => {
+    const el = pillRef.current;
+    if (!el) return;
+    const half = Math.min(150, window.innerWidth / 2 - 8);
+    const x = Math.max(half + 8, Math.min(window.innerWidth - half - 8, cx));
+    el.style.transform = `translate(${x}px, ${Math.max(8, cy - 92)}px) translateX(-50%)`;
+  };
+
+  const moveDrag = (cx, cy) => {
+    const d = dragRef.current;
+    if (!d || !gridEl) return;
+    auto.current.x = cx;
+    auto.current.y = cy;
+    placePill(cx, cy);
+    const rect = gridEl.getBoundingClientRect();
+    const delta = Math.round((cx - rect.left - d.startGX) / COL);
+    const top = rect.top + (headRef.current ? headRef.current.offsetHeight : 36);
+    const ri = Math.max(0, Math.min(rows.length - 1, Math.floor((cy - top) / ROW)));
+    autoScroll(cx, d.startCX);
+    if (delta === d.delta && ri === d.currentRowIdx) return;
+    const nr = rows[ri];
+    const npid = nr.prop.id;
+    const nroom = nr.type === 'room' ? nr.room.id : '';
+    const nci = fmt(addDays(parseD(d.orig.checkIn), delta));
+    const nco = fmt(addDays(parseD(nci), d.nights));
+    const nd = {
+      ...d,
+      delta,
+      currentRowIdx: ri,
+      newPropId: npid,
+      newRoom: nroom,
+      newCheckIn: nci,
+      newCheckOut: nco,
+      conflicts: findConflicts(reservations, npid, nroom, nci, nco, d.id),
+    };
+    dragRef.current = nd;
+    setDrag(nd);
+    if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(8);
+  };
+
+  // Cerca del borde, el calendario se desliza solo para llevar la reserva más lejos
+  // Solo si el dedo fue hacia ese borde: levantar una barra que ya está en el borde no desliza nada.
+  const autoScroll = (cx, sx) => {
+    const sc = scrollRef.current;
+    if (!sc) return;
+    const sr = sc.getBoundingClientRect();
+    const L = sr.left + LABEL + 24,
+      R = sr.right - 30;
+    let v = 0;
+    if (cx < L && sx - cx > 12 && sc.scrollLeft > 0) v = -Math.min(14, (L - cx) / 3 + 3);
+    else if (cx > R && cx - sx > 12 && sc.scrollLeft < sc.scrollWidth - sc.clientWidth)
+      v = Math.min(14, (cx - R) / 3 + 3);
+    auto.current.v = v;
+    if (v && !auto.current.raf) {
+      const step = () => {
+        const a = auto.current;
+        if (!a.v || !dragRef.current) {
+          a.raf = 0;
+          return;
+        }
+        sc.scrollLeft += a.v;
+        fn.current.move(a.x, a.y);
+        a.raf = requestAnimationFrame(step);
+      };
+      auto.current.raf = requestAnimationFrame(step);
+    }
+  };
+
+  const endDrag = (cancel) => {
+    const d = dragRef.current;
+    dragRef.current = null;
+    auto.current.v = 0;
+    cancelAnimationFrame(auto.current.raf);
+    auto.current.raf = 0;
+    setDrag(null);
+    noClickUntil.current = Date.now() + 450;
+    if (cancel || !d) return;
+    const ch =
+      d.newCheckIn !== d.orig.checkIn ||
+      d.newPropId !== d.orig.propId ||
+      d.newRoom !== d.orig.room;
+    if (ch) setDConf({ ...d, dragConflicts: d.conflicts.length ? d.conflicts : undefined });
+  };
+  fn.current = { move: moveDrag, end: endDrag };
+
+  // Toque en la barra: espera el toque largo para levantarla
+  const pressBar = (e, r, row) => {
+    if (e.touches.length > 1) return;
+    const t = e.touches[0];
+    const x = t.clientX,
+      y = t.clientY;
+    if (pressRef.current) clearTimeout(pressRef.current.timer);
+    const timer = setTimeout(() => {
+      pressRef.current = null;
+      beginDrag(x, y, r, row);
+      if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(30);
+    }, 350);
+    pressRef.current = { timer, x, y };
+  };
+
+  // Mouse: el arrastre empieza recién al moverse unos píxeles (un clic simple abre la reserva)
+  const mouseBar = (e, r, row) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setTooltip(null);
+    const sx = e.clientX,
+      sy = e.clientY;
+    const mm = (ev) => {
+      if (!dragRef.current) {
+        if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
+        beginDrag(sx, sy, r, row);
+      }
+      fn.current.move(ev.clientX, ev.clientY);
+    };
+    const mu = () => {
+      window.removeEventListener('mousemove', mm);
+      window.removeEventListener('mouseup', mu);
+      if (dragRef.current) fn.current.end(false);
+    };
+    window.addEventListener('mousemove', mm);
+    window.addEventListener('mouseup', mu);
+  };
+
+  // Deslizar la fila de los días (y en la compu, toda la grilla con el mouse) cambia las fechas
+  const onMove = (e) => {
+    if (!hdrDrag) return;
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const dd = -Math.round((cx - hdrDrag.startX) / COL);
+    setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
+  };
+  const endPan = () => setHdrDrag(null);
 
   const confDrag = (nci, nco, npid, nr) => {
     const confs = findConflicts(reservations, npid, nr, nci, nco, dConf.id);
@@ -280,20 +443,17 @@ export function Timeline({
   return (
     <div
       onMouseMove={onMove}
-      onMouseUp={endDrag}
-      onMouseLeave={endDrag}
-      onTouchMove={(e) => {
-        e.preventDefault();
-        onMove(e);
+      onMouseUp={endPan}
+      onMouseLeave={endPan}
+      onTouchMove={onMove}
+      onTouchEnd={endPan}
+      // Sin selección de texto ni el menú del toque largo (iPhone y Android)
+      style={{
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        WebkitTouchCallout: 'none',
+        WebkitTapHighlightColor: 'transparent',
       }}
-      onTouchEnd={() => {
-        endDrag();
-        if (lpt[0]) {
-          clearTimeout(lpt[0]);
-          lpt[1](null);
-        }
-      }}
-      style={{ userSelect: 'none' }}
     >
       {/* ESTILOS DE ANIMACIÓN DE PULSO VERDE */}
       <style>{timelineCss}</style>
@@ -367,7 +527,8 @@ export function Timeline({
         </div>
       </div>
       <div
-        id="calendario-scroll"  // <--- ¡AGREGAMOS ESTO!
+        id="calendario-scroll"
+        ref={scrollRef}
         style={{
           overflowX: 'auto',
           borderRadius: 'var(--r-card)',
@@ -385,11 +546,17 @@ export function Timeline({
             setHdrDrag({ startX: cx, startOffset: offset });
           }}
           onTouchStart={(e) => {
-            const cx = e.touches[0].clientX;
-            setHdrDrag({ startX: cx, startOffset: offset });
+            // Con el dedo, la grilla se desliza sola (nativo); solo se anota dónde empezó el toque
+            const t = e.touches[0];
+            tapRef.current = { x: t.clientX, y: t.clientY };
           }}
         >
           <div
+            ref={headRef}
+            onTouchStart={(e) => {
+              const cx = e.touches[0].clientX;
+              setHdrDrag({ startX: cx, startOffset: offset });
+            }}
             style={{
               display: 'flex',
               borderBottom: '1px solid var(--line)',
@@ -587,7 +754,14 @@ export function Timeline({
                       if (!drag && !hdrDrag) onAddRes(row.prop.id, fmt(d), row.type === 'room' ? { room: row.room.id } : null);
                     }}
                     onTouchEnd={(e) => {
-                      if (drag || hdrDrag) return;
+                      if (drag || hdrDrag || Date.now() < noClickUntil.current) return;
+                      const t = e.changedTouches[0],
+                        s = tapRef.current;
+                      // Fue un deslizamiento, no un toque
+                      if (t && s && Math.hypot(t.clientX - s.x, t.clientY - s.y) > 10) {
+                        e.currentTarget._lt = 0;
+                        return;
+                      }
                       const n = Date.now();
                       if (
                         e.currentTarget._lt &&
@@ -602,22 +776,46 @@ export function Timeline({
                     }}
                   />
                 ))}
-                {ghost && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 6,
-                      height: ROW - SH * 3 - 10,
-                      left: LABEL + ghost.currentCol * COL + 2,
-                      width: ghost.width * COL - 4,
-                      borderRadius: 6,
-                      background: 'rgba(59,130,246,.2)',
-                      border: '2px dashed var(--acc)',
-                      zIndex: 6,
-                      pointerEvents: 'none',
-                    }}
-                  />
-                )}
+                {ghost && (() => {
+                  // Dónde cae: misma cuenta que las barras (entra a mitad del día, sale a mitad del día)
+                  const ci = ghost.colIn + ghost.delta;
+                  const co = ci + ghost.nights;
+                  const cs = Math.max(0, ci),
+                    ce = Math.min(NCOLS, co);
+                  if (ce <= cs) return null;
+                  const pxL = cs * COL + (ci < 0 ? 0 : COL / 2);
+                  const pxR = ce * COL + (co > NCOLS ? COL : COL / 2);
+                  const bad = ghost.conflicts.length > 0;
+                  const bc = BLOCK_COLORS[ghost.status] || BLOCK_COLORS.por_llegar;
+                  return (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 4,
+                        height: ROW - 8,
+                        left: LABEL + pxL + 2,
+                        width: Math.max(8, pxR - pxL - 4),
+                        borderRadius: 10,
+                        background: bad ? 'var(--c-FEF2F2)' : bc.bg,
+                        border: `2px ${bad ? 'dashed' : 'solid'} ${bad ? 'var(--red)' : 'var(--acc)'}`,
+                        boxShadow: '0 8px 22px rgba(0,0,0,.25)',
+                        color: bad ? 'var(--red)' : bc.text,
+                        fontSize: 11,
+                        fontWeight: 800,
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '0 10px',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        zIndex: 16,
+                        pointerEvents: 'none',
+                        transition: 'left .12s ease-out',
+                      }}
+                    >
+                      {ghost.guestName}
+                    </div>
+                  );
+                })()}
                 {blocks.map((r) => {
                   const bc = BLOCK_COLORS[r.status] || BLOCK_COLORS.por_llegar;
                   const alerts = getAlerts(r);
@@ -649,45 +847,26 @@ export function Timeline({
                         width: W,
                         zIndex: isDrag ? 10 : (highlightStatus && r.status === highlightStatus ? 15 : 4),
                         opacity: isDrag ? 0.3 : 1,
-                        touchAction: 'none',
+                        pointerEvents: drag && !isDrag ? 'none' : undefined,
+                        transition: 'opacity .15s',
                         animation: (highlightStatus && r.status === highlightStatus) ? 'pulseGreenBlock 0.8s ease-in-out 3' : 'none',
                       }}
                       onMouseEnter={(e) => {
-                        if (!isMobile)
+                        if (!isMobile && !dragRef.current)
                           setTooltip({ r, x: e.clientX, y: e.clientY });
                       }}
                       onMouseLeave={() => setTooltip(null)}
                       onMouseMove={(e) => {
-                        if (!isMobile && tooltip)
+                        if (!isMobile && tooltip && !dragRef.current)
                           setTooltip({ r, x: e.clientX, y: e.clientY });
                       }}
-                      onMouseDown={(e) => {
-                        setTooltip(null);
-                        startDrag(e, r, row);
-                      }}
-                      onTouchStart={(e) => {
-                        const touch = e.touches[0];
-                        const fakeEvent = { touches: [touch] };
-                        
-                        const timer = setTimeout(() => {
-                          startDrag(fakeEvent, r, row);
-                          if (window.navigator && window.navigator.vibrate) {
-                            window.navigator.vibrate(40);
-                          }
-                        }, 400); 
-                        lpt[1](timer);
-                      }}
-                      onTouchMove={() => {
-                        if (lpt[0]) {
-                          clearTimeout(lpt[0]);
-                          lpt[1](null);
-                        }
-                      }}
+                      onMouseDown={(e) => mouseBar(e, r, row)}
+                      onTouchStart={(e) => pressBar(e, r, row)}
+                      onContextMenu={(e) => e.preventDefault()}
                       onClick={(e) => {
-                        if (!drag) {
-                          e.stopPropagation();
-                          onClickRes(r);
-                        }
+                        e.stopPropagation();
+                        if (dragRef.current || Date.now() < noClickUntil.current) return;
+                        onClickRes(r);
                       }}
                     >
                       {W > 12 ? (
@@ -927,6 +1106,46 @@ export function Timeline({
           </div>
         ))}
       </div>
+      {drag && (() => {
+        const nr = rows[drag.currentRowIdx];
+        const where = nr ? (nr.type === 'room' ? nr.room.name : nr.prop.name) : '';
+        const moved =
+          drag.newCheckIn !== drag.orig.checkIn ||
+          drag.newPropId !== drag.orig.propId ||
+          drag.newRoom !== drag.orig.room;
+        const bad = drag.conflicts.length > 0;
+        return (
+          <div
+            ref={(el) => {
+              pillRef.current = el;
+              if (el) placePill(auto.current.x, auto.current.y);
+            }}
+            style={{
+              position: 'fixed',
+              left: 0,
+              top: 0,
+              zIndex: 600,
+              maxWidth: 300,
+              background: bad ? 'var(--red)' : 'var(--tip)',
+              color: '#fff',
+              borderRadius: 14,
+              padding: '8px 14px',
+              boxShadow: '0 10px 30px rgba(0,0,0,.3)',
+              pointerEvents: 'none',
+              textAlign: 'center',
+              lineHeight: 1.3,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <div style={{ fontSize: 13.5, fontWeight: 800 }}>
+              {bad ? <>{ic('warning', 14)}{where} está ocupada</> : moved ? <>{where} · {drag.nights} {drag.nights === 1 ? 'noche' : 'noches'}</> : 'Movela a otro día o habitación'}
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.85 }}>
+              {dayShort(drag.newCheckIn)} → {dayShort(drag.newCheckOut)}
+            </div>
+          </div>
+        );
+      })()}
       {tooltip && (
         <div
           style={{
@@ -1073,9 +1292,13 @@ export function Timeline({
                   >
                     Cambio de fechas
                   </div>
-                  <div style={{ fontSize: 14.5 }}>
-                    Entrada {dayShort(dConf.orig.checkIn)} →{' '}
-                    <b style={{ color: 'var(--acc)' }}>{dayShort(newCI)}</b>
+                  <div style={{ fontSize: 13, color: 'var(--mut)', textDecoration: 'line-through' }}>
+                    {dayShort(dConf.orig.checkIn)} → {dayShort(dConf.orig.checkOut)}
+                  </div>
+                  <div style={{ fontSize: 14.5, marginTop: 2 }}>
+                    <b style={{ color: 'var(--acc)' }}>
+                      {dayShort(newCI)} → {dayShort(newCO)}
+                    </b>
                   </div>
                 </div>
               )}
