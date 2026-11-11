@@ -619,7 +619,7 @@ export function Timeline({
                         right: -7,
                         borderRadius: 12,
                         background: 'var(--c-DBEAFE)',
-                        border: '1.5px solid var(--acc)',
+                        border: '1px solid var(--acc)',
                         boxShadow: '0 4px 12px rgba(37,99,235,.25)',
                         display: 'flex',
                         flexDirection: 'column',
