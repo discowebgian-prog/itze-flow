@@ -16,6 +16,7 @@ import { ROOMS } from '../../lib/constants';
 import { fmt } from '../../lib/dates';
 import { TIPS, careLine, WATER_NUDGE, waterText, HELP } from '../../lib/equipoVoz';
 import { I } from './icons';
+import { pushSupported, pushGranted, pushBlocked, isIOS, isStandalone, enablePush, syncPush } from '../../lib/push';
 import Sortable from 'sortablejs';
 import './limpieza-base.css';
 import './equipo.css';
@@ -105,6 +106,36 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
     document.addEventListener('visibilitychange', vis);
     return () => { supabase.removeChannel(ch); clearInterval(iv); document.removeEventListener('visibilitychange', vis); };
   }, [load, refresh]);
+
+  // Avisos (paso 7): Mary anota este aparato con su nombre al abrir; al abrir se borra el numerito del ícono
+  const [pushOn, setPushOn] = useState(() => pushGranted());
+  useEffect(() => {
+    if (isDueno) return undefined;
+    syncPush(myName);
+    const clear = () => {
+      try {
+        if (navigator.clearAppBadge) navigator.clearAppBadge();
+        if ('serviceWorker' in navigator) navigator.serviceWorker.ready.then((r) => r.getNotifications()).then((l) => l.forEach((n) => n.close())).catch(() => {});
+      } catch (e) {}
+    };
+    clear();
+    const vis = () => { if (!document.hidden) clear(); };
+    document.addEventListener('visibilitychange', vis);
+    return () => document.removeEventListener('visibilitychange', vis);
+  }, [isDueno, myName]);
+  async function activarAvisos() {
+    if (!pushSupported()) {
+      notify(isIOS() && !isStandalone()
+        ? 'Para recibir avisos en iPhone: abre Flow en Safari, toca Compartir › "Agregar a pantalla de inicio" y abre la app desde ese ícono. Ahí toca otra vez "Activar avisos".'
+        : 'Este navegador no permite avisos.', 'info');
+      return;
+    }
+    if (pushBlocked()) { notify('Los avisos están bloqueados. Actívalos en los ajustes del navegador o de la app para este sitio.', 'info'); return; }
+    try {
+      const r = await enablePush(myName);
+      if (r === 'ok') { setPushOn(true); notify('¡Listo! Avisos activados.'); }
+    } catch (e) { notifyError(e, 'activar los avisos'); }
+  }
 
   const t = hoyStr();
   const { tareas, fotos, dia, insumos, marcas, reservas, tarifas } = data;
@@ -451,6 +482,7 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
       <div className="top">
         <div><h1>{hi}</h1><div className="sub">{fecha}</div></div>
         <div className="row">
+          {!isDueno && !pushOn ? <button className="pill" onClick={activarAvisos}><I n="bell" c="a" /> Activar avisos</button> : null}
           {isDueno ? <button className="pill" onClick={() => setView(view === 'owner' ? 'mary' : 'owner')}>{view === 'owner' ? 'Ver como Mary' : 'Volver a dueños'}</button> : null}
           {onLogout ? <button className="pill" onClick={onLogout}>Salir</button> : null}
         </div>
