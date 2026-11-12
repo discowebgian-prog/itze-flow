@@ -11,7 +11,7 @@ import { AnimatePresence } from 'motion/react';
 import { Backdrop, PopCard, CountUp, Collapse } from '../components/ui/Motion';
 import { InfoTip } from '../components/ui/InfoTip';
 import { Icon, ic } from '../components/ui/Icon';
-import { notify, notifyError, financeReading } from '../lib/voice';
+import { notify, notifyError, financeReading, paxReading } from '../lib/voice';
 import { esDueno } from '../lib/roles';
 
 // Títulos de sección (estilo Limpieza: grandes, con ícono)
@@ -46,8 +46,40 @@ function Delta({ cur, prev, style = {} }) {
 }
 
 // ── FINANCE PAGE ──────────────────────────────────────────────────────────────
+// ── Personas por habitación (Segmentación física, al tocarla) ──
+// Cada noche ocupada (hasta hoy) cuenta con las personas de su reserva.
+const PAX_TYPES = [
+  ['compartidas', 'Habitaciones 1, 2, 3 y 5', ['P1', 'P2', 'P3', 'P5']],
+  ['king', 'Habitación 4', ['P4']],
+  ['matrimonial', 'Habitación 6', ['P6']],
+].map((t) => [...t, Math.max(...t[2].map((id) => ROOMS.find((r) => r.id === id)?.maxGuests || 0))]); // + capacidad
+
+const paxSeg = () => ({ n: 0, pax: 0, solo: 0, pareja: 0, grupo: 0 });
+const paxAdd = (s, p) => {
+  s.n++;
+  s.pax += p;
+  if (p <= 1) s.solo++;
+  else if (p === 2) s.pareja++;
+  else s.grupo++;
+};
+function paxStats(list = []) {
+  const out = { entre: paxSeg(), finde: paxSeg(), global: paxSeg(), types: {} };
+  PAX_TYPES.forEach(([k]) => (out.types[k] = paxSeg()));
+  list.forEach((x) => {
+    const p = x.pax || 1;
+    paxAdd(x.finde ? out.finde : out.entre, p);
+    paxAdd(out.global, p);
+    const t = PAX_TYPES.find((t) => t[2].includes(x.room));
+    if (t) paxAdd(out.types[t[0]], p);
+  });
+  return out;
+}
+const paxAvg = (s) => (s && s.n ? (s.pax / s.n).toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—');
+const paxPct = (s, k) => (s && s.n ? Math.round((s[k] / s.n) * 100) : 0);
+
 export function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoTo, tarifas = [] }) {
   const [showTrash, setShowTrash] = useState(false);
+  const [paxOpen, setPaxOpen] = useState({}); // mes → abierto "Personas por habitación"
   const [gastos, setGastos] = useState([]);
   const [formGasto, setFormGasto] = useState({ fecha: fmt(TODAY), monto: '', categoria: 'Insumos', notas: '' });
   const [guardandoGasto, setGuardandoGasto] = useState(false);
@@ -202,7 +234,8 @@ DATOS DEL HOTEL (${m.label}). Ingresos, ocupación, ADR, RevPAR y GOPPAR conside
 - RevPAR (Lun-Mié): $${metrics.revparEntre} vs RevPAR (Jue-Dom): $${metrics.revparFinde}${metrics.pot ? `
 - % del potencial (ingreso de las habitaciones ÷ todas vendidas cada noche al precio del tarifario vigente): ${metrics.pot.pct}% ($${metrics.pot.earned} de $${metrics.pot.possible}) | Ocupación: ${metrics.pot.occ}% | Cobrado vs tarifario: ${metrics.pot.rate}% | Lun-Mié: ${metrics.pot.entre}% | Jue-Dom: ${metrics.pot.finde}%` : ''}${metrics.prevCmp ? `
 - Mes anterior (${metrics.prevCmp.label}): RevPAR Global $${metrics.prevCmp.revpar} | Lun-Mié $${metrics.prevCmp.entre} | Jue-Dom $${metrics.prevCmp.finde}` : ''}
-- Ocup. Habitaciones 1, 2, 3 y 5 (privadas): ${metrics.oComp}% | Habitación 4 (king): ${metrics.oKing}% | Habitación 6 (matrimonial): ${metrics.oMat}%
+- Ocup. Habitaciones 1, 2, 3 y 5 (privadas): ${metrics.oComp}% | Habitación 4 (king): ${metrics.oKing}% | Habitación 6 (matrimonial): ${metrics.oMat}%${metrics.pax ? `
+- Personas promedio por habitación ocupada por noche: Lun-Mié ${metrics.pax.entre} (solos ${metrics.pax.entreMix}) | Jue-Dom ${metrics.pax.finde} (solos ${metrics.pax.findeMix}) | Global ${metrics.pax.global}` : ''}
 ${rmBloque("- Distribución de estadía", rmExtra.distribucionEstadia)}
 ${rmBloque("- Ocupación por día de la semana", rmExtra.ocupacionPorDiaSemana)}
 ${rmBloque("- ADR por día de la semana", rmExtra.adrPorDiaSemana)}
@@ -320,7 +353,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
 
         // Índice por noche, para comparar un mes contra el anterior en el mismo tramo de días
         if (!nightsByMonth[nightMonthKey]) nightsByMonth[nightMonthKey] = [];
-        nightsByMonth[nightMonthKey].push({ day: currentNight.getDate(), date: fmt(currentNight), finde: isWeekend, room: r.room, rev: avgDailyRate });
+        nightsByMonth[nightMonthKey].push({ day: currentNight.getDate(), date: fmt(currentNight), finde: isWeekend, room: r.room, rev: avgDailyRate, pax: Math.max(1, Number(r.totalGuests) || 1) });
 
         if (isWeekend) {
            acc[nightMonthKey].dow.finde.revenue += avgDailyRate;
@@ -825,8 +858,13 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                 );
               })()}
 
-              {/* DESGLOSE DE INVENTARIO */}
-              <div style={{ background: 'var(--inset)', borderRadius: 'var(--r-item)', padding: '11px 12px', marginBottom: 14 }}>
+              {/* DESGLOSE DE INVENTARIO (tocar: personas por habitación) */}
+              <div
+                className="tap"
+                role="button"
+                onClick={() => setPaxOpen((o) => ({ ...o, [m.key]: !o[m.key] }))}
+                style={{ background: 'var(--inset)', borderRadius: 'var(--r-item)', padding: '11px 12px', marginBottom: 14, cursor: 'pointer' }}
+              >
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center' }}>Segmentación Física<InfoTip k="segmentacion" /></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4, alignItems: 'center' }}>
                   <span style={{ color: 'var(--ink-2)', fontWeight: 600 }}>Habitaciones 1, 2, 3 y 5</span>
@@ -841,6 +879,77 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                   <div style={{ textAlign: 'right' }}><span style={{ color: oMat > 60 ? 'var(--c-10B981)' : 'var(--c-F59E0B)', fontWeight: 800, marginRight: 6 }}><CountUp value={oMat + '%'} /></span><span style={{ fontWeight: 700, color: 'var(--ink)' }}>{currency(rMat)}</span>{showCmp && <Delta cur={rMat} prev={prev.mat} style={{ display: 'inline-block', minWidth: 40, textAlign: 'right', marginLeft: 6 }} />}</div>
                 </div>
                 {showCmp && <CmpTitle label={cmpLabel} />}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 8, fontSize: 11.5, fontWeight: 700, color: 'var(--acc)' }}>
+                  {ic('users', 13)}{paxOpen[m.key] ? 'Ocultar personas por habitación' : 'Ver personas por habitación'}
+                  <span style={{ display: 'inline-flex', transform: paxOpen[m.key] ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform .2s' }}>
+                    <Icon name="chev" size={13} strokeWidth={2.5} />
+                  </span>
+                </div>
+                <Collapse open={!!paxOpen[m.key]}>
+                  {(() => {
+                    const st = paxStats(nightsByMonth[m.key]);
+                    if (!st.global.n)
+                      return <div style={{ fontSize: 11.5, color: 'var(--mut)', marginTop: 10 }}>Todavía no hay noches ocupadas este mes.</div>;
+                    const reading = paxReading(st);
+                    const box = (label, s, bg, c, c2) => (
+                      <div style={{ background: bg, padding: '8px 4px', borderRadius: 12, textAlign: 'center' }}>
+                        <div style={{ fontSize: 9, color: c, fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>{label}</div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: c2 }}>{paxAvg(s)}</div>
+                        <div style={{ fontSize: 9.5, color: c, fontWeight: 600 }}>personas</div>
+                      </div>
+                    );
+                    const mix = (label, s) =>
+                      s.n ? (
+                        <div style={{ marginTop: 8 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--ink-2)', fontWeight: 700, marginBottom: 3 }}>
+                            <span>{label}</span>
+                            <span style={{ color: 'var(--mut)', fontWeight: 600 }}>{s.n} {s.n === 1 ? 'noche' : 'noches'}</span>
+                          </div>
+                          <div style={{ display: 'flex', height: 8, borderRadius: 99, overflow: 'hidden', background: 'var(--line)' }}>
+                            <div style={{ width: paxPct(s, 'solo') + '%', background: 'var(--c-9CA3AF)' }} />
+                            <div style={{ width: paxPct(s, 'pareja') + '%', background: 'var(--c-3B82F6)' }} />
+                            <div style={{ width: paxPct(s, 'grupo') + '%', background: 'var(--c-10B981)' }} />
+                          </div>
+                          <div style={{ display: 'flex', gap: 10, fontSize: 10.5, color: 'var(--ink-2)', marginTop: 3, flexWrap: 'wrap' }}>
+                            <span><b style={{ color: 'var(--c-9CA3AF)' }}>●</b> Solos {paxPct(s, 'solo')}%</span>
+                            <span><b style={{ color: 'var(--c-3B82F6)' }}>●</b> Parejas {paxPct(s, 'pareja')}%</span>
+                            <span><b style={{ color: 'var(--c-10B981)' }}>●</b> 3 o más {paxPct(s, 'grupo')}%</span>
+                          </div>
+                        </div>
+                      ) : null;
+                    return (
+                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--line)', cursor: 'default' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center' }}>Personas por habitación<InfoTip k="personas" /></span>
+                          <span style={{ fontSize: 9 }}>promedio por noche</span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+                          {box('Lun - Mié', st.entre, 'var(--c-FFFBEB)', 'var(--c-D97706)', 'var(--c-92400E)')}
+                          {box('Jue - Dom', st.finde, 'var(--c-F5F3FF)', 'var(--c-7C3AED)', 'var(--c-5B21B6)')}
+                          {box('Global', st.global, 'var(--acc-soft)', 'var(--acc)', 'var(--acc)')}
+                        </div>
+                        {mix('Lun – Mié', st.entre)}
+                        {mix('Jue – Dom', st.finde)}
+                        <div style={{ marginTop: 10 }}>
+                          {PAX_TYPES.map(([k, label, , cap]) => (
+                            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
+                              <span style={{ color: 'var(--ink-2)', fontWeight: 600 }}>{label}</span>
+                              <span style={{ fontWeight: 700, color: 'var(--ink)' }}>
+                                {st.types[k].n ? `${paxAvg(st.types[k])} personas` : 'sin noches'}
+                                {st.types[k].n && cap ? <span style={{ color: 'var(--mut)', fontWeight: 600 }}> · de {cap}</span> : null}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        {reading && (
+                          <div style={{ fontSize: 12, color: 'var(--ink)', background: 'var(--card)', borderRadius: 10, padding: '8px 10px', marginTop: 8, lineHeight: 1.45 }}>
+                            {reading}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </Collapse>
               </div>
 
               {/* FLUJO DE CAJA (FACTURADO) */}
@@ -866,7 +975,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                   </div>
                   {!aiInsights[m.key] ? (
                     <button
-                      onClick={() => analizarRevenue(m, { pot: pot && pot.pct !== null ? pot : null, trueRevenue: Math.round(m.trueRevenue), bookedRevenue: Math.round(m.bookedRevenue), bookedPct, projectedPct, projectedRevenue, gastos: m.gastos, occPct, adr, revpar, goppar, revparEntre, revparFinde, oMat, oKing, oComp, prevCmp: showCmp ? { label: cmpLabel, revpar: prev.revpar, entre: prev.entre, finde: prev.finde } : null })}
+                      onClick={() => analizarRevenue(m, { pot: pot && pot.pct !== null ? pot : null, trueRevenue: Math.round(m.trueRevenue), bookedRevenue: Math.round(m.bookedRevenue), bookedPct, projectedPct, projectedRevenue, gastos: m.gastos, occPct, adr, revpar, goppar, revparEntre, revparFinde, oMat, oKing, oComp, pax: (() => { const st = paxStats(nightsByMonth[m.key]); if (!st.global.n) return null; const mx = (x) => `${paxPct(x, 'solo')}%, parejas ${paxPct(x, 'pareja')}%, 3 o más ${paxPct(x, 'grupo')}%`; return { entre: paxAvg(st.entre), finde: paxAvg(st.finde), global: paxAvg(st.global), entreMix: mx(st.entre), findeMix: mx(st.finde) }; })(), prevCmp: showCmp ? { label: cmpLabel, revpar: prev.revpar, entre: prev.entre, finde: prev.finde } : null })}
                       disabled={analyzingMonth === m.key}
                       style={{
                         background: 'var(--c-EEF2FF)', border: 'none', color: 'var(--c-4F46E5)', padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: analyzingMonth === m.key ? 'wait' : 'pointer', opacity: analyzingMonth === m.key ? 0.7 : 1
