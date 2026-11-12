@@ -2,13 +2,12 @@
 // @ts-nocheck
 // ── PERSONAS POR HABITACIÓN Y ESTRATEGIA ─────────────────────────────────────
 // Lo usan Finanzas (al tocar Segmentación física, mes a mes, se recalcula cada día)
-// e Inicio (tarjeta "Estrategia de la semana": últimas 4 semanas, cambia los lunes,
-// y los próximos 7 días para mover parejas de habitaciones grandes).
+// e Inicio (tarjeta "Estrategia de la semana": últimas 4 semanas, cambia los lunes).
+// Sin sugerir mover huéspedes de habitación (Gian: incomoda más de lo que ayuda).
 // Las sugerencias son reglas fijas (no gastan IA). Tono: cálido, corto y claro.
 import { ROOMS } from './constants';
 import { TODAY, fmt, addDays, parseD, diffDays } from './dates';
 import { isFindeDow } from './rates';
-import { findConflicts } from './reservations';
 
 // Tipos de habitación con su capacidad (la mayor del grupo)
 export const PAX_TYPES = [
@@ -143,47 +142,6 @@ export function paxStrategy(st, { prev = null, prevLabel = '', max = 3 } = {}) {
     });
 
   return out.slice(0, max);
-}
-
-const roomNum = (id) => String(id || '').replace(/^P/, '');
-const dShort = (d) =>
-  parseD(d).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric' }).replace(/\./g, '').replace(',', '');
-
-// Próximos 7 días: parejas o solos que todavía no llegaron, en una habitación grande con noches
-// de jueves a domingo, cuando la 6 o la 4 está libre toda su estadía → mover y dejar lugar a un grupo.
-export function weekMoves(reservations, max = 2) {
-  const today = fmt(TODAY),
-    end = fmt(addDays(TODAY, 7));
-  const out = [];
-  reservations
-    .filter(
-      (r) =>
-        r &&
-        r.status === 'por_llegar' &&
-        BIG.includes(r.room) &&
-        (Number(r.totalGuests) || 1) <= 2 &&
-        !r.grupoId &&
-        r.checkIn >= today &&
-        r.checkIn < end
-    )
-    .sort((a, b) => a.checkIn.localeCompare(b.checkIn))
-    .forEach((r) => {
-      if (out.length >= max) return;
-      const n = diffDays(r.checkIn, r.checkOut);
-      let finde = false;
-      for (let i = 0; i < n; i++) if (isFindeDow(addDays(parseD(r.checkIn), i).getDay())) finde = true;
-      if (!finde) return;
-      const pax = Number(r.totalGuests) || 1;
-      const alt = ['P6', 'P4'].find((a) => capOf(a) >= pax && !findConflicts(reservations, r.propertyId, a, r.checkIn, r.checkOut, r.id).length);
-      if (!alt) return;
-      out.push({
-        icon: 'shuffle',
-        title: `${r.guestName}: se puede pasar a la ${roomNum(alt)}`,
-        text: `${pax === 1 ? 'Es 1 persona' : 'Son 2 personas'} en la habitación ${roomNum(r.room)} (${dShort(r.checkIn)} → ${dShort(r.checkOut)}) y la ${roomNum(alt)} está libre esas noches. Si escribe un grupo para el finde, con ese cambio queda libre la ${roomNum(r.room)}.`,
-        res: r,
-      });
-    });
-  return out;
 }
 
 // Inicio: patrón de las últimas 4 semanas hasta el lunes (cambia una vez por semana)

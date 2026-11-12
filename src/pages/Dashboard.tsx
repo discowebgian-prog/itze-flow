@@ -11,7 +11,7 @@ import { greeting, daySummary, nowMerida } from '../lib/voice';
 import { buildGuestDB } from '../lib/guests';
 import { birthdayList, wasGreeted } from '../lib/guestMessages';
 import { PushButton } from '../components/ui/PushButton';
-import { weekMoves, weeklyPattern } from '../lib/paxStrategy';
+import { weeklyPattern } from '../lib/paxStrategy';
 import { Icon } from '../components/ui/Icon';
 import { MOV_TIPO, movTexto, cuando } from '../lib/movimientos';
 
@@ -69,8 +69,7 @@ export function Dashboard({
   const coTomorrow = reservations.filter(
     (r) => r.checkOut === fmt(addDays(TODAY, 1)) && r.status !== 'cancelada' && r.status !== 'finalizada'
   );
-  // Estrategia de la semana: movidas para los próximos 7 días + patrón de las últimas 4 semanas (cambia los lunes)
-  const moves = weekMoves(reservations);
+  // Estrategia de la semana: patrón de las últimas 4 semanas (cambia los lunes)
   const pattern = weeklyPattern(reservations);
   const pending = reservations.filter(
     (r) => r.status !== 'cancelada' && r.paid < r.totalAmount
@@ -424,9 +423,9 @@ export function Dashboard({
       )}
 
       {/* Estrategia de la semana */}
-      {(moves.length > 0 || pattern.length > 0) && (
+      {pattern.length > 0 && (
         <Group title="Estrategia de la semana" icon="target" col="var(--c-4F46E5)">
-          {[...moves, ...pattern].map((it, i) => (
+          {pattern.map((it, i) => (
             <div key={i} className="li-in ui-row" style={{ '--i': i, alignItems: 'flex-start', gap: 10, cursor: 'default' }}>
               <span style={{ color: 'var(--c-4F46E5)', flexShrink: 0, marginTop: 2 }}>
                 <Icon name={it.icon} size={18} />
@@ -437,11 +436,9 @@ export function Dashboard({
               </div>
             </div>
           ))}
-          {pattern.length > 0 && (
-            <div style={{ fontSize: 11.5, color: 'var(--mut)', padding: '6px 16px 8px' }}>
-              Según quiénes vinieron las últimas 4 semanas. Se renueva cada lunes; lo de los próximos días, cada día.
-            </div>
-          )}
+          <div style={{ fontSize: 11.5, color: 'var(--mut)', padding: '6px 16px 8px' }}>
+            Según quiénes vinieron las últimas 4 semanas. Se renueva cada lunes.
+          </div>
         </Group>
       )}
     </div>
