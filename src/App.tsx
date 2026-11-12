@@ -361,6 +361,7 @@ export default function AppMejorada() {
   }, [user?.id, deviceName]);
   // Desde el aviso de cumpleaños de Inicio: qué huésped resaltar en Huéspedes › Cumpleaños
   const [guestFocus, setGuestFocus] = useState(null);
+  const [ratesPrefill, setRatesPrefill] = useState(null); // período nuevo para Tarifas (desde un evento de Inicio)
   useEffect(() => {
     if (tab !== 'huespedes') setGuestFocus(null);
   }, [tab]);
@@ -494,6 +495,8 @@ export default function AppMejorada() {
       }
       // { birthday: clave del huésped } → Huéspedes › Cumpleaños con su tarjeta resaltada
       if (data && typeof data === 'object' && 'birthday' in data) setGuestFocus({ key: data.birthday || null });
+      // { nuevoPeriodo: { nombre, desde, hasta } } → Tarifas con el formulario de período nuevo ya lleno (radar de eventos)
+      if (data && typeof data === 'object' && data.nuevoPeriodo) setRatesPrefill(data.nuevoPeriodo);
     }
   };
   // Convierte una reserva de la app al formato de la base (y al de la pantalla)
@@ -1222,6 +1225,8 @@ const toggleBlacklist = async (id, currentStatus) => {
               user={user}
               onReload={fetchTarifas}
               isMobile={isMobile}
+              prefill={ratesPrefill}
+              onPrefillUsed={() => setRatesPrefill(null)}
             />
           )}
           {tab === 'finanzas' && (

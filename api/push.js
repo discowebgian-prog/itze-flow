@@ -20,7 +20,7 @@ import webpush from 'web-push';
 import crypto from 'node:crypto';
 import { daySummary, greeting, nowMerida } from './_voz.mjs';
 
-function vapidKeys() {
+export function vapidKeys() {
   if (process.env.VAPID_PRIVATE_KEY && process.env.VITE_VAPID_PUBLIC_KEY) {
     return { pub: process.env.VITE_VAPID_PUBLIC_KEY, priv: process.env.VAPID_PRIVATE_KEY };
   }
@@ -151,7 +151,7 @@ async function buenDia(req, res, { url, anonKey, keys }) {
 
 // ── Avisos de Equipo (paso 7) ─────────────────────────────────────────────────
 // Las mismas reglas y textos que la Edge Function "notify" de Itzé Limpieza, con los nombres de Flow.
-async function subsConRol(url, anonKey, clave, borrar = null) {
+export async function subsConRol(url, anonKey, clave, borrar = null) {
   const r = await fetch(`${url}/rest/v1/rpc/flow_avisos_subs`, {
     method: 'POST',
     headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json' },
