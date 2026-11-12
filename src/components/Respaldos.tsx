@@ -159,9 +159,9 @@ export function Respaldos({ who }) {
         <h3><Icon name="send" size={20} color="var(--c-8B5CF6)" strokeWidth={2.2} />Por correo</h3>
         <p style={P}>
           {correoEstado === 'enviado' || ultCorreo
-            ? <>Llega a tu correo los lunes, el día 1 de cada mes y cada vez que tocás "Hacer respaldo ahora". Último enviado: {cuandoTexto(ultCorreo?.creado_en)}.</>
+            ? <>Llega a tu correo todas las noches y cada vez que tocás "Hacer respaldo ahora". Último enviado: {cuandoTexto(ultCorreo?.creado_en)}.</>
             : correoEstado === 'sin configurar' || !correoEstado
-              ? <>Todavía no está conectado el envío de correos. Cuando esté, el respaldo llega los lunes y el día 1 de cada mes.</>
+              ? <>Todavía no está conectado el envío de correos. Cuando esté, el respaldo llega a tu correo todas las noches.</>
               : <>El último envío no salió: {correoEstado}</>}
         </p>
       </div>

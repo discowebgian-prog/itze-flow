@@ -1,7 +1,7 @@
 // Respaldo de Flow: arma la planilla Excel, la guarda en Flow (tabla flow_respaldos) y la manda por correo.
 //
 //   POST /api/respaldo con x-flow-clave → lo dispara Supabase todas las noches a las 3:00 de Progreso
-//        (responde 202 enseguida y sigue en el servidor). Correo: los lunes y el día 1 de cada mes.
+//        (responde 202 enseguida y sigue en el servidor). Correo: todas las noches (pedido de Gian).
 //   POST /api/respaldo con sesión de dueño → "Hacer respaldo ahora" de Finanzas › Respaldos
 //        (espera a que termine; siempre manda el correo si está configurado).
 //
@@ -82,9 +82,7 @@ export default async function handler(req, res) {
     if (!datos.ok || !datos.data) throw new Error('No pude leer los datos para el respaldo.');
     const { buffer, resumen, nombre } = await armarPlanilla(datos.data);
 
-    const hoy = new Date(`${hoyProgreso()}T12:00:00Z`);
-    const tocaCorreo = manual || hoy.getUTCDay() === 1 || hoy.getUTCDate() === 1;
-    resumen.correo = tocaCorreo ? await mandarCorreo({ buffer, nombre, resumen }) : 'no tocaba';
+    resumen.correo = await mandarCorreo({ buffer, nombre, resumen });
 
     const g = await rpc('flow_respaldo_guardar', {
       p_clave: clave,
