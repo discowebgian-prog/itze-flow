@@ -541,3 +541,23 @@ export function paxReading({ entre, finde }) {
     t += ' Entre semana llegan grupos más grandes que el finde: vale la pena pensar promos para grupos de lunes a miércoles.';
   return t;
 }
+
+// ── Finanzas: Huéspedes y cobros (lectura en palabras) ──
+// c = cobrosMes(...) del mes; prev = el del mes anterior (o null)
+export function cobrosReading(c, prev) {
+  if (!c || !c.n) return null;
+  const frases = [];
+  const PG = { efectivo: 'en efectivo', transferencia: 'por transferencia', debito: 'con débito', credito: 'con crédito', vcc: 'con la VCC de Booking', otro: 'de otra forma' };
+  const top = Object.entries(c.pago).filter(([, v]) => v.monto > 0).sort((a, b) => b[1].monto - a[1].monto)[0];
+  if (top && c.cobrado > 0) frases.push(`El ${Math.round((top[1].monto / c.cobrado) * 100)}% se cobró ${PG[top[0]]}.`);
+  if (c.factura.n) frases.push(`${c.factura.n === 1 ? '1 reserva pidió' : `${c.factura.n} reservas pidieron`} factura (${c.factura.pctIngresos}% de los ingresos).`);
+  if (c.repiten.n) frases.push(`El ${c.repiten.pct}% ya había venido antes.`);
+  if (prev && prev.n >= 5 && c.n >= 5) {
+    const d = c.procedencia.pctExtranjeros - prev.procedencia.pctExtranjeros;
+    if (Math.abs(d) >= 15) frases.push(`Vinieron ${d > 0 ? 'más' : 'menos'} extranjeros que el mes anterior (${c.procedencia.pctExtranjeros}% contra ${prev.procedencia.pctExtranjeros}%).`);
+    const dc = c.cancel.pct - prev.cancel.pct;
+    if (dc >= 10) frases.push(`Ojo: subieron las cancelaciones (${c.cancel.pct}% contra ${prev.cancel.pct}%).`);
+  }
+  if (c.late.n && c.late.monto > 0) frases.push(`El late check-out dejó $${Math.round(c.late.monto).toLocaleString('es-MX')}.`);
+  return frases.slice(0, 4).join(' ');
+}

@@ -97,6 +97,21 @@ export const GLOSSARY = {
       'Si "cobrado vs tarifario" pasa el 100%: vendiste extras (personas adicionales, late check-out). ¡Bien!',
     ],
   },
+  cobros: {
+    title: 'Huéspedes y cobros',
+    sub: 'Cómo pagan, quiénes son y qué se dejó de cobrar',
+    what:
+      'Un resumen de las reservas que entran en el mes: con qué medio pagaron, cuántas pidieron factura o son de empresa, cuántas sumaron extras (late check-out, personas extra, noches extendidas), cuántos huéspedes repiten o vienen de otro país, y lo que se perdió por cancelaciones, descuentos y noches gratis.',
+    how: 'Cuenta las reservas por su fecha de entrada. Las formas de pago se miden sobre lo ya cobrado; las cancelaciones, sobre todas las reservas del mes (incluidas las canceladas).',
+    example:
+      'Si en el mes entraron 20 reservas y 5 pidieron factura, dice 25%. Si esas 5 sumaron $15,000 de $50,000 en total, son el 30% de los ingresos.',
+    use: [
+      'Si crece la parte en efectivo, conviene tener cambio y registrar bien cada cobro.',
+      'Muchas facturas o empresas: hay un público de trabajo para cuidar con convenios o tarifa corporativa.',
+      'Si los extras (late check-out, personas extra) suben, ofrecerlos siempre al hacer el check-in suma ingresos sin vender más noches.',
+      '"Extendieron estadía" cuenta desde el 12 nov 2026: antes no se guardaba.',
+    ],
+  },
   personas: {
     title: 'Personas por habitación',
     sub: 'Qué tipo de grupos vienen cada día',
