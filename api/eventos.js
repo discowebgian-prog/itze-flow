@@ -11,6 +11,7 @@
 import webpush from 'web-push';
 import { waitUntil } from '@vercel/functions';
 import { vapidKeys, subsConRol } from './push.js';
+import { fechasFijas } from './_fechasFijas.mjs';
 
 const MODEL = 'claude-sonnet-5-5';
 const MAX_SEARCHES = 6; // por tema (3 temas en paralelo)
@@ -18,7 +19,7 @@ const TOPE_MS = 270000; // todo tiene que terminar antes del maxDuration de verc
 
 // Un tema por búsqueda (corren al mismo tiempo)
 const TEMAS = [
-  'feriados y puentes largos de México, temporadas altas (Semana Santa y Pascua, vacaciones de verano, Navidad y Año Nuevo), carnaval de Progreso y de Mérida, y fiestas patronales y religiosas',
+  'fiestas patronales y religiosas de Progreso y los puertos cercanos, el programa del carnaval de Progreso y de Mérida, y eventos especiales que se hagan en los puentes y temporadas (las fechas de feriados y vacaciones ya las tenemos: no las busques)',
   'festivales, ferias y eventos culturales (Noche Blanca, Festival de la Cultura Maya, Hanal Pixán, Paseo de las Ánimas, ferias gastronómicas, exposiciones) y conciertos grandes',
   'eventos deportivos (maratones, medio maratón, triatlones, kitesurf, pesca, vela, ciclismo, natación en aguas abiertas, torneos), congresos y convenciones en Mérida y arribos de cruceros al puerto de Progreso',
 ];
@@ -64,13 +65,16 @@ export default async function handler(req, res) {
 
   // La búsqueda sigue en segundo plano; la app se entera por eventos_busquedas
   const trabajo = async () => {
+    // Feriados, puentes y temporadas: por calendario (siempre, sin gastar búsquedas)
+    const fijas = fechasFijas(hoyMx());
+    const conocidosYFijas = [...(conocidos || []), ...fijas.map((e) => ({ nombre: e.nombre, fecha_desde: e.fecha_desde, fecha_hasta: e.fecha_hasta }))];
     const limite = Date.now() + TOPE_MS;
-    const res3 = await Promise.allSettled(TEMAS.map((t) => buscarEventos(apiKey, conocidos, t, limite)));
+    const res3 = await Promise.allSettled(TEMAS.map((t) => buscarEventos(apiKey, conocidosYFijas, t, limite)));
     const errores = res3.filter((r) => r.status === 'rejected').map((r) => String((r.reason && r.reason.message) || r.reason).slice(0, 140));
     errores.forEach((e) => console.error('Radar de eventos: error', e));
     // Junta los tres temas sin repetir (mismo nombre y fecha)
-    const vistos = new Set();
-    const eventos = [];
+    const vistos = new Set(fijas.map((e) => e.nombre.toLowerCase().replace(/[^a-z0-9]/g, '') + '|' + e.fecha_desde));
+    const eventos = [...fijas];
     res3.forEach((r) => {
       if (r.status !== 'fulfilled') return;
       r.value.forEach((e) => {
@@ -106,7 +110,7 @@ Dónde buscar: Ayuntamiento de Progreso y de Mérida, Secretaría de Fomento Tur
 
 REGLAS:
 - Solo eventos con fecha concreta (al menos el día de inicio) que hayas visto en una fuente. No inventes. Si la fecha todavía no está confirmada por los organizadores, poné "confianza": "probable".
-- Si un evento ya está en la lista de conocidos, usá EXACTAMENTE el mismo nombre y la misma fecha_desde (podés corregir el resto de los datos).
+- Si un evento ya está en la lista de conocidos, usá EXACTAMENTE el mismo nombre y la misma fecha_desde (podés corregir el resto de los datos). Los feriados, puentes y vacaciones de la lista ya están: no los repitas; sí buscá eventos que pasen en esas fechas.
 - Cruceros: no uno por barco; si hay arribos, uno por mes que diga en la descripción cuántos y qué días.
 - impacto: "alto" si llena Progreso (carnaval, Semana Santa, verano, Navidad y Año Nuevo, festivales grandes), "medio" si atrae bastante gente de afuera, "bajo" si es más local.
 - ideas: 2 o 3 acciones concretas y cortas para el hostel (precio, difusión o participación: convenio con organizadores, paquete o descuento para participantes, transporte, desayuno temprano, late check-out…). Tono cálido, de "vos". Sin ideas obvias ni pedir mínimo de noches (en Progreso las estadías son cortas).
