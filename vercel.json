@@ -5,6 +5,9 @@
     },
     "api/eventos.js": {
       "maxDuration": 300
+    },
+    "api/respaldo.js": {
+      "maxDuration": 60
     }
   }
 }

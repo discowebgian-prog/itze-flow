@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { TODAY, fmt, fmtD, addDays, diffDays, parseD, currency, MONTHS } from '../lib/dates';
 import { askClaude } from '../lib/claude';
 import { exportToExcel } from '../lib/excel';
+import { Modal } from '../components/ui/Modal';
+import { Respaldos } from '../components/Respaldos';
 import { supabase } from '../lib/supabase';
 import { isFindeDow, roomTypeOf, nightPrice } from '../lib/rates';
 import { ROOMS } from '../lib/constants';
@@ -50,8 +52,9 @@ function Delta({ cur, prev, style = {} }) {
 }
 
 // ── FINANCE PAGE ──────────────────────────────────────────────────────────────
-export function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoTo, tarifas = [] }) {
+export function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoTo, tarifas = [], who = '' }) {
   const [showTrash, setShowTrash] = useState(false);
+  const [showBackups, setShowBackups] = useState(false);
   const [paxOpen, setPaxOpen] = useState({}); // mes → abierto "Personas por habitación"
   const [paxAsking, setPaxAsking] = useState(null);
   const [cobrosOpen, setCobrosOpen] = useState({}); // mes → abierta "Huéspedes y cobros" // mes al que el Asesor IA le está armando la estrategia
@@ -598,6 +601,19 @@ PARA LA PRÓXIMA SEMANA: 1 cosa para hacer ya.`;
               Papelera {deleted.length > 0 && ( <span style={{ background: 'var(--red)', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 11, fontWeight: 700 }}>{deleted.length}</span> )}
             </button>
           )}
+          {esDueno(user) && (
+            <button
+              onClick={() => setShowBackups(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px',
+                background: 'var(--acc-soft)', border: 'none', borderRadius: 20,
+                fontFamily: 'inherit', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: 'var(--acc)',
+              }}
+            >
+              <Icon name="shield" size={16} />
+              Respaldos
+            </button>
+          )}
           <button
             onClick={() => exportToExcel(reservations, properties)}
             style={{
@@ -611,6 +627,12 @@ PARA LA PRÓXIMA SEMANA: 1 cosa para hacer ya.`;
           </button>
         </div>
       </div>
+
+      <AnimatePresence>{showBackups && (
+        <Modal key="respaldos" title="Respaldos" icon="shield" onClose={() => setShowBackups(false)} isMobile={typeof window !== 'undefined' && window.innerWidth < 769} tall>
+          <Respaldos who={who} />
+        </Modal>
+      )}</AnimatePresence>
 
       {/* PAPELERA: reservas eliminadas, con Recuperar */}
       {showTrash && (

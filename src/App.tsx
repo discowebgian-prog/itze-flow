@@ -29,6 +29,7 @@ import { WhoAmI } from './components/ui/WhoAmI';
 import { getDeviceName, setDeviceName } from './lib/device';
 import { syncPush, sendPush } from './lib/push';
 import { ROLES, esDueno, puede } from './lib/roles';
+import { autoGuardarLocal } from './lib/respaldos';
 import { EquipoHome } from './pages/EquipoHome';
 import { EquipoView } from './pages/equipo/EquipoView';
 import { prepRes } from './lib/resDb';
@@ -364,6 +365,10 @@ export default function AppMejorada() {
     // Por ahora solo los dueños reciben avisos (los del equipo llegan en el paso 7)
     if (user?.id && esDueno(user) && deviceName) syncPush(deviceName);
   }, [user?.id, deviceName]);
+  // Respaldo en la carpeta de la compu (si la eligieron en Finanzas › Respaldos): guarda el nuevo al abrir
+  useEffect(() => {
+    if (user?.id && esDueno(user)) autoGuardarLocal();
+  }, [user?.id]);
   // Desde el aviso de cumpleaños de Inicio: qué huésped resaltar en Huéspedes › Cumpleaños
   const [guestFocus, setGuestFocus] = useState(null);
   const [ratesPrefill, setRatesPrefill] = useState(null); // período nuevo para Tarifas (desde un evento de Inicio)
@@ -1254,6 +1259,7 @@ const toggleBlacklist = async (id, currentStatus) => {
               restoreRes={restoreRes}
               onGoTo={goTo}
               tarifas={tarifas}
+              who={who}
             />
           )}
         </motion.div>
