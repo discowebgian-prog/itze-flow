@@ -12,7 +12,12 @@ import { buildGuestDB } from '../lib/guests';
 import { birthdayList, wasGreeted } from '../lib/guestMessages';
 import { PushButton } from '../components/ui/PushButton';
 import { weeklyPattern } from '../lib/paxStrategy';
-import { SeViene } from '../components/SeViene';
+import { useRadar, eventosAhora, SeVieneLista } from '../components/SeViene';
+import { urgente } from '../lib/eventos';
+import { cargarVistos, marcarVistos, quienDe } from '../lib/vistos';
+import { Modal } from '../components/ui/Modal';
+import { createPortal } from 'react-dom';
+import { AnimatePresence } from 'motion/react';
 import { Icon } from '../components/ui/Icon';
 import { MOV_TIPO, movTexto, cuando } from '../lib/movimientos';
 
@@ -72,6 +77,65 @@ export function Dashboard({
   );
   // Estrategia de la semana: patrón de las últimas 4 semanas (cambia los lunes)
   const pattern = weeklyPattern(reservations);
+  const lunes = fmt(addDays(TODAY, -((TODAY.getDay() + 6) % 7)));
+
+  // ── Píldoras "Se viene" y "Estrategia" (arriba, con circulito rojo de novedades por persona) ──
+  const radar = useRadar();
+  const quien = quienDe(deviceName);
+  const [vistos, setVistos] = useState(null); // Set de lo que vio esta persona; null = sin tabla (sin circulitos)
+  const [hoja, setHoja] = useState(null); // 'evento' | 'estrategia'
+  const [nuevosAlAbrir, setNuevosAlAbrir] = useState(null);
+  useEffect(() => {
+    let vivo = true;
+    cargarVistos(quien).then((v) => vivo && setVistos(v)).catch(() => {});
+    return () => { vivo = false; };
+  }, [quien]);
+  const ahoraEv = radar.st.ok ? eventosAhora(radar, reservations, vistos) : [];
+  const evNuevos = vistos ? ahoraEv.filter((x) => !vistos.has('evento:' + x.e.id)) : [];
+  const evUrgente = ahoraEv.some((x) => urgente(x.e, x.pct));
+  const estrClave = 'estrategia:' + lunes;
+  const estrNueva = !!(vistos && pattern.length && !vistos.has(estrClave));
+  const verVistos = (claves) => {
+    if (!vistos || !claves.length) return;
+    setVistos((v) => new Set([...(v || []), ...claves]));
+    marcarVistos(quien, claves).catch(() => {});
+  };
+  const abrirSeViene = () => {
+    setNuevosAlAbrir(new Set(evNuevos.map((x) => x.e.id)));
+    setHoja('evento');
+    verVistos(evNuevos.map((x) => 'evento:' + x.e.id));
+  };
+  const abrirEstrategia = () => {
+    setHoja('estrategia');
+    if (estrNueva) verVistos([estrClave]);
+  };
+  const isMobileW = typeof window !== 'undefined' && window.innerWidth < 769;
+  // Píldora de Inicio con circulito rojo (como la de Cumpleaños)
+  const pildora = ({ icon, label, color, bg = null, ink = null, badge = 0, onClick }) => (
+    <button
+      key={label.split(' ')[0]}
+      className={badge ? 'tap pop-in' : 'tap'}
+      onClick={onClick}
+      style={{
+        position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 20,
+        fontFamily: 'inherit', fontSize: 14, fontWeight: 600, cursor: 'pointer', border: 'none',
+        background: bg || 'var(--card)', color: ink || 'var(--ink-2)', boxShadow: bg ? 'none' : 'var(--shadow)',
+      }}
+    >
+      <Icon name={icon} size={16} color={color} />
+      {label}
+      {badge > 0 && (
+        <span
+          style={{
+            position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9,
+            background: 'var(--red)', color: '#fff', fontSize: 11, fontWeight: 800, lineHeight: '18px', textAlign: 'center', boxSizing: 'border-box',
+          }}
+        >
+          {badge}
+        </span>
+      )}
+    </button>
+  );
   const pending = reservations.filter(
     (r) => r.status !== 'cancelada' && r.paid < r.totalAmount
   );
@@ -302,6 +366,25 @@ export function Dashboard({
               </span>
             )}
           </button>
+          {/* Se viene (radar de eventos): circulito = eventos en su momento que esta persona todavía no vio;
+              roja si alguno está "¡Prepararse ya!". No aparece si falta el SQL del radar. */}
+          {radar.st.ok && pildora({
+            icon: 'megaphone',
+            label: ahoraEv.length ? `Se viene · ${ahoraEv.length}` : 'Se viene',
+            color: 'var(--c-DB2777)',
+            bg: evUrgente ? 'var(--c-FCE7F3)' : null,
+            ink: evUrgente ? 'var(--c-9D174D)' : null,
+            badge: evNuevos.length,
+            onClick: abrirSeViene,
+          })}
+          {/* Estrategia de la semana: circulito cuando cambió (los lunes) y esta persona no la vio */}
+          {pildora({
+            icon: 'target',
+            label: 'Estrategia',
+            color: 'var(--c-4F46E5)',
+            badge: estrNueva ? pattern.length : 0,
+            onClick: abrirEstrategia,
+          })}
           {/* Activar avisos con la app cerrada (desaparece cuando ya están activos en este aparato) */}
           {deviceName && <PushButton deviceName={deviceName} />}
         </div>
@@ -404,9 +487,6 @@ export function Dashboard({
         </Group>
       )}
 
-            {/* Se viene: radar de eventos (solo si ya se corrió supabase/eventos.sql) */}
-      <SeViene reservations={reservations} canEdit onGoTo={onGoTo} isMobile={typeof window !== 'undefined' && window.innerWidth < 769} />
-
       {/* VCC de Booking por cobrar */}
       {vccPending.length > 0 && (
         <Group title={`VCC de Booking por cobrar (${vccPending.length})`} icon="card" col="var(--c-1E40AF)">
@@ -426,25 +506,52 @@ export function Dashboard({
         </Group>
       )}
 
-      {/* Estrategia de la semana */}
-      {pattern.length > 0 && (
-        <Group title="Estrategia de la semana" icon="target" col="var(--c-4F46E5)">
-          {pattern.map((it, i) => (
-            <div key={i} className="li-in ui-row" style={{ '--i': i, alignItems: 'flex-start', gap: 10, cursor: 'default' }}>
-              <span style={{ color: 'var(--c-4F46E5)', flexShrink: 0, marginTop: 2 }}>
-                <Icon name={it.icon} size={18} />
-              </span>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--ink)' }}>{it.title}</div>
-                <div style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.45, marginTop: 2 }}>{it.text}</div>
-              </div>
-            </div>
-          ))}
-          <div style={{ fontSize: 11.5, color: 'var(--mut)', padding: '6px 16px 8px' }}>
-            Según quiénes vinieron las últimas 4 semanas. Se renueva cada lunes.
-          </div>
-        </Group>
-      )}
+      {/* Hojas de las píldoras */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {hoja === 'evento' && (
+              <Modal key="seviene" title="Se viene" icon="megaphone" onClose={() => setHoja(null)} isMobile={isMobileW} tall>
+                <SeVieneLista radar={radar} reservations={reservations} canEdit onGoTo={(t, x) => { setHoja(null); onGoTo(t, x); }} nuevos={nuevosAlAbrir} />
+              </Modal>
+            )}
+            {hoja === 'estrategia' && (
+              <Modal key="estrategia" title="Estrategia de la semana" icon="target" onClose={() => setHoja(null)} isMobile={isMobileW}>
+                <div className="ui-card" style={{ padding: '2px 0' }}>
+                  {pattern.length === 0 ? (
+                    <div style={{ fontSize: 13.5, color: 'var(--mut)', padding: '14px 16px', lineHeight: 1.45 }}>
+                      Por ahora no hay nada para cambiar: con las últimas 4 semanas la mezcla de huéspedes está pareja (o todavía hay pocas noches). Se renueva cada lunes.
+                    </div>
+                  ) : (
+                    pattern.map((it, i) => (
+                      <div key={i} className="li-in ui-row" style={{ '--i': i, alignItems: 'flex-start', gap: 10, cursor: 'default' }}>
+                        <span style={{ color: 'var(--c-4F46E5)', flexShrink: 0, marginTop: 2 }}>
+                          <Icon name={it.icon} size={18} />
+                        </span>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--ink)' }}>{it.title}</div>
+                          <div style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.45, marginTop: 2 }}>{it.text}</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--mut)', margin: '10px 4px 0', lineHeight: 1.45 }}>
+                  Según quiénes vinieron las últimas 4 semanas, comparado con las 4 anteriores. Se renueva cada lunes. El detalle de cada mes está en Finanzas, tocando "Segmentación física".
+                </div>
+                <button
+                  type="button"
+                  className="tap"
+                  onClick={() => { setHoja(null); onGoTo('finanzas'); }}
+                  style={{ marginTop: 12, width: '100%', padding: '11px 14px', border: 'none', borderRadius: 14, background: 'var(--c-EEF2FF)', color: 'var(--c-4F46E5)', fontWeight: 700, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' }}
+                >
+                  Ver en Finanzas
+                </button>
+              </Modal>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
     </div>
   );
 }
