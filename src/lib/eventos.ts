@@ -70,7 +70,7 @@ export async function cargarEventos() {
   const r2 = await supabase.from('eventos').select('*').is('fecha_hasta', null).gte('fecha_desde', hoy).order('fecha_desde');
   if (r.error || r2.error) return { ok: false, eventos: [], ultima: null };
   const eventos = [...(r.data || []), ...(r2.data || [])].sort((a, b) => a.fecha_desde.localeCompare(b.fecha_desde));
-  const b = await supabase.from('eventos_busquedas').select('hecho_en, nuevos, error').order('hecho_en', { ascending: false }).limit(1);
+  const b = await supabase.from('eventos_busquedas').select('id, hecho_en, nuevos, total, error').order('hecho_en', { ascending: false }).limit(1);
   return { ok: true, eventos, ultima: (b.data && b.data[0]) || null };
 }
 
@@ -79,7 +79,8 @@ export async function marcarEvento(id, estado) {
   if (error) throw error;
 }
 
-// "Buscar ahora": la búsqueda puede tardar 1 a 3 minutos
+// "Buscar ahora": el servidor responde enseguida (202) y busca en segundo plano (1 a 4 minutos).
+// Al terminar deja una fila nueva en eventos_busquedas: `esperarBusqueda` la espera.
 export async function buscarAhora() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw Object.assign(new Error('Tu sesión venció.'), { status: 401 });
@@ -95,7 +96,24 @@ export async function buscarAhora() {
   }
   const data = await resp.json().catch(() => null);
   if (!resp.ok) throw Object.assign(new Error(data?.error || `Error del servidor (${resp.status}).`), { status: resp.status });
-  return data; // { encontrados, nuevos }
+  return data; // { iniciada: true }
+}
+
+// Última fila de eventos_busquedas (id, hecho_en, nuevos, total, error)
+export async function ultimaBusqueda() {
+  const b = await supabase.from('eventos_busquedas').select('id, hecho_en, nuevos, total, error').order('hecho_en', { ascending: false }).limit(1);
+  return (b.data && b.data[0]) || null;
+}
+
+// Espera (cada 10 s, hasta 6 min) a que aparezca una búsqueda más nueva que `prevId`
+export async function esperarBusqueda(prevId, desde = Date.now(), cancel = { stop: false }) {
+  while (!cancel.stop && Date.now() - desde < 6 * 60000) {
+    await new Promise((r) => setTimeout(r, 10000));
+    if (cancel.stop) return null;
+    const u = await ultimaBusqueda().catch(() => null);
+    if (u && u.id !== prevId) return u;
+  }
+  return null;
 }
 
 // Para el Asesor IA: eventos de un rango de fechas

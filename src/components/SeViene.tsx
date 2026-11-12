@@ -4,14 +4,14 @@
 // Radar de eventos: muestra los eventos que ya están en su momento de prepararse (según el tipo:
 // Navidad con meses, un evento deportivo con semanas), cuánto hay reservado esas noches y qué hacer.
 // "Ver todos" abre la lista completa (también los que todavía no están en su momento y los descartados).
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence } from 'motion/react';
 import { Icon, ic } from './ui/Icon';
 import { Modal } from './ui/Modal';
 import { notify, notifyError } from '../lib/voice';
 import {
-  cargarEventos, marcarEvento, buscarAhora, enVentana, reservadoPct, urgente, periodoSugerido,
+  cargarEventos, marcarEvento, buscarAhora, esperarBusqueda, enVentana, reservadoPct, urgente, periodoSugerido,
   fechasTexto, cuandoTexto, leadDays,
 } from '../lib/eventos';
 
@@ -39,10 +39,51 @@ export function SeViene({ reservations, canEdit, onGoTo, isMobile }) {
   const [busy, setBusy] = useState(false);
   const [todos, setTodos] = useState(false);
 
-  const load = async () => setSt(await cargarEventos().catch(() => ({ ok: false, eventos: [], ultima: null })));
+  const load = async () => {
+    const r = await cargarEventos().catch(() => ({ ok: false, eventos: [], ultima: null }));
+    setSt(r);
+    return r;
+  };
+
+  // Espera el resultado de una búsqueda en curso (sigue aunque se cambie de pantalla y se vuelva)
+  const KEY = 'itze-eventos-buscando';
+  const esperar = async (prevId, desde, cancel) => {
+    setBusy(true);
+    const u = await esperarBusqueda(prevId, desde, cancel);
+    if (cancel.stop) return;
+    try { sessionStorage.removeItem(KEY); } catch {}
+    setBusy(false);
+    await load();
+    if (!u) notify('La búsqueda está tardando más de lo normal. Fijate en un rato si aparecieron eventos.', 'info');
+    else if (u.error && !u.total) notify('No se pudo completar la búsqueda de eventos. Probá de nuevo más tarde.', 'error');
+    else notify(u.nuevos ? `Listo: ${u.nuevos === 1 ? 'apareció 1 evento nuevo' : `aparecieron ${u.nuevos} eventos nuevos`}.` : 'Listo: no hay eventos nuevos.');
+  };
+  const cancelRef = useRef({ stop: false });
   useEffect(() => {
-    load();
+    const cancel = { stop: false };
+    cancelRef.current = cancel;
+    load().then(() => {
+      let saved = null;
+      try { saved = JSON.parse(sessionStorage.getItem(KEY) || 'null'); } catch {}
+      if (saved && Date.now() - saved.desde < 6 * 60000) esperar(saved.prevId, saved.desde, cancel);
+    });
+    return () => { cancel.stop = true; };
   }, []);
+
+  const buscar = async () => {
+    setBusy(true);
+    try {
+      const prevId = st.ultima ? st.ultima.id : null;
+      await buscarAhora();
+      const desde = Date.now();
+      try { sessionStorage.setItem(KEY, JSON.stringify({ prevId, desde })); } catch {}
+      notify('Buscando eventos en internet. Tarda 1 a 4 minutos: podés seguir usando Flow.', 'info');
+      esperar(prevId, desde, cancelRef.current);
+    } catch (err) {
+      setBusy(false);
+      notifyError(err, 'buscar eventos');
+    }
+  };
 
   if (!st.ok) return null; // sin el SQL (o sin permiso) no se muestra nada
 
@@ -60,19 +101,6 @@ export function SeViene({ reservations, canEdit, onGoTo, isMobile }) {
       if (msg) notify(msg, 'info');
     } catch (err) {
       notifyError(err, 'guardar el cambio');
-    }
-  };
-  const buscar = async () => {
-    setBusy(true);
-    notify('Buscando eventos en internet… puede tardar un par de minutos.', 'info');
-    try {
-      const r = await buscarAhora();
-      await load();
-      notify(r.nuevos ? `Listo: ${r.nuevos === 1 ? 'apareció 1 evento nuevo' : `aparecieron ${r.nuevos} eventos nuevos`}.` : 'Listo: no hay eventos nuevos.');
-    } catch (err) {
-      notifyError(err, 'buscar eventos');
-    } finally {
-      setBusy(false);
     }
   };
   const tarifa = (e) => {
@@ -160,7 +188,7 @@ export function SeViene({ reservations, canEdit, onGoTo, isMobile }) {
           </button>
         )}
         <button type="button" onClick={buscar} disabled={busy} style={{ ...link, opacity: busy ? 0.6 : 1, cursor: busy ? 'wait' : 'pointer' }}>
-          {busy ? 'Buscando…' : 'Buscar ahora'}
+          {busy ? 'Buscando… (1 a 4 min)' : 'Buscar ahora'}
         </button>
       </span>
     </div>
