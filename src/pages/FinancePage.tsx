@@ -738,34 +738,34 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                   <span style={{ fontWeight: 800, color: 'var(--red)' }}>-<CountUp value={currency(m.gastos)} /></span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--c-047857)', background: 'var(--c-D1FAE5)', padding: '2px 8px', borderRadius: 6 }}>GANANCIA NETA</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center' }}><span style={{ fontSize: 11, fontWeight: 800, color: 'var(--c-047857)', background: 'var(--c-D1FAE5)', padding: '2px 8px', borderRadius: 6 }}>GANANCIA NETA</span><InfoTip k="ganancia" /></span>
                   <span style={{ fontWeight: 'var(--w-title)', fontSize: 18, color: 'var(--c-065F46)' }}><CountUp value={currency(netProfit)} /></span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center' }}>Ind. GOPPAR<InfoTip k="goppar" /></span>
-                  <span style={{ fontWeight: 800, fontSize: 12, color: 'var(--acc)' }}><CountUp value={currency(goppar)} /></span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--ink-2)', display: 'inline-flex', alignItems: 'center' }}>GOPPAR<InfoTip k="goppar" /></span>
+                  <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--acc)' }}><CountUp value={currency(goppar)} /></span>
                 </div>
               </div>
 
               {/* ── RENDIMIENTO: REVPAR SEGMENTADO Y GLOBAL ── */}
               <div style={{ background: 'var(--inset)', borderRadius: 'var(--r-item)', padding: '11px 12px', marginBottom: 14 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center' }}>RevPAR Segmentado<InfoTip k="revpar" /></span>
-                  <span style={{ fontSize: 9, color: 'var(--mut)' }}>Ingreso x Hab.</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center' }}>RevPAR<InfoTip k="revpar" /></span>
+                  <span style={{ fontSize: 9, color: 'var(--mut)' }}>Ingreso por habitación disponible</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
                   <div style={{ background: 'var(--c-FFFBEB)', padding: '8px 4px', borderRadius: 12, textAlign: 'center' }}>
-                    <div style={{ fontSize: 9, color: 'var(--c-D97706)', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Lun - Mié</div>
+                    <div style={{ fontSize: 9, color: 'var(--c-D97706)', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2, minHeight: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Lun - Mié</div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-92400E)' }}><CountUp value={currency(revparEntre)} /></div>
                     {showCmp && <div style={{ marginTop: 2 }}><Delta cur={revparEntre} prev={prev.entre} /></div>}
                   </div>
                   <div style={{ background: 'var(--c-F5F3FF)', padding: '8px 4px', borderRadius: 12, textAlign: 'center' }}>
-                    <div style={{ fontSize: 9, color: 'var(--c-7C3AED)', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Jue - Dom</div>
+                    <div style={{ fontSize: 9, color: 'var(--c-7C3AED)', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2, minHeight: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Jue - Dom</div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-5B21B6)' }}><CountUp value={currency(revparFinde)} /></div>
                     {showCmp && <div style={{ marginTop: 2 }}><Delta cur={revparFinde} prev={prev.finde} /></div>}
                   </div>
-                  <div title="Ingreso por Habitación Disponible" style={{ background: 'var(--acc-soft)', padding: '8px 4px', borderRadius: 12, textAlign: 'center', cursor: 'help' }}>
-                    <div style={{ fontSize: 9.5, color: 'var(--acc)', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>Global</div>
+                  <div style={{ background: 'var(--acc-soft)', padding: '8px 4px', borderRadius: 12, textAlign: 'center' }}>
+                    <div style={{ fontSize: 9.5, color: 'var(--acc)', fontWeight: 800, textTransform: 'uppercase', marginBottom: 2, minHeight: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Global<InfoTip k="revpar" /></div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--acc)' }}><CountUp value={currency(revpar)} /></div>
                     {showCmp && <div style={{ marginTop: 2 }}><Delta cur={revpar} prev={prev.revpar} /></div>}
                   </div>
