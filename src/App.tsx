@@ -11,7 +11,7 @@ import { PROPS, INIT_RES, COUNTRIES } from './lib/constants';
 import { TODAY, fmt, diffDays } from './lib/dates';
 import { supabase } from './lib/supabase';
 import { findDuplicates } from './lib/duplicates';
-import { checkoutTimePassed, lateCostOf } from './lib/reservations';
+import { checkoutTimePassed, lateCostOf, extensionDe } from './lib/reservations';
 import { groupOf, groupBooker, bookerOf, newGroupId, PERSON_FIELDS } from './lib/groups';
 import { Dashboard } from './pages/Dashboard';
 import { FinancePage } from './pages/FinancePage';
@@ -182,6 +182,9 @@ export default function AppMejorada() {
           cargadaPorNombre: item.cargada_por_nombre || '',
           // Nota para el equipo (la ve Mary en Habitaciones de hoy); undefined si falta la columna
           notaEquipo: 'nota_equipo' in item ? item.nota_equipo || '' : undefined,
+          // Extensión de estadía (mejoras_nov.sql): undefined si la columna todavía no existe
+          extendidaNoches: 'extendida_noches' in item ? Number(item.extendida_noches) || 0 : undefined,
+          checkoutOriginal: item.checkout_original || null,
           // Cuándo se cargó (Asesor IA: anticipación de las reservas); null si la base no la tiene
           createdAt: item.created_at || null,
         };
@@ -515,7 +518,14 @@ export default function AppMejorada() {
 
       if (!Array.isArray(input) && input.id) {
         // 1. EDICIÓN (esta habitación y, si se eligió "todo el grupo", las demás)
-        const todas = [input, ...(opts.also || [])];
+        // Extensión de estadía: si a una hospedada se le corrió la salida más tarde, se anota
+        const todas = [input, ...(opts.also || [])].map((r) => {
+          const prev = res.find((x) => x.id === r.id);
+          const ext = extensionDe(prev, r.checkOut);
+          return ext ? { ...r, ...ext } : prev && prev.extendidaNoches !== undefined && r.extendidaNoches === undefined
+            ? { ...r, extendidaNoches: prev.extendidaNoches, checkoutOriginal: prev.checkoutOriginal }
+            : r;
+        });
         const preparadas = todas.map((r) => ({ id: r.id, ...prepRes(r) }));
         for (const p of preparadas) {
           const { error } = await rdb.update(p.datosLimpios).eq('id', p.id);
@@ -609,6 +619,9 @@ export default function AppMejorada() {
   };
   const updateRes = async (id, changes) => {
     const before = res.find((r) => r.id === id);
+    // Extensión de estadía (arrastrar la barra de una hospedada hacia más tarde)
+    const ext = extensionDe(before, changes.checkOut);
+    if (ext) changes = { ...changes, ...ext };
     // 1. Movemos la reserva visualmente al instante para que la app se sienta rápida
     setRes(res.map((r) => (r.id === id ? { ...r, ...changes } : r)));
 
@@ -616,7 +629,8 @@ export default function AppMejorada() {
       const { error } = await rdb.update({
           fecha_ingreso: changes.checkIn,
           fecha_salida: changes.checkOut,
-          habitacion: changes.room
+          habitacion: changes.room,
+          ...(ext ? { checkout_original: ext.checkoutOriginal, extendida_noches: ext.extendidaNoches } : {}),
         })
         .eq('id', id);
 
