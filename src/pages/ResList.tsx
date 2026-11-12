@@ -106,7 +106,8 @@ export function ResList({ reservations, properties, onView, onAdd, onQuote }) {
                 {r.room}
               </span>
             )}
-            {r.checkOut === fmt(addDays(TODAY, 1)) && r.status !== 'finalizada' && r.status !== 'cancelada' && (
+            {/* Solo parado en hoy: en otro día "mañana" confunde */}
+            {selectedDate === fmt(TODAY) && r.checkOut === fmt(addDays(TODAY, 1)) && r.status !== 'finalizada' && r.status !== 'cancelada' && (
               <span style={{ background: 'var(--c-FFF7ED)', color: 'var(--c-EA580C)', padding: '1px 7px', borderRadius: 7, fontSize: 11, fontWeight: 800, lineHeight: 1.3, whiteSpace: 'nowrap' }}>
                 Sale mañana
               </span>
