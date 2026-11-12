@@ -825,6 +825,15 @@ export function ResDrawer({
                       ¡Mañana!
                     </div>
                   )}
+                {/* Extendió estadía (se marca solo al correr la salida de una hospedada) */}
+                {l === 'Check-out' && res.extendidaNoches > 0 && res.checkoutOriginal && (
+                  <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--mut)', marginTop: 2 }}>salía el {fmtD(res.checkoutOriginal)}</div>
+                )}
+                {l === 'Duración' && res.extendidaNoches > 0 && (
+                  <div style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--c-047857)', marginTop: 2 }}>
+                    Extendió {res.extendidaNoches} {res.extendidaNoches === 1 ? 'noche' : 'noches'}
+                  </div>
+                )}
                 {l === 'Check-out' && lateHour(res) && (
                   <div style={{ fontSize: 10.5, fontWeight: 800, color: LATE_COLORS.txt, marginTop: 2 }}>
                     {ic('clock', 13)}Late {lateHour(res)}
