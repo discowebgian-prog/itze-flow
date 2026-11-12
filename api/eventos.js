@@ -4,8 +4,9 @@
 //   POST /api/eventos con x-flow-clave → lo dispara Supabase cada lunes 7:00 de Progreso.
 //        Si aparece algo nuevo de impacto alto, avisa al celular de los dueños.
 //   POST /api/eventos con sesión de un dueño → botón "Buscar ahora" de Inicio (sin aviso al celular).
-// Responde enseguida (202) y la búsqueda sigue en el servidor (waitUntil): son 3 búsquedas en paralelo,
-// una por tema, para que no pase el límite de tiempo de Vercel. Al terminar queda una fila en
+// Responde enseguida (202) y la búsqueda sigue en el servidor (waitUntil): son 4 búsquedas en paralelo,
+// una por tema (4: fiestas y carnaval; cultura; deportes, congresos y cruceros; solo Progreso),
+// para que no pase el límite de tiempo de Vercel. Al terminar queda una fila en
 // eventos_busquedas (la app la espera para actualizar la tarjeta; si falló, con el error).
 // Costo: cada búsqueda en internet sale US$0,01 (más el texto); máx. MAX_SEARCHES por tema.
 import webpush from 'web-push';
@@ -14,14 +15,20 @@ import { vapidKeys, subsConRol } from './push.js';
 import { fechasFijas } from './_fechasFijas.mjs';
 
 const MODEL = 'claude-sonnet-5-5';
-const MAX_SEARCHES = 6; // por tema (3 temas en paralelo)
+const MAX_SEARCHES = 6; // por tema (4 temas en paralelo)
+const MAX_FETCH = 5; // páginas propias que se leen enteras (solo en el tema de Progreso)
 const TOPE_MS = 270000; // todo tiene que terminar antes del maxDuration de vercel.json (300 s)
 
 // Un tema por búsqueda (corren al mismo tiempo)
 const TEMAS = [
-  'fiestas patronales y religiosas de Progreso y los puertos cercanos, el programa del carnaval de Progreso y de Mérida, y eventos especiales que se hagan en los puentes y temporadas (las fechas de feriados y vacaciones ya las tenemos: no las busques)',
-  'festivales, ferias y eventos culturales (Noche Blanca, Festival de la Cultura Maya, Hanal Pixán, Paseo de las Ánimas, ferias gastronómicas, exposiciones) y conciertos grandes',
-  'eventos deportivos (maratones, medio maratón, triatlones, kitesurf, pesca, vela, ciclismo, natación en aguas abiertas, torneos), congresos y convenciones en Mérida y arribos de cruceros al puerto de Progreso',
+  { texto: 'fiestas patronales y religiosas de Progreso y los puertos cercanos, el programa del carnaval de Progreso y de Mérida, y eventos especiales que se hagan en los puentes y temporadas (las fechas de feriados y vacaciones ya las tenemos: no las busques)' },
+  { texto: 'festivales, ferias y eventos culturales (Noche Blanca, Festival de la Cultura Maya, Hanal Pixán, Paseo de las Ánimas, ferias gastronómicas, exposiciones) y conciertos grandes' },
+  { texto: 'eventos deportivos (maratones, medio maratón, triatlones, kitesurf, pesca, vela, ciclismo, natación en aguas abiertas, torneos), congresos y convenciones en Mérida y arribos de cruceros al puerto de Progreso' },
+  // Solo Progreso (Gian: "no sale ninguno muy interesante"): lo chico y local, mes por mes, y las páginas propias
+  {
+    texto: 'lo que pasa en Progreso, Chicxulub, Chelem y Yucalpetén, mes por mes: actividades del Ayuntamiento y del malecón, ferias del puerto, regatas y torneos de pesca, festivales de playa y de música, eventos gastronómicos, fiestas de colonias y comisarías, eventos en clubes de playa y bares. Buscá mes por mes los próximos 3 meses (por ejemplo "eventos Progreso Yucatán diciembre 2026", "qué hacer en Progreso este fin de semana") y en las páginas del Ayuntamiento de Progreso',
+    local: true,
+  },
 ];
 const TIPOS = ['feriado', 'temporada', 'festival', 'cultural', 'deportivo', 'concierto', 'congreso', 'crucero', 'religioso', 'otro'];
 
@@ -62,6 +69,8 @@ export default async function handler(req, res) {
   if (perm.data !== true) return res.status(401).json({ error: 'Solo los dueños pueden buscar eventos.' });
 
   const conocidos = (await rpc('eventos_conocidos', { p_clave: clave })).data || [];
+  // Páginas propias y lo marcado "No nos interesa" (supabase/mejoras_nov.sql; si no existe, nada)
+  const ctx = (await rpc('eventos_contexto', { p_clave: clave })).data || { fuentes: [], descartados: [] };
 
   // La búsqueda sigue en segundo plano; la app se entera por eventos_busquedas
   const trabajo = async () => {
@@ -69,10 +78,10 @@ export default async function handler(req, res) {
     const fijas = fechasFijas(hoyMx());
     const conocidosYFijas = [...(conocidos || []), ...fijas.map((e) => ({ nombre: e.nombre, fecha_desde: e.fecha_desde, fecha_hasta: e.fecha_hasta }))];
     const limite = Date.now() + TOPE_MS;
-    const res3 = await Promise.allSettled(TEMAS.map((t) => buscarEventos(apiKey, conocidosYFijas, t, limite)));
+    const res3 = await Promise.allSettled(TEMAS.map((t) => buscarEventos(apiKey, conocidosYFijas, t, limite, ctx)));
     const errores = res3.filter((r) => r.status === 'rejected').map((r) => String((r.reason && r.reason.message) || r.reason).slice(0, 140));
     errores.forEach((e) => console.error('Radar de eventos: error', e));
-    // Junta los tres temas sin repetir (mismo nombre y fecha)
+    // Junta los temas sin repetir (mismo nombre y fecha)
     const vistos = new Set(fijas.map((e) => e.nombre.toLowerCase().replace(/[^a-z0-9]/g, '') + '|' + e.fecha_desde));
     const eventos = [...fijas];
     res3.forEach((r) => {
@@ -97,7 +106,9 @@ export default async function handler(req, res) {
 }
 
 // ── Claude + búsqueda en internet ────────────────────────────────────────────
-async function buscarEventos(apiKey, conocidos, tema, limite) {
+async function buscarEventos(apiKey, conocidos, tema, limite, ctx = {}) {
+  const fuentes = tema.local ? (ctx.fuentes || []).filter((f) => /^https?:\/\//.test(f.url)).slice(0, 10) : [];
+  const descartados = (ctx.descartados || []).slice(0, 20);
   const hoy = hoyMx();
   const mas = (m) => { const d = new Date(hoy + 'T12:00:00'); d.setMonth(d.getMonth() + m); return d.toISOString().slice(0, 10); };
   const hasta6 = mas(6), hasta12 = mas(12);
@@ -105,7 +116,7 @@ async function buscarEventos(apiKey, conocidos, tema, limite) {
   const prompt = `Hoy es ${hoy}. Sos el radar de eventos de Itzé Hostel Boutique, un hostel boutique de 6 habitaciones privadas en Progreso, Yucatán, México (puerto y playa a 30 minutos de Mérida). Su público: parejas, familias, grupos de amigos, viajeros de Mérida y del resto de México, extranjeros y gente que viene por trabajo.
 
 TAREA: buscá en internet eventos de los PRÓXIMOS 12 MESES (hasta ${hasta12}) que puedan traer huéspedes a Progreso y la costa (Progreso, Chicxulub, Chelem, Telchac, Sisal) o a Mérida si mueven gente que también duerme en la costa.
-En esta búsqueda, enfocate SOLO en: ${tema}.
+En esta búsqueda, enfocate SOLO en: ${tema.texto}.${fuentes.length ? `\nPÁGINAS QUE CONOCEN LOS DUEÑOS (leelas con web_fetch, son las que más les sirven):\n${fuentes.map((f) => `- ${f.url}${f.nombre ? ' (' + f.nombre + ')' : ''}`).join('\n')}` : ''}
 Dónde buscar: Ayuntamiento de Progreso y de Mérida, Secretaría de Fomento Turístico (SEFOTUR) y de Cultura de Yucatán, puerto de Progreso (cruceros), organizadores de cada evento, medios locales (Diario de Yucatán, La Jornada Maya, Novedades Yucatán, Por Esto).
 
 REGLAS:
@@ -117,7 +128,7 @@ REGLAS:
 - Próximos 6 meses (hasta ${hasta6}): todos los que encuentres, también los chicos y los que se organizan sobre la marcha (son los que más cuesta enterarse). Del mes 7 al 12: solo los de impacto alto o medio.
 - Máximo 15 eventos, primero los de los próximos 6 meses.
 
-EVENTOS YA CONOCIDOS:
+${descartados.length ? `NO LES INTERESAN (no traigas estos ni parecidos):\n${descartados.map((n) => '- ' + n).join('\n')}\n\n` : ''}EVENTOS YA CONOCIDOS:
 ${lista || '(ninguno todavía)'}
 
 RESPUESTA: al final, SOLO esto (JSON válido, sin markdown):
@@ -131,6 +142,8 @@ RESPUESTA: al final, SOLO esto (JSON válido, sin markdown):
       user_location: { type: 'approximate', city: 'Progreso', region: 'Yucatán', country: 'MX', timezone: 'America/Merida' },
     },
   ];
+  // Leer páginas enteras (beta web-fetch-2025-09-10): solo URLs que aparecen en el pedido
+  if (fuentes.length) tools.push({ type: 'web_fetch_20250910', name: 'web_fetch', max_uses: MAX_FETCH });
   const messages = [{ role: 'user', content: prompt }];
   let data = null;
   // La API puede pausar una búsqueda larga (pause_turn): se continúa mandando lo mismo de nuevo
@@ -139,7 +152,12 @@ RESPUESTA: al final, SOLO esto (JSON válido, sin markdown):
     if (quedan < 20000) throw new Error('La búsqueda tardó demasiado.');
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        ...(fuentes.length ? { 'anthropic-beta': 'web-fetch-2025-09-10' } : {}),
+      },
       body: JSON.stringify({ model: MODEL, max_tokens: 7000, messages, tools }),
       signal: AbortSignal.timeout(quedan),
     });
