@@ -1,6 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 import { useState, useEffect } from 'react';
+import { EventosManuales, Competencia } from '../components/TarifasExtras';
 import { TODAY, fmt, addDays, parseD, currency } from '../lib/dates';
 import { supabase } from '../lib/supabase';
 import { notify, notifyError, humanError } from '../lib/voice';
@@ -549,6 +550,10 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
         Si dos períodos se pisan, en esos días manda el más corto (una fecha especial le gana a una promo, y una promo a la Normal).
         Las tarifas son las directas; en Booking se cobra aparte.
       </div>
+
+      {/* Solo dueños: eventos anotados a mano (van al radar) y precios de la competencia */}
+      {canEdit && <EventosManuales />}
+      {canEdit && <Competencia periods={periods} />}
     </div>
   );
 }
