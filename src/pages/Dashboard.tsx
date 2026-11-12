@@ -12,6 +12,7 @@ import { buildGuestDB } from '../lib/guests';
 import { birthdayList, wasGreeted } from '../lib/guestMessages';
 import { PushButton } from '../components/ui/PushButton';
 import { weeklyPattern } from '../lib/paxStrategy';
+import { SeViene } from '../components/SeViene';
 import { Icon } from '../components/ui/Icon';
 import { MOV_TIPO, movTexto, cuando } from '../lib/movimientos';
 
@@ -403,7 +404,10 @@ export function Dashboard({
         </Group>
       )}
 
-            {/* VCC de Booking por cobrar */}
+            {/* Se viene: radar de eventos (solo si ya se corrió supabase/eventos.sql) */}
+      <SeViene reservations={reservations} canEdit onGoTo={onGoTo} isMobile={typeof window !== 'undefined' && window.innerWidth < 769} />
+
+      {/* VCC de Booking por cobrar */}
       {vccPending.length > 0 && (
         <Group title={`VCC de Booking por cobrar (${vccPending.length})`} icon="card" col="var(--c-1E40AF)">
           {vccPending.map((r, liI) =>

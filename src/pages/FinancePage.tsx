@@ -14,6 +14,7 @@ import { Icon, ic } from '../components/ui/Icon';
 import { notify, notifyError, financeReading, paxReading } from '../lib/voice';
 import { esDueno } from '../lib/roles';
 import { PAX_TYPES, paxStats, paxAvg, paxPct, paxStrategy } from '../lib/paxStrategy';
+import { eventosEntre } from '../lib/eventos';
 
 // Títulos de sección (estilo Limpieza: grandes, con ícono)
 const H3 = { margin: '0 0 12px', fontSize: 20, fontWeight: 'var(--w-title)', color: 'var(--ink)', letterSpacing: '-.01em', display: 'flex', alignItems: 'center', gap: 8 };
@@ -228,7 +229,10 @@ export function FinancePage({ reservations, allRes, properties, user, restoreRes
       const rmMetaOcupacion = 70; // Tu meta de ocupación, en %
 
       // Completar si hay eventos especiales (ej: [{ fecha: "2026-10-31", nombre: "Kitesurf Fest", tipo: "deportivo" }])
-      const rmEventos = [];
+      // Eventos del radar (Inicio › Se viene) desde el 1 del mes hasta 60 días adelante; vacío si no hay
+      const rmEventos = await eventosEntre(`${m.key}-01`, fmt(addDays(TODAY, 60)))
+        .then((l) => l.map((e) => `${e.fecha_desde}${e.fecha_hasta && e.fecha_hasta !== e.fecha_desde ? ' a ' + e.fecha_hasta : ''}: ${e.nombre} (${e.tipo || 'evento'}, impacto ${e.impacto || 'medio'})`))
+        .catch(() => []);
       
       // Completar si tenés relevamiento de la zona (ej: [{ nombre: "Hostal X", tarifaEntreSemana: 500, tarifaFinde: 900 }])
       const rmCompetencia = [];

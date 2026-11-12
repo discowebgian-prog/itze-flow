@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TODAY, fmt, addDays, parseD, currency } from '../lib/dates';
 import { supabase } from '../lib/supabase';
 import { notify, notifyError, humanError } from '../lib/voice';
@@ -63,7 +63,7 @@ const emptyPrecios = (from) =>
   );
 
 // ── PÁGINA DE TARIFAS ─────────────────────────────────────────────────────────
-export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, isMobile }) {
+export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, isMobile, prefill = null, onPrefillUsed = null }) {
   const [editing, setEditing] = useState(null); // { id?, nombre, desde, hasta, precios, normal }
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
@@ -89,6 +89,15 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
     setConfirmDelId(null);
     setEditing({ nombre: '', desde: '', hasta: '', precios: emptyPrecios(normal?.precios), normal: false });
   };
+  // Desde un evento de Inicio ("Crear fecha especial"): abre el período nuevo con nombre y fechas puestos
+  useEffect(() => {
+    if (!prefill || !canEdit || loading) return;
+    setErr('');
+    setConfirmDelId(null);
+    setEditing({ nombre: prefill.nombre || '', desde: prefill.desde || '', hasta: prefill.hasta || '', precios: emptyPrecios(normal?.precios), normal: false });
+    onPrefillUsed && onPrefillUsed();
+    setTimeout(() => document.getElementById('editor-periodo')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 350);
+  }, [prefill, canEdit, loading]);
   const startEdit = (p) => {
     setErr('');
     setConfirmDelId(null);
@@ -208,7 +217,7 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
     const inp = { width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 'var(--r-field)', background: 'var(--card)', color: 'var(--ink)', fontSize: 15, fontFamily: 'inherit', boxSizing: 'border-box', minHeight: 42, outline: 'none' };
 
     return (
-      <div key={key} style={{ ...card, boxShadow: 'inset 0 0 0 2px var(--acc), var(--shadow)' }}>
+      <div key={key} id={key === 'nuevo' ? 'editor-periodo' : undefined} style={{ ...card, boxShadow: 'inset 0 0 0 2px var(--acc), var(--shadow)', scrollMarginTop: 80 }}>
         <div style={{ fontWeight: 'var(--w-title)', fontSize: 18, color: 'var(--ink)', marginBottom: 14 }}>
           {e.normal ? 'Editar tarifa Normal' : e.id ? `Editar «${e.nombre}»` : 'Nuevo período (promo o fecha especial)'}
         </div>
