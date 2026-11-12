@@ -56,6 +56,18 @@ export const GLOSSARY = {
       'Para que sea fiel, cargá todos los gastos del mes en Egresos.',
     ],
   },
+  ganancia: {
+    title: 'Ganancia neta',
+    sub: 'Lo que queda después de pagar los gastos',
+    what:
+      'Lo que ingresó en el mes menos los gastos operativos que cargaste en Egresos (limpieza, insumos, lavandería, servicios…). Es la plata que realmente queda.',
+    how: 'Ingresos − egresos operativos.',
+    example: 'En el mes ingresaron $60,000 y cargaste $18,000 de gastos: la ganancia neta es $42,000.',
+    use: [
+      'Solo es real si cargás todos los gastos del mes en Egresos: si faltan, la ganancia se ve más grande de lo que es.',
+      'Dividida por las noches disponibles da el GOPPAR, que sirve para comparar meses aunque tengan distinta cantidad de días.',
+    ],
+  },
   revpar: {
     title: 'RevPAR',
     sub: 'Ingreso por habitación disponible',
