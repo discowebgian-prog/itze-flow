@@ -148,6 +148,68 @@ export function EventosManuales() {
   );
 }
 
+// ── PÁGINAS QUE REVISA EL RADAR (tabla eventos_fuentes, supabase/mejoras_nov.sql) ──
+// Links que conocen los dueños (agenda del Ayuntamiento, página de un organizador, calendario de eventos).
+// El radar las lee enteras cada lunes. Facebook e Instagram no se pueden leer.
+export function FuentesRadar() {
+  const [lista, setLista] = useState(null);
+  const [url, setUrl] = useState('');
+  const [nombre, setNombre] = useState('');
+  const [abierto, setAbierto] = useState(false);
+  const load = async () => {
+    const { data, error } = await supabase.from('eventos_fuentes').select('*').order('creado_en');
+    if (error) return setLista(faltaSql(error) ? false : []);
+    setLista(data || []);
+  };
+  useEffect(() => { load(); }, []);
+  if (lista === false) return null;
+  const agregar = async () => {
+    let u = url.trim();
+    if (!u) return;
+    if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+    if (/facebook\.com|instagram\.com|fb\.com|tiktok\.com/i.test(u)) return notify('Facebook, Instagram y TikTok no se pueden leer desde el radar. Probá con una página web.', 'error');
+    const { error } = await supabase.from('eventos_fuentes').insert({ url: u, nombre: nombre.trim() || null });
+    if (error && /duplicate|unique/i.test(String(error.message))) return notify('Esa página ya está en la lista.', 'error');
+    if (error) return notifyError(error, 'guardar la página');
+    setUrl(''); setNombre(''); setAbierto(false);
+    notify('Listo: el radar la va a leer el próximo lunes (o al tocar "Buscar ahora").');
+    load();
+  };
+  const quitar = async (f) => {
+    const { error } = await supabase.from('eventos_fuentes').delete().eq('id', f.id);
+    if (error) return notifyError(error, 'quitar la página');
+    load();
+  };
+  return (
+    <div style={card}>
+      <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>{ic('link', 15)}Páginas que revisa el radar</div>
+      <div style={{ fontSize: 12.5, color: 'var(--mut)', margin: '2px 0 8px', lineHeight: 1.45 }}>
+        Si conocen una página con agenda de eventos (del Ayuntamiento, de un organizador, de un club de playa), péguenla acá: el radar la lee entera cada lunes. Facebook e Instagram no se pueden leer.
+      </div>
+      {(lista || []).map((f) => (
+        <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--line)', fontSize: 13 }}>
+          <a href={f.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--acc)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+            {f.nombre || f.url.replace(/^https?:\/\/(www\.)?/, '')}
+          </a>
+          <button type="button" style={{ ...link, color: 'var(--mut)', flexShrink: 0 }} onClick={() => quitar(f)}>Quitar</button>
+        </div>
+      ))}
+      {abierto ? (
+        <div className="pop-in" style={{ marginTop: 8 }}>
+          <input style={inp} value={url} placeholder="https://… (la página con la agenda)" onChange={(ev) => setUrl(ev.target.value)} />
+          <input style={{ ...inp, marginTop: 8 }} value={nombre} placeholder="Nombre (opcional): Agenda del Ayuntamiento" onChange={(ev) => setNombre(ev.target.value)} />
+          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            <button type="button" className="tap" onClick={agregar} style={{ ...btn('var(--acc)', '#fff'), flex: 2 }}>Agregar</button>
+            <button type="button" className="tap" onClick={() => setAbierto(false)} style={{ ...btn('var(--fill)', 'var(--ink)'), flex: 1 }}>Cancelar</button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" style={{ ...link, marginTop: 8 }} onClick={() => setAbierto(true)}>{ic('plus', 13)}Agregar una página</button>
+      )}
+    </div>
+  );
+}
+
 // ── COMPETENCIA ──
 // Próxima noche Lun–Mié y Jue–Dom desde hoy (para comparar con el tarifario que rige)
 const proxima = (finde) => {

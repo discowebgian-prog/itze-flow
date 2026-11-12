@@ -1,7 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 import { useState, useEffect } from 'react';
-import { EventosManuales, Competencia } from '../components/TarifasExtras';
+import { EventosManuales, FuentesRadar, Competencia } from '../components/TarifasExtras';
 import { TODAY, fmt, addDays, parseD, currency } from '../lib/dates';
 import { supabase } from '../lib/supabase';
 import { notify, notifyError, humanError } from '../lib/voice';
@@ -553,6 +553,7 @@ export function RatesPage({ periods = [], ok, loading, canEdit, user, onReload, 
 
       {/* Solo dueños: eventos anotados a mano (van al radar) y precios de la competencia */}
       {canEdit && <EventosManuales />}
+      {canEdit && <FuentesRadar />}
       {canEdit && <Competencia periods={periods} />}
     </div>
   );
