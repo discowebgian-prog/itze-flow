@@ -6,6 +6,7 @@ import { askClaude } from '../lib/claude';
 import { exportToExcel } from '../lib/excel';
 import { Modal } from '../components/ui/Modal';
 import { Respaldos } from '../components/Respaldos';
+import { Egresos } from '../components/Egresos';
 import { supabase } from '../lib/supabase';
 import { isFindeDow, roomTypeOf, nightPrice } from '../lib/rates';
 import { ROOMS } from '../lib/constants';
@@ -59,9 +60,6 @@ export function FinancePage({ reservations, allRes, properties, user, restoreRes
   const [paxAsking, setPaxAsking] = useState(null);
   const [cobrosOpen, setCobrosOpen] = useState({}); // mes → abierta "Huéspedes y cobros" // mes al que el Asesor IA le está armando la estrategia
   const [gastos, setGastos] = useState([]);
-  const [formGasto, setFormGasto] = useState({ fecha: fmt(TODAY), monto: '', categoria: 'Insumos', notas: '' });
-  const [guardandoGasto, setGuardandoGasto] = useState(false);
-  const [confirmGastoId, setConfirmGastoId] = useState(null); // "¿Eliminar este gasto?" en la misma línea
 
   // ── ESTADOS PARA REVENUE INTELLIGENCE Y EL POP-UP ──
   const [analyzingMonth, setAnalyzingMonth] = useState(null);
@@ -100,45 +98,15 @@ export function FinancePage({ reservations, allRes, properties, user, restoreRes
   };
   const currentMonthKey = `${TODAY.getFullYear()}-${String(TODAY.getMonth() + 1).padStart(2, '0')}`;
 
+  // Gastos: primero crea los meses que falten de los gastos fijos (si el SQL no está, sigue igual) y después los trae
+  const recargarGastos = async () => {
+    await supabase.rpc('gastos_fijos_generar').then(() => {}, () => {});
+    const { data, error } = await supabase.from('gastos').select('*').order('fecha', { ascending: false });
+    if (!error && data) setGastos(data);
+  };
   useEffect(() => {
-    const fetchGastos = async () => {
-      const { data, error } = await supabase.from('gastos').select('*').order('fecha', { ascending: false });
-      if (!error && data) setGastos(data);
-    };
-    fetchGastos();
+    recargarGastos();
   }, []);
-
-  const handleGuardarGasto = async (e) => {
-    e.preventDefault();
-    if (!formGasto.monto || Number(formGasto.monto) <= 0) return;
-    setGuardandoGasto(true);
-    const { data, error } = await supabase.from('gastos').insert([{
-      fecha: formGasto.fecha,
-      monto: Number(formGasto.monto),
-      categoria: formGasto.categoria,
-      notas: formGasto.notas
-    }]).select();
-    setGuardandoGasto(false);
-    
-    if (error || !data?.length) {
-      notifyError(error, 'guardar el gasto');
-      return;
-    }
-    setGastos([data[0], ...gastos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)));
-    setFormGasto({ ...formGasto, monto: '', notas: '' });
-    notify(`Gasto guardado · ${currency(data[0].monto)} en ${data[0].categoria}`);
-  };
-
-  const eliminarGasto = async (id) => {
-    const { error } = await supabase.from('gastos').delete().eq('id', id);
-    setConfirmGastoId(null);
-    if (error) {
-      notifyError(error, 'eliminar el gasto');
-      return;
-    }
-    setGastos(gastos.filter((g) => g.id !== id));
-    notify('Gasto eliminado');
-  };
 
   // ── Datos extra para el Asesor IA, calculados con las reservas del mes ──
   // Noches de `nightsByMonth` (ocupadas hasta hoy). Lo que no se puede calcular queda vacío.
@@ -672,76 +640,8 @@ PARA LA PRÓXIMA SEMANA: 1 cosa para hacer ya.`;
         </div>
       )}
 
-      {/* MÓDULO DE EGRESOS */}
-      <div style={{ background: 'var(--card)', borderRadius: 'var(--r-card)', padding: '16px 18px', marginBottom: 24, boxShadow: 'var(--shadow)' }}>
-        <h3 style={{ ...H3, margin: '0 0 14px' }}><Icon name="wallet" size={20} color="var(--red)" />Egresos</h3>
-        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-          
-          <form onSubmit={handleGuardarGasto} style={{ flex: '1 1 280px', display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--inset)', padding: 14, borderRadius: 'var(--r-item)' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 5 }}>Fecha</label>
-                <input type="date" value={formGasto.fecha} onChange={(e) => setFormGasto({ ...formGasto, fecha: e.target.value })} style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--r-field)', border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: 15, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }} required />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 5 }}>Monto $</label>
-                <input type="number" placeholder="0.00" value={formGasto.monto} onChange={(e) => setFormGasto({ ...formGasto, monto: e.target.value })} style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--r-field)', border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: 15, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }} required />
-              </div>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 5 }}>Categoría</label>
-              <select value={formGasto.categoria} onChange={(e) => setFormGasto({ ...formGasto, categoria: e.target.value })} style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--r-field)', border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: 15, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }}>
-                <option value="Mantenimiento">Mantenimiento</option>
-                <option value="Sueldos">Sueldos</option>
-                <option value="Insumos">Insumos (Limpieza/Desayuno)</option>
-                <option value="Servicios">Servicios (Luz/Agua/Internet)</option>
-                <option value="Impuestos">Impuestos</option>
-                <option value="Comisiones">Comisiones (Booking/OTA)</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 5 }}>Concepto / Notas</label>
-              <input type="text" placeholder="Ej. Pintura pasillo..." value={formGasto.notas} onChange={(e) => setFormGasto({ ...formGasto, notas: e.target.value })} style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--r-field)', border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: 15, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }} required />
-            </div>
-            <button disabled={guardandoGasto} type="submit" style={{ marginTop: 2, width: '100%', minHeight: 46, padding: '11px', background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 'var(--r-field)', fontWeight: 700, fontSize: 15, fontFamily: 'inherit', cursor: guardandoGasto ? 'not-allowed' : 'pointer', opacity: guardandoGasto ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              {guardandoGasto ? 'Guardando…' : <><Icon name="plus" size={18} strokeWidth={2.5} />Registrar gasto</>}
-            </button>
-          </form>
-
-          <div style={{ flex: '2 1 350px', maxHeight: 300, overflowY: 'auto' }}>
-             {gastos.length === 0 ? (
-               <div style={{ textAlign: 'center', color: 'var(--mut)', padding: '40px 0', fontSize: 14 }}>Todavía no hay gastos cargados.</div>
-             ) : (
-               <div className="ui-group" style={{ boxShadow: 'none', margin: 0, padding: 0 }}>
-                 {gastos.map(g => (
-                   <div key={g.id} className="ui-row" style={{ cursor: 'default', justifyContent: 'space-between', padding: '11px 4px' }}>
-                     <div>
-                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                         <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--c-991B1B)', background: 'var(--c-FEE2E2)', padding: '2px 8px', borderRadius: 20 }}>{g.categoria}</span>
-                         <span style={{ fontSize: 12, color: 'var(--mut)', fontWeight: 500 }}>{shortDay(g.fecha)}</span>
-                       </div>
-                       <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ink)' }}>{g.notas}</div>
-                     </div>
-                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                       <span style={{ fontWeight: 700, color: 'var(--red)', fontSize: 15, whiteSpace: 'nowrap' }}>-{currency(g.monto)}</span>
-                       {confirmGastoId === g.id ? (
-                         <span className="pop-in" style={{ fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                           <button onClick={() => eliminarGasto(g.id)} style={{ background: 'transparent', border: 'none', color: 'var(--red)', cursor: 'pointer', fontWeight: 800, fontFamily: 'inherit', fontSize: 12, padding: '2px 4px' }}>Sí, eliminar</button>
-                           <span style={{ color: 'var(--mut)' }}>·</span>
-                           <button onClick={() => setConfirmGastoId(null)} style={{ background: 'transparent', border: 'none', color: 'var(--mut)', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit', fontSize: 12, padding: '2px 4px' }}>Cancelar</button>
-                         </span>
-                       ) : (
-                         <button aria-label="Eliminar gasto" onClick={() => setConfirmGastoId(g.id)} style={{ background: 'var(--fill)', border: 'none', color: 'var(--mut)', cursor: 'pointer', width: 28, height: 28, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}><Icon name="close" size={15} strokeWidth={2.5} /></button>
-                       )}
-                     </div>
-                   </div>
-                 ))}
-               </div>
-             )}
-          </div>
-        </div>
-      </div>
+      {/* MÓDULO DE EGRESOS: gastos del mes y gastos fijos (src/components/Egresos.tsx) */}
+      <Egresos gastos={gastos} setGastos={setGastos} recargar={recargarGastos} who={who} />
 
       <h3 style={H3}><Icon name="chart" size={20} color="var(--acc)" />Mes a mes</h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: 16, marginBottom: 28 }}>

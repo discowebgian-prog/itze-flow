@@ -295,7 +295,8 @@ export async function armarPlanilla(datos, { ahora = new Date() } = {}) {
     ['Canceladas', 'Todas las reservas canceladas, de la más nueva a la más vieja.'],
     ['Eliminadas', 'Las que se borraron (están en la Papelera de Flow), con quién y cuándo.'],
     ['Huéspedes', 'Una fila por persona: visitas, noches, total gastado y contacto.'],
-    ['Gastos', 'Los egresos cargados en Finanzas.'],
+    ['Gastos', 'Todos los egresos, mes a mes (los fijos y los del mes).'],
+    ['Gastos fijos', 'La lista de lo que se paga siempre, que Flow suma solo cada mes.'],
     ['Movimientos de Mary', 'Lo que cargó, cobró o hizo Mary en las reservas.'],
     ['Tarifas', 'La tarifa normal y las promos con sus fechas.'],
     ['Todas (para restaurar)', 'Todas las reservas con los datos tal cual están en la base. Sirve para volver a cargar todo si algún día hace falta.'],
@@ -370,19 +371,41 @@ export async function armarPlanilla(datos, { ahora = new Date() } = {}) {
     const cols = [
       { key: 'fecha', t: 'Fecha', w: 12, fmt: FECHA },
       { key: 'mes', t: 'Mes', w: 15 },
+      { key: 'tipo', t: 'Tipo', w: 9 },
       { key: 'categoria', t: 'Categoría', w: 22 },
       { key: 'monto', t: 'Monto', w: 12, fmt: PESOS },
-      { key: 'notas', t: 'Notas', w: 40, wrap: true },
+      { key: 'notas', t: 'Concepto', w: 40, wrap: true },
     ];
     const ws = wb.addWorksheet('Gastos', { properties: { tabColor: { argb: 'FFF59E0B' } } });
     encabezado(ws, cols);
     const gs = gastos
-      .map((g) => ({ fecha: aFecha(g.fecha), mes: mesDe(g.fecha) ? nombreMes(mesDe(g.fecha)) : '', categoria: txt(g.categoria), monto: num(g.monto), notas: txt(g.notas) }))
+      .map((g) => ({ fecha: aFecha(g.fecha), mes: mesDe(g.fecha) ? nombreMes(mesDe(g.fecha)) : '', tipo: g.fijo_id ? 'Fijo' : 'Del mes', categoria: txt(g.categoria), monto: num(g.monto), notas: txt(g.notas) }))
       .sort((a, b) => (b.fecha?.getTime() || 0) - (a.fecha?.getTime() || 0));
     if (gs.length) {
       filas(ws, cols, gs);
       filaTotal(ws, cols, { monto: sumar(gs, 'monto') });
     } else vacia(ws, 'No hay gastos cargados.');
+  }
+
+  // ── Gastos fijos (la lista que se carga una vez) ──
+  {
+    const fijos = Array.isArray(datos?.gastos_fijos) ? datos.gastos_fijos : [];
+    const CADA = { 1: 'Todos los meses', 2: 'Cada 2 meses', 3: 'Cada 3 meses', 6: 'Cada 6 meses', 12: 'Una vez al año' };
+    const cols = [
+      { key: 'concepto', t: 'Concepto', w: 28 },
+      { key: 'categoria', t: 'Categoría', w: 16 },
+      { key: 'monto', t: 'Monto', w: 12, fmt: PESOS },
+      { key: 'cada', t: 'Se paga', w: 16 },
+      { key: 'desde', t: 'Desde', w: 12, fmt: FECHA },
+      { key: 'hasta', t: 'Hasta', w: 12, fmt: FECHA },
+    ];
+    const ws = wb.addWorksheet('Gastos fijos', { properties: { tabColor: { argb: 'FFF59E0B' } } });
+    encabezado(ws, cols);
+    const fs = fijos
+      .map((f) => ({ concepto: txt(f.concepto), categoria: txt(f.categoria), monto: num(f.monto), cada: CADA[f.cada_meses] || '', desde: aFecha(f.desde), hasta: aFecha(f.hasta) || 'Sigue' }))
+      .sort((a, b) => a.concepto.localeCompare(b.concepto));
+    if (fs.length) filas(ws, cols, fs);
+    else vacia(ws, 'No hay gastos fijos cargados.');
   }
 
   // ── Movimientos de Mary ──
