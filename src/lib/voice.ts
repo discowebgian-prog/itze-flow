@@ -517,3 +517,27 @@ export const EQUIPO_PRONTO = {
   body: 'Muy pronto vas a ver acá tus habitaciones del día, tareas e insumos. Mientras tanto, seguí usando Itzé Limpieza como siempre :)',
   logout: 'Cerrar sesión',
 };
+
+// ── Finanzas: personas por habitación (Segmentación física, al tocarla) ──
+// st = { entre, finde } con { n, solo, pareja, grupo, pax }. Devuelve una o dos frases, o null.
+const PAX_KIND = { solo: 'personas solas', pareja: 'parejas', grupo: 'grupos de 3 o más' };
+const paxTop = (s) => {
+  if (!s || !s.n) return null;
+  const k = ['solo', 'pareja', 'grupo'].sort((a, b) => s[b] - s[a])[0];
+  return { k, pct: Math.round((s[k] / s.n) * 100), avg: s.pax / s.n };
+};
+export function paxReading({ entre, finde }) {
+  const a = paxTop(entre),
+    b = paxTop(finde);
+  if (!a && !b) return null;
+  let t;
+  if (a && b && a.k === b.k) t = `Tanto de lunes a miércoles como de jueves a domingo vienen más que nada ${PAX_KIND[a.k]}.`;
+  else if (a && b) t = `De lunes a miércoles vienen más que nada ${PAX_KIND[a.k]} (${a.pct}%); de jueves a domingo, ${PAX_KIND[b.k]} (${b.pct}%).`;
+  else if (a) t = `De lunes a miércoles vienen más que nada ${PAX_KIND[a.k]} (${a.pct}%).`;
+  else t = `De jueves a domingo vienen más que nada ${PAX_KIND[b.k]} (${b.pct}%).`;
+  if (a && b && b.avg - a.avg >= 0.5)
+    t += ' Los fines de semana llegan grupos más grandes: conviene cuidar las habitaciones grandes para ellos y ofrecer promos de pareja entre semana.';
+  else if (a && b && a.avg - b.avg >= 0.5)
+    t += ' Entre semana llegan grupos más grandes que el finde: vale la pena pensar promos para grupos de lunes a miércoles.';
+  return t;
+}

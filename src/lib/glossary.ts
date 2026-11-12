@@ -97,6 +97,20 @@ export const GLOSSARY = {
       'Si "cobrado vs tarifario" pasa el 100%: vendiste extras (personas adicionales, late check-out). ¡Bien!',
     ],
   },
+  personas: {
+    title: 'Personas por habitación',
+    sub: 'Qué tipo de grupos vienen cada día',
+    what:
+      'En promedio, cuántas personas durmieron en cada habitación ocupada, cada noche. Se separa en Lun–Mié y Jue–Dom, y cuenta qué parte de las noches fueron de personas solas, parejas o grupos de 3 o más.',
+    how: 'Suma de personas de cada noche ocupada ÷ noches ocupadas. Toma el total de huéspedes cargado en cada reserva.',
+    example:
+      'Si de lunes a miércoles hubo 10 noches ocupadas con 2 personas cada una, el promedio es 2,0 y 100% parejas. Si de jueves a domingo hubo 5 noches con 4 personas y 5 con 2, el promedio es 3,0: mitad grupos, mitad parejas.',
+    use: [
+      'Si entre semana vienen parejas y el finde grupos, armá promos de pareja para Lun–Mié y cuidá las habitaciones grandes para el finde.',
+      'Si una habitación grande se vende casi siempre a 2 personas, está rindiendo como una chica: ahí hay lugar para cobrar personas extra o empujar grupos.',
+      'Solo es preciso si en cada reserva está bien cargado el total de huéspedes.',
+    ],
+  },
   segmentacion: {
     title: 'Segmentación física',
     sub: 'Cómo rinde cada tipo de habitación',
