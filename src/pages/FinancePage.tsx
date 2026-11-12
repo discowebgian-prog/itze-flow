@@ -133,6 +133,92 @@ export function FinancePage({ reservations, allRes, properties, user, restoreRes
     notify('Gasto eliminado');
   };
 
+  // ── Datos extra para el Asesor IA, calculados con las reservas del mes ──
+  // Noches de `nightsByMonth` (ocupadas hasta hoy). Lo que no se puede calcular queda vacío.
+  const datosAsesor = (m) => {
+    const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const pct = (a, b) => (b > 0 ? Math.round((a / b) * 100) : 0);
+    const enMes = reservations.filter((r) => r.status !== 'cancelada' && r.checkIn && r.checkIn.slice(0, 7) === m.key);
+
+    // Cuántas noches se queda la gente (reservas que entran este mes)
+    const largo = { 1: 0, 2: 0, 3: 0, '4+': 0 };
+    enMes.forEach((r) => {
+      const n = diffDays(r.checkIn, r.checkOut);
+      if (n >= 4) largo['4+']++;
+      else if (n >= 1) largo[n]++;
+    });
+    const distribucionEstadia = enMes.length
+      ? `${pct(largo[1], enMes.length)}% 1 noche, ${pct(largo[2], enMes.length)}% 2 noches, ${pct(largo[3], enMes.length)}% 3 noches, ${pct(largo['4+'], enMes.length)}% 4 o más (${enMes.length} reservas)`
+      : '';
+
+    // Ocupación y ADR por día de la semana (noches hasta hoy)
+    const nights = nightsByMonth[m.key] || [];
+    const [yy, mo] = m.key.split('-').map(Number);
+    const days = new Date(yy, mo, 0).getDate();
+    const hasta = m.key === fmt(TODAY).slice(0, 7) ? TODAY.getDate() : m.key < fmt(TODAY).slice(0, 7) ? days : 0;
+    const disp = Array(7).fill(0), occ = Array(7).fill(0), rev = Array(7).fill(0);
+    for (let d = 1; d <= hasta; d++) disp[new Date(yy, mo - 1, d).getDay()] += ROOMS.length;
+    nights.forEach((x) => {
+      const w = parseD(x.date).getDay();
+      occ[w]++;
+      rev[w] += x.rev;
+    });
+    const orden = [1, 2, 3, 4, 5, 6, 0];
+    const ocupacionPorDiaSemana = hasta ? orden.filter((w) => disp[w]).map((w) => `${DOW[w]} ${pct(occ[w], disp[w])}%`).join(', ') : '';
+    const adrPorDiaSemana = nights.length ? orden.filter((w) => occ[w]).map((w) => `${DOW[w]} $${Math.round(rev[w] / occ[w])}`).join(', ') : '';
+
+    // Canales (por monto)
+    const canales = Object.entries(m.srcTotals || {}).filter(([, v]) => v > 0);
+    const totCan = canales.reduce((a, [, v]) => a + v, 0);
+    const NOMBRE = { 'Directo-Puerta': 'Por puerta', 'Directo-Celular': 'Por celular' };
+    const mixCanales = totCan ? canales.sort((a, b) => b[1] - a[1]).map(([k, v]) => `${NOMBRE[k] || k} ${pct(v, totCan)}%`).join(', ') : '';
+
+    // Anticipación (días entre que se cargó y la entrada); solo si la base guarda la fecha de carga
+    const conFecha = enMes.filter((r) => r.createdAt);
+    let anticipacionReservas = '';
+    if (conFecha.length >= 3) {
+      const ant = conFecha.map((r) => Math.max(0, diffDays(String(r.createdAt).slice(0, 10), r.checkIn)));
+      const b = { mismo: 0, sem: 0, mes: 0, mas: 0 };
+      ant.forEach((a) => (a === 0 ? b.mismo++ : a <= 7 ? b.sem++ : a <= 30 ? b.mes++ : b.mas++));
+      const n = ant.length;
+      anticipacionReservas = `${pct(b.mismo, n)}% el mismo día, ${pct(b.sem, n)}% 1 a 7 días antes, ${pct(b.mes, n)}% 8 a 30 días antes, ${pct(b.mas, n)}% más de 30 días (según cuándo se cargaron en el sistema; las de Booking se cargan a mano)`;
+    }
+
+    // Lo ya reservado para los próximos 30 días
+    const hoy = fmt(TODAY), fin = fmt(addDays(TODAY, 30));
+    let fut = 0, futE = 0, futF = 0, dispE = 0, dispF = 0;
+    for (let i = 0; i < 30; i++) (isFindeDow(addDays(TODAY, i).getDay()) ? (dispF += ROOMS.length) : (dispE += ROOMS.length));
+    reservations.forEach((r) => {
+      if (r.status === 'cancelada' || !r.checkIn) return;
+      const n = diffDays(r.checkIn, r.checkOut);
+      for (let i = 0; i < n; i++) {
+        const d = addDays(parseD(r.checkIn), i), k = fmt(d);
+        if (k < hoy || k >= fin) continue;
+        fut++;
+        if (isFindeDow(d.getDay())) futF++; else futE++;
+      }
+    });
+    const reservasYaTomadas = `Próximos 30 días: ${pct(fut, dispE + dispF)}% de ocupación ya reservada (Lun-Mié ${pct(futE, dispE)}%, Jue-Dom ${pct(futF, dispF)}%)`;
+
+    return {
+      distribucionEstadia,
+      ocupacionPorDiaSemana,
+      adrPorDiaSemana,
+      mixCanales,
+      anticipacionReservas,
+      reservasYaTomadas,
+      costoVariablePorNocheOcupada: m.occupiedNights > 0 && m.gastos > 0 ? Math.round(m.gastos / m.occupiedNights) : 0,
+      // Comisión: lo cargado en Egresos como "Comisiones" ÷ lo facturado por Booking ese mes
+      comisionPromedioPct: (() => {
+        const com = gastos
+          .filter((g) => g.fecha && g.fecha.slice(0, 7) === m.key && /comisi/i.test(g.categoria || ''))
+          .reduce((a, g) => a + Number(g.monto || 0), 0);
+        const bk = (m.srcTotals || {}).Booking || 0;
+        return com > 0 && bk > 0 ? Math.round((com / bk) * 100) : 0;
+      })(),
+    };
+  };
+
   const analizarRevenue = async (m, metrics) => {
     setAnalyzingMonth(m.key);
     try {
@@ -148,16 +234,8 @@ export function FinancePage({ reservations, allRes, properties, user, restoreRes
       const rmCompetencia = [];
 
       // Datos extra. Lo que quede vacío o en 0, Claude lo marcará como dato faltante.
-      const rmExtra = {
-        distribucionEstadia: "", // Ej: "80% 1 noche, 20% 2 noches"
-        ocupacionPorDiaSemana: "", // Ej: "Dom 12%, Lun 10%, Vie 60%, Sáb 70%"
-        adrPorDiaSemana: "", 
-        mixCanales: "", // Ej: "Booking 55%, Airbnb 20%, Directo 25%"
-        anticipacionReservas: "", 
-        reservasYaTomadas: "", 
-        costoVariablePorNocheOcupada: 0, 
-        comisionPromedioPct: 0, 
-      };
+      // Se calculan solos con lo que hay en Flow (antes había que completarlos a mano y llegaban vacíos)
+      const rmExtra = datosAsesor(m);
 
       // ============================================================
       // 2) FUNCIONES AUXILIARES PARA EL PROMPT
