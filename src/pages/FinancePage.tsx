@@ -13,6 +13,7 @@ import { InfoTip } from '../components/ui/InfoTip';
 import { Icon, ic } from '../components/ui/Icon';
 import { notify, notifyError, financeReading, paxReading } from '../lib/voice';
 import { esDueno } from '../lib/roles';
+import { PAX_TYPES, paxStats, paxAvg, paxPct, paxStrategy } from '../lib/paxStrategy';
 
 // Títulos de sección (estilo Limpieza: grandes, con ícono)
 const H3 = { margin: '0 0 12px', fontSize: 20, fontWeight: 'var(--w-title)', color: 'var(--ink)', letterSpacing: '-.01em', display: 'flex', alignItems: 'center', gap: 8 };
@@ -46,40 +47,10 @@ function Delta({ cur, prev, style = {} }) {
 }
 
 // ── FINANCE PAGE ──────────────────────────────────────────────────────────────
-// ── Personas por habitación (Segmentación física, al tocarla) ──
-// Cada noche ocupada (hasta hoy) cuenta con las personas de su reserva.
-const PAX_TYPES = [
-  ['compartidas', 'Habitaciones 1, 2, 3 y 5', ['P1', 'P2', 'P3', 'P5']],
-  ['king', 'Habitación 4', ['P4']],
-  ['matrimonial', 'Habitación 6', ['P6']],
-].map((t) => [...t, Math.max(...t[2].map((id) => ROOMS.find((r) => r.id === id)?.maxGuests || 0))]); // + capacidad
-
-const paxSeg = () => ({ n: 0, pax: 0, solo: 0, pareja: 0, grupo: 0 });
-const paxAdd = (s, p) => {
-  s.n++;
-  s.pax += p;
-  if (p <= 1) s.solo++;
-  else if (p === 2) s.pareja++;
-  else s.grupo++;
-};
-function paxStats(list = []) {
-  const out = { entre: paxSeg(), finde: paxSeg(), global: paxSeg(), types: {} };
-  PAX_TYPES.forEach(([k]) => (out.types[k] = paxSeg()));
-  list.forEach((x) => {
-    const p = x.pax || 1;
-    paxAdd(x.finde ? out.finde : out.entre, p);
-    paxAdd(out.global, p);
-    const t = PAX_TYPES.find((t) => t[2].includes(x.room));
-    if (t) paxAdd(out.types[t[0]], p);
-  });
-  return out;
-}
-const paxAvg = (s) => (s && s.n ? (s.pax / s.n).toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—');
-const paxPct = (s, k) => (s && s.n ? Math.round((s[k] / s.n) * 100) : 0);
-
 export function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoTo, tarifas = [] }) {
   const [showTrash, setShowTrash] = useState(false);
   const [paxOpen, setPaxOpen] = useState({}); // mes → abierto "Personas por habitación"
+  const [paxAsking, setPaxAsking] = useState(null); // mes al que el Asesor IA le está armando la estrategia
   const [gastos, setGastos] = useState([]);
   const [formGasto, setFormGasto] = useState({ fecha: fmt(TODAY), monto: '', categoria: 'Insumos', notas: '' });
   const [guardandoGasto, setGuardandoGasto] = useState(false);
@@ -269,6 +240,41 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
       notifyError(err, 'armar el diagnóstico');
     } finally {
       setAnalyzingMonth(null);
+    }
+  };
+
+  // Asesor IA: estrategia solo con los datos de personas por habitación (se puede seguir preguntando)
+  const pedirEstrategiaPax = async (m, st, ideas) => {
+    const key = `${m.key}-pax`;
+    if (chatMessages[key]) {
+      setInsightModal({ title: `Estrategia por tipo de grupo: ${m.label}`, content: chatMessages[key][1].content, monthKey: key });
+      return;
+    }
+    setPaxAsking(m.key);
+    try {
+      const mix = (x) => `${paxAvg(x)} personas promedio · solos ${paxPct(x, 'solo')}%, parejas ${paxPct(x, 'pareja')}%, 3 o más ${paxPct(x, 'grupo')}% (${x.n} noches)`;
+      const prompt = `Sos consultor de revenue management de Itzé Hostel Boutique, en Progreso, Yucatán (playa, a 30 min de Mérida). Tiene 6 habitaciones privadas: las 1, 2, 3 y 5 para hasta 5 personas (dos camas queen + sofá cama; la 3, dos matrimoniales + individual), la 4 para 3 (king + sofá cama) y la 6 para 2 (matrimonial). La tarifa incluye 2 personas y cada persona extra paga $200 por noche. Fin de semana = noches de jueves a domingo.
+
+QUIÉNES VINIERON EN ${m.label.toUpperCase()} (noches ocupadas hasta hoy):
+- Lun-Mié: ${mix(st.entre)}
+- Jue-Dom: ${mix(st.finde)}
+- Global: ${mix(st.global)}
+${PAX_TYPES.map(([k, label, , cap]) => `- ${label} (capacidad ${cap}): ${st.types[k].n ? paxAvg(st.types[k]) + ' personas promedio' : 'sin noches'}`).join('\n')}
+- Habitaciones 1, 2, 3 y 5 vendidas a 1 o 2 personas: ${st.bigLow.n} noches (${st.bigLow.finde} de jueves a domingo), unas ${st.bigLow.beds} camas sin usar.
+${ideas && ideas.length ? 'Ideas que ya le sugiere el sistema: ' + ideas.map((i) => i.title).join('; ') : ''}
+
+TU TAREA: en texto plano (sin asteriscos ni markdown; MAYÚSCULAS para títulos y guiones para listas), máximo 450 palabras, sin introducción, en español rioplatense cálido y claro:
+LO QUE DICEN ESTOS NÚMEROS: 2 o 3 lecturas sobre qué tipo de huésped viene cada parte de la semana.
+ESTRATEGIA: 4 acciones concretas (a quién, qué ofrecer, a qué precio aproximado, qué días, por qué canal) para ganar más según el tipo de grupo, incluyendo cómo asignar habitaciones.
+PARA LA PRÓXIMA SEMANA: 1 cosa para hacer ya.`;
+      const respuesta = await askClaude({ messages: [{ role: 'user', content: prompt }], maxTokens: 3000 });
+      const text = respuesta || 'No se pudo armar la estrategia.';
+      setChatMessages((prev) => ({ ...prev, [key]: [{ role: 'user', content: prompt }, { role: 'assistant', content: text }] }));
+      setInsightModal({ title: `Estrategia por tipo de grupo: ${m.label}`, content: text, monthKey: key });
+    } catch (err) {
+      notifyError(err, 'armar la estrategia');
+    } finally {
+      setPaxAsking(null);
     }
   };
 
@@ -891,11 +897,18 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                     if (!st.global.n)
                       return <div style={{ fontSize: 11.5, color: 'var(--mut)', marginTop: 10 }}>Todavía no hay noches ocupadas este mes.</div>;
                     const reading = paxReading(st);
-                    const box = (label, s, bg, c, c2) => (
+                    // Mes anterior en el mismo tramo de días (como el RevPAR)
+                    const stPrev = paxStats((nightsByMonth[prevKey] || []).filter((x) => x.day <= prevUpTo));
+                    const hasPrev = stPrev.global.n >= 5;
+                    const ideas = paxStrategy(st, { prev: hasPrev ? stPrev : null, prevLabel: cmpLabel });
+                    const box = (label, s, sp, bg, c, c2) => (
                       <div style={{ background: bg, padding: '8px 4px', borderRadius: 12, textAlign: 'center' }}>
                         <div style={{ fontSize: 9, color: c, fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>{label}</div>
                         <div style={{ fontSize: 15, fontWeight: 800, color: c2 }}>{paxAvg(s)}</div>
                         <div style={{ fontSize: 9.5, color: c, fontWeight: 600 }}>personas</div>
+                        {hasPrev && sp && sp.n > 0 && (
+                          <div style={{ fontSize: 9.5, color: 'var(--mut)', fontWeight: 600, marginTop: 2 }}>antes {paxAvg(sp)}</div>
+                        )}
                       </div>
                     );
                     const mix = (label, s) =>
@@ -924,9 +937,9 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                           <span style={{ fontSize: 9 }}>promedio por noche</span>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
-                          {box('Lun - Mié', st.entre, 'var(--c-FFFBEB)', 'var(--c-D97706)', 'var(--c-92400E)')}
-                          {box('Jue - Dom', st.finde, 'var(--c-F5F3FF)', 'var(--c-7C3AED)', 'var(--c-5B21B6)')}
-                          {box('Global', st.global, 'var(--acc-soft)', 'var(--acc)', 'var(--acc)')}
+                          {box('Lun - Mié', st.entre, stPrev.entre, 'var(--c-FFFBEB)', 'var(--c-D97706)', 'var(--c-92400E)')}
+                          {box('Jue - Dom', st.finde, stPrev.finde, 'var(--c-F5F3FF)', 'var(--c-7C3AED)', 'var(--c-5B21B6)')}
+                          {box('Global', st.global, stPrev.global, 'var(--acc-soft)', 'var(--acc)', 'var(--acc)')}
                         </div>
                         {mix('Lun – Mié', st.entre)}
                         {mix('Jue – Dom', st.finde)}
@@ -941,11 +954,43 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
                             </div>
                           ))}
                         </div>
+                        {hasPrev && <div style={{ fontSize: 10, color: 'var(--mut)', marginTop: 4, textAlign: 'center' }}>"antes" = {cmpLabel}</div>}
                         {reading && (
                           <div style={{ fontSize: 12, color: 'var(--ink)', background: 'var(--card)', borderRadius: 10, padding: '8px 10px', marginTop: 8, lineHeight: 1.45 }}>
                             {reading}
                           </div>
                         )}
+                        {/* Estrategia sugerida: se recalcula cada día con las noches que van pasando */}
+                        <div style={{ marginTop: 12 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            {ic('target', 13)}Estrategia sugerida
+                          </div>
+                          {ideas === null ? (
+                            <div style={{ fontSize: 11.5, color: 'var(--mut)' }}>Todavía hay pocas noches para sugerir algo. Se actualiza solo cada día.</div>
+                          ) : ideas.length === 0 ? (
+                            <div style={{ fontSize: 11.5, color: 'var(--mut)' }}>Por ahora no hay nada para cambiar: la mezcla de huéspedes está pareja. Se actualiza solo cada día.</div>
+                          ) : (
+                            ideas.map((it, i) => (
+                              <div key={i} style={{ display: 'flex', gap: 9, background: 'var(--card)', borderRadius: 12, padding: '9px 11px', marginBottom: 6 }}>
+                                <span style={{ color: 'var(--acc)', flexShrink: 0, marginTop: 1 }}><Icon name={it.icon} size={16} /></span>
+                                <div>
+                                  <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--ink)' }}>{it.title}</div>
+                                  <div style={{ fontSize: 11.5, color: 'var(--ink-2)', lineHeight: 1.45, marginTop: 2 }}>{it.text}</div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                          <button
+                            type="button"
+                            className="tap"
+                            onClick={() => pedirEstrategiaPax(m, st, ideas)}
+                            disabled={paxAsking === m.key}
+                            style={{ marginTop: 4, width: '100%', background: 'var(--c-EEF2FF)', border: 'none', color: 'var(--c-4F46E5)', padding: '9px 14px', borderRadius: 20, fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: paxAsking === m.key ? 'wait' : 'pointer', opacity: paxAsking === m.key ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                          >
+                            <Icon name="sparkles" size={15} />
+                            {paxAsking === m.key ? 'Armando la estrategia…' : chatMessages[`${m.key}-pax`] ? 'Ver la estrategia del Asesor IA' : 'Pedirle una estrategia al Asesor IA'}
+                          </button>
+                        </div>
                       </div>
                     );
                   })()}
