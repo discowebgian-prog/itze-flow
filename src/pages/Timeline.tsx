@@ -1,6 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 import { useState, useRef, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { ROOMS, srcShort, RS, PS, BLOCK_COLORS, ALERTS, getAlerts } from '../lib/constants';
 import { TODAY, fmt, fmtD, addDays, diffDays, parseD, currency, MONTHS, DAYS } from '../lib/dates';
 import { findConflicts, lateHour } from '../lib/reservations';
@@ -109,6 +110,7 @@ export function Timeline({
   const noClickUntil = useRef(0); // al soltar una barra, que no se abra la reserva
   const auto = useRef({ v: 0, raf: 0, x: 0, y: 0 }); // desplazamiento solo cerca de los bordes
   const fn = useRef({}); // funciones del arrastre con los datos de este render
+  const navAnim = useRef(0); // animación de los botones 7d
 
   useEffect(() => {
     if (!gridEl) return;
@@ -156,6 +158,7 @@ export function Timeline({
     () => () => {
       if (pressRef.current) clearTimeout(pressRef.current.timer);
       cancelAnimationFrame(auto.current.raf);
+      cancelAnimationFrame(navAnim.current);
     },
     []
   );
@@ -406,6 +409,37 @@ export function Timeline({
     window.addEventListener('mouseup', mu);
   };
 
+  // Botones 7d: el calendario se desliza (arranca suave, acelera y frena de a poco) en vez de saltar.
+  // Si no hay días dibujados hacia ese lado, primero se corre la ventana de días sin que se note
+  // (cambia `offset` y se compensa el desplazamiento) y después se anima.
+  const slideDays = (n) => {
+    const sc = scrollRef.current;
+    const quiet = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!sc || quiet) {
+      setOffset((o) => o + n);
+      return;
+    }
+    cancelAnimationFrame(navAnim.current);
+    const dist = n * COL;
+    const max = () => sc.scrollWidth - sc.clientWidth;
+    let from = sc.scrollLeft;
+    if (from + dist < 0 || from + dist > max()) {
+      flushSync(() => setOffset((o) => o + n));
+      sc.scrollLeft = from - dist;
+      from = sc.scrollLeft;
+    }
+    const to = Math.max(0, Math.min(max(), from + dist));
+    const T = 520;
+    const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    const t0 = performance.now();
+    const step = (now) => {
+      const t = Math.min(1, (now - t0) / T);
+      sc.scrollLeft = from + (to - from) * ease(t);
+      if (t < 1) navAnim.current = requestAnimationFrame(step);
+    };
+    navAnim.current = requestAnimationFrame(step);
+  };
+
   // Deslizar la fila de los días (y en la compu, toda la grilla con el mouse) cambia las fechas
   const onMove = (e) => {
     if (!hdrDrag) return;
@@ -494,7 +528,7 @@ export function Timeline({
             }}
           >
             <button
-              onClick={() => setOffset((s) => s - 7)}
+              onClick={() => slideDays(-7)}
               aria-label="7 días antes"
               style={NAV_BTN}
             >
@@ -510,7 +544,7 @@ export function Timeline({
               Hoy
             </button>
             <button
-              onClick={() => setOffset((s) => s + 7)}
+              onClick={() => slideDays(7)}
               aria-label="7 días después"
               style={NAV_BTN}
             >
