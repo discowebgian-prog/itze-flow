@@ -221,11 +221,23 @@ export function SeViene({ reservations, canEdit, onGoTo, isMobile }) {
             {todos && (
               <Modal key="eventos" title="Radar de eventos" icon="megaphone" onClose={() => setTodos(false)} isMobile={isMobile} tall>
                 <div style={{ fontSize: 13, color: 'var(--mut)', margin: '0 2px 10px' }}>
-                  Cada evento aparece en Inicio cuando es momento de prepararse: los grandes, meses antes; los chicos, semanas antes.
+                  Los próximos 12 meses, mes por mes. Cada evento aparece en Inicio cuando es momento de prepararse: los grandes, meses antes; los chicos, semanas antes.
                 </div>
                 <div className="ui-card" style={{ padding: '2px 0' }}>
                   {lista.map((x, i) => (
                     <div key={x.e.id}>
+                      {/* Encabezado de cada mes: "Diciembre 2026 · 3 eventos" */}
+                      {(i === 0 || x.e.fecha_desde.slice(0, 7) !== lista[i - 1].e.fecha_desde.slice(0, 7)) && (() => {
+                        const mk = x.e.fecha_desde.slice(0, 7);
+                        const n = lista.filter((y) => y.e.fecha_desde.slice(0, 7) === mk).length;
+                        const [yy, mm] = mk.split('-').map(Number);
+                        const nom = new Date(yy, mm - 1, 1).toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }).replace(' de ', ' ');
+                        return (
+                          <div style={{ padding: '12px 16px 4px', fontSize: 12, fontWeight: 800, color: 'var(--mut)', textTransform: 'uppercase', letterSpacing: 0.3, borderTop: i ? '1px solid var(--line)' : 'none' }}>
+                            {nom} · {n === 1 ? '1 evento' : `${n} eventos`}
+                          </div>
+                        );
+                      })()}
                       {row(x, i, true)}
                       {!enVentana(x.e) && x.e.estado !== 'descartado' && (
                         <div style={{ fontSize: 11.5, color: 'var(--mut)', padding: '0 16px 8px' }}>

@@ -95,10 +95,12 @@ export default async function handler(req, res) {
 // ── Claude + búsqueda en internet ────────────────────────────────────────────
 async function buscarEventos(apiKey, conocidos, tema, limite) {
   const hoy = hoyMx();
+  const mas = (m) => { const d = new Date(hoy + 'T12:00:00'); d.setMonth(d.getMonth() + m); return d.toISOString().slice(0, 10); };
+  const hasta6 = mas(6), hasta12 = mas(12);
   const lista = (conocidos || []).map((e) => `- ${e.nombre} (${e.fecha_desde}${e.fecha_hasta ? ' a ' + e.fecha_hasta : ''})`).join('\n');
   const prompt = `Hoy es ${hoy}. Sos el radar de eventos de Itzé Hostel Boutique, un hostel boutique de 6 habitaciones privadas en Progreso, Yucatán, México (puerto y playa a 30 minutos de Mérida). Su público: parejas, familias, grupos de amigos, viajeros de Mérida y del resto de México, extranjeros y gente que viene por trabajo.
 
-TAREA: buscá en internet eventos de los PRÓXIMOS 12 MESES que puedan traer huéspedes a Progreso y la costa (Progreso, Chicxulub, Chelem, Telchac, Sisal) o a Mérida si mueven gente que también duerme en la costa.
+TAREA: buscá en internet eventos de los PRÓXIMOS 12 MESES (hasta ${hasta12}) que puedan traer huéspedes a Progreso y la costa (Progreso, Chicxulub, Chelem, Telchac, Sisal) o a Mérida si mueven gente que también duerme en la costa.
 En esta búsqueda, enfocate SOLO en: ${tema}.
 Dónde buscar: Ayuntamiento de Progreso y de Mérida, Secretaría de Fomento Turístico (SEFOTUR) y de Cultura de Yucatán, puerto de Progreso (cruceros), organizadores de cada evento, medios locales (Diario de Yucatán, La Jornada Maya, Novedades Yucatán, Por Esto).
 
@@ -108,7 +110,8 @@ REGLAS:
 - Cruceros: no uno por barco; si hay arribos, uno por mes que diga en la descripción cuántos y qué días.
 - impacto: "alto" si llena Progreso (carnaval, Semana Santa, verano, Navidad y Año Nuevo, festivales grandes), "medio" si atrae bastante gente de afuera, "bajo" si es más local.
 - ideas: 2 o 3 acciones concretas y cortas para el hostel (precio, difusión o participación: convenio con organizadores, paquete o descuento para participantes, transporte, desayuno temprano, late check-out…). Tono cálido, de "vos". Sin ideas obvias ni pedir mínimo de noches (en Progreso las estadías son cortas).
-- Máximo 12 eventos, priorizando los de más impacto y los más cercanos.
+- Próximos 6 meses (hasta ${hasta6}): todos los que encuentres, también los chicos y los que se organizan sobre la marcha (son los que más cuesta enterarse). Del mes 7 al 12: solo los de impacto alto o medio.
+- Máximo 15 eventos, primero los de los próximos 6 meses.
 
 EVENTOS YA CONOCIDOS:
 ${lista || '(ninguno todavía)'}
@@ -133,7 +136,7 @@ RESPUESTA: al final, SOLO esto (JSON válido, sin markdown):
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: MODEL, max_tokens: 6000, messages, tools }),
+      body: JSON.stringify({ model: MODEL, max_tokens: 7000, messages, tools }),
       signal: AbortSignal.timeout(quedan),
     });
     data = await r.json().catch(() => null);
