@@ -15,6 +15,7 @@ import { notify, notifyError, financeReading, paxReading } from '../lib/voice';
 import { esDueno } from '../lib/roles';
 import { PAX_TYPES, paxStats, paxAvg, paxPct, paxStrategy } from '../lib/paxStrategy';
 import { eventosEntre } from '../lib/eventos';
+import { competenciaParaAsesor } from '../components/TarifasExtras';
 
 // Títulos de sección (estilo Limpieza: grandes, con ícono)
 const H3 = { margin: '0 0 12px', fontSize: 20, fontWeight: 'var(--w-title)', color: 'var(--ink)', letterSpacing: '-.01em', display: 'flex', alignItems: 'center', gap: 8 };
@@ -235,7 +236,8 @@ export function FinancePage({ reservations, allRes, properties, user, restoreRes
         .catch(() => []);
       
       // Completar si tenés relevamiento de la zona (ej: [{ nombre: "Hostal X", tarifaEntreSemana: 500, tarifaFinde: 900 }])
-      const rmCompetencia = [];
+      // Competencia cargada a mano en Tarifas (vacío si no hay o falta el SQL)
+      const rmCompetencia = await competenciaParaAsesor(tarifas).catch(() => []);
 
       // Datos extra. Lo que quede vacío o en 0, Claude lo marcará como dato faltante.
       // Se calculan solos con lo que hay en Flow (antes había que completarlos a mano y llegaban vacíos)
