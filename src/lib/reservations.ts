@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { parseD } from './dates';
+import { parseD, diffDays } from './dates';
 
 // ── OVERLAP ───────────────────────────────────────────────────────────────────
 export function findConflicts(all, propId, room, ci, co, excludeId) {
@@ -66,3 +66,20 @@ export function checkoutTimePassed(checkOutDate, late, nowMerida, hoyFmt) {
 // Estadía sin cargo: total $0 y nadie pagó (noches gratis que cubren todo, 100% de descuento…).
 // No es "pagado": no hubo pago de por medio.
 export const isFreeStay = (r) => (Number(r?.totalAmount) || 0) <= 0 && (Number(r?.paid) || 0) <= 0;
+
+// ── Extensión de estadía (supabase/mejoras_nov.sql: checkout_original, extendida_noches) ──
+// Se marca solo cuando a una reserva HOSPEDADA se le corre la salida más tarde (editando o arrastrando).
+// checkoutOriginal = la salida que tenía antes de la primera extensión. Si después se acorta,
+// las noches extendidas se recalculan contra esa salida (y si vuelve a la original, se borra).
+// Devuelve { checkoutOriginal, extendidaNoches } si hay que guardar algo, o null si no cambia nada.
+// Si la reserva no conoce las columnas (SQL sin correr), devuelve null para no mandarlas.
+export function extensionDe(prev, nuevoCheckOut) {
+  if (!prev || prev.extendidaNoches === undefined || !nuevoCheckOut || nuevoCheckOut === prev.checkOut) return null;
+  if (prev.checkoutOriginal) {
+    const n = Math.max(0, diffDays(prev.checkoutOriginal, nuevoCheckOut));
+    return n > 0 ? { checkoutOriginal: prev.checkoutOriginal, extendidaNoches: n } : { checkoutOriginal: null, extendidaNoches: 0 };
+  }
+  if (prev.status === 'hospedado' && nuevoCheckOut > prev.checkOut)
+    return { checkoutOriginal: prev.checkOut, extendidaNoches: diffDays(prev.checkOut, nuevoCheckOut) };
+  return null;
+}
