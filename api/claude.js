@@ -6,7 +6,7 @@
 // - El modelo y los límites los decide este archivo, no el navegador.
 // - No registra el contenido de los pedidos (pueden llevar fotos de INE).
 
-const MODEL = 'claude-sonnet-5';
+const MODEL = 'claude-sonnet-5-5';
 const MAX_TOKENS_LIMIT = 40000;
 const ALLOWED_EFFORT = ['low', 'medium', 'high'];
 const UPSTREAM_TIMEOUT_MS = 285000; // Un poco menos que el maxDuration de vercel.json

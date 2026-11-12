@@ -182,6 +182,8 @@ export default function AppMejorada() {
           cargadaPorNombre: item.cargada_por_nombre || '',
           // Nota para el equipo (la ve Mary en Habitaciones de hoy); undefined si falta la columna
           notaEquipo: 'nota_equipo' in item ? item.nota_equipo || '' : undefined,
+          // Cuándo se cargó (Asesor IA: anticipación de las reservas); null si la base no la tiene
+          createdAt: item.created_at || null,
         };
       });
 
