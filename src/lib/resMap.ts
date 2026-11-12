@@ -60,6 +60,9 @@ export function rowToRes(item) {
   r.cargadaPorNombre = item.cargada_por_nombre || '';
   // Nota para el equipo: undefined si la columna todavía no existe (así no se manda al guardar)
   r.notaEquipo = 'nota_equipo' in item ? item.nota_equipo || '' : undefined;
+  // Extensión de estadía: undefined si la columna todavía no existe
+  r.extendidaNoches = 'extendida_noches' in item ? Number(item.extendida_noches) || 0 : undefined;
+  r.checkoutOriginal = item.checkout_original || null;
   r.propia = item.propia === true;
   r.saldo = item.saldo === undefined ? undefined : item.saldo === null ? null : Number(item.saldo);
   r.sinMontos = item.propia === false;

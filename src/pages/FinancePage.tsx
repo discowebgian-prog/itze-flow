@@ -11,11 +11,12 @@ import { AnimatePresence } from 'motion/react';
 import { Backdrop, PopCard, CountUp, Collapse } from '../components/ui/Motion';
 import { InfoTip } from '../components/ui/InfoTip';
 import { Icon, ic } from '../components/ui/Icon';
-import { notify, notifyError, financeReading, paxReading } from '../lib/voice';
+import { notify, notifyError, financeReading, paxReading, cobrosReading } from '../lib/voice';
 import { esDueno } from '../lib/roles';
 import { PAX_TYPES, paxStats, paxAvg, paxPct, paxStrategy } from '../lib/paxStrategy';
 import { eventosEntre } from '../lib/eventos';
 import { competenciaParaAsesor } from '../components/TarifasExtras';
+import { cobrosMes, cobrosParaAsesor, PAGOS } from '../lib/huespedesCobros';
 
 // Títulos de sección (estilo Limpieza: grandes, con ícono)
 const H3 = { margin: '0 0 12px', fontSize: 20, fontWeight: 'var(--w-title)', color: 'var(--ink)', letterSpacing: '-.01em', display: 'flex', alignItems: 'center', gap: 8 };
@@ -52,7 +53,8 @@ function Delta({ cur, prev, style = {} }) {
 export function FinancePage({ reservations, allRes, properties, user, restoreRes, onGoTo, tarifas = [] }) {
   const [showTrash, setShowTrash] = useState(false);
   const [paxOpen, setPaxOpen] = useState({}); // mes → abierto "Personas por habitación"
-  const [paxAsking, setPaxAsking] = useState(null); // mes al que el Asesor IA le está armando la estrategia
+  const [paxAsking, setPaxAsking] = useState(null);
+  const [cobrosOpen, setCobrosOpen] = useState({}); // mes → abierta "Huéspedes y cobros" // mes al que el Asesor IA le está armando la estrategia
   const [gastos, setGastos] = useState([]);
   const [formGasto, setFormGasto] = useState({ fecha: fmt(TODAY), monto: '', categoria: 'Insumos', notas: '' });
   const [guardandoGasto, setGuardandoGasto] = useState(false);
@@ -298,6 +300,7 @@ ${rmBloque("- Mix de canales de venta", rmExtra.mixCanales)}
 ${rmBloque("- Anticipación de reservas", rmExtra.anticipacionReservas)}
 ${rmBloque("- Reservas tomadas a futuro", rmExtra.reservasYaTomadas)}
 ${rmBloque("- Costo variable por noche", rmExtra.costoVariablePorNocheOcupada)}
+${(() => { const t = cobrosParaAsesor(cobrosMes(reservations, allRes, m.key)); return t ? '\nHUÉSPEDES Y COBROS (reservas que entran en el mes):\n' + t : ''; })()}
 ${rmBloque("- Comisión promedio", rmExtra.comisionPromedioPct)}
 ${rmBloque("- Eventos locales", rmEventos)}
 ${rmBloque("- Competencia", rmCompetencia)}
@@ -1080,6 +1083,116 @@ PARA LA PRÓXIMA SEMANA: 1 cosa para hacer ya.`;
                   })()}
                 </Collapse>
               </div>
+
+              {/* HUÉSPEDES Y COBROS (plegable): cómo pagan, facturas, extras, quiénes son, lo que se perdió */}
+              {(() => {
+                const abierta = !!cobrosOpen[m.key];
+                const c = abierta ? cobrosMes(reservations, allRes, m.key) : null;
+                const cp = abierta ? cobrosMes(reservations, allRes, prevKey) : null;
+                const antes = (v) => (cp && cp.n >= 3 ? <span style={{ color: 'var(--mut)', fontWeight: 600, fontSize: 10.5 }}> · antes {v}%</span> : null);
+                const pc = (a, b) => (b > 0 ? Math.round((a / b) * 100) : 0);
+                const sec = (titulo, hijos) => (
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--mut)', textTransform: 'uppercase', marginBottom: 5 }}>{titulo}</div>
+                    {hijos}
+                  </div>
+                );
+                const fila = (label, valor, extra = null) => (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12, marginBottom: 4 }}>
+                    <span style={{ color: 'var(--ink-2)', fontWeight: 600 }}>{label}</span>
+                    <span style={{ fontWeight: 700, color: 'var(--ink)', textAlign: 'right' }}>{valor}{extra}</span>
+                  </div>
+                );
+                return (
+                  <div
+                    className="tap"
+                    role="button"
+                    onClick={() => setCobrosOpen((o) => ({ ...o, [m.key]: !o[m.key] }))}
+                    style={{ background: 'var(--inset)', borderRadius: 'var(--r-item)', padding: '11px 12px', marginBottom: 14, cursor: 'pointer' }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--mut)', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center' }}>
+                        Huéspedes y cobros<span onClick={(e) => e.stopPropagation()}><InfoTip k="cobros" /></span>
+                      </span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, fontWeight: 700, color: 'var(--acc)' }}>
+                        {abierta ? 'Ocultar' : 'Ver'}
+                        <span style={{ display: 'inline-flex', transform: abierta ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform .2s' }}>
+                          <Icon name="chev" size={13} strokeWidth={2.5} />
+                        </span>
+                      </span>
+                    </div>
+                    <Collapse open={abierta}>
+                      {c && (
+                        <div onClick={(e) => e.stopPropagation()} style={{ cursor: 'default', paddingTop: 4 }}>
+                          {!c.n && !c.cancel.n ? (
+                            <div style={{ fontSize: 11.5, color: 'var(--mut)', marginTop: 8 }}>Todavía no hay reservas que entren este mes.</div>
+                          ) : (
+                            <>
+                              <div style={{ fontSize: 11, color: 'var(--mut)', marginTop: 6 }}>
+                                {c.n} {c.n === 1 ? 'reserva entra' : 'reservas entran'} este mes{cp && cp.n >= 3 ? ` · "antes" = ${cmpLabel ? cmpLabel.split(',')[0] : 'mes anterior'} completo` : ''}
+                              </div>
+                              {sec('Cómo pagan (sobre lo cobrado)', c.cobrado > 0 ? (
+                                <>
+                                  <div style={{ display: 'flex', height: 8, borderRadius: 99, overflow: 'hidden', background: 'var(--line)' }}>
+                                    {PAGOS.map(([k, , col]) => (c.pago[k].monto > 0 ? <div key={k} style={{ width: pc(c.pago[k].monto, c.cobrado) + '%', background: col }} /> : null))}
+                                  </div>
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px 12px', fontSize: 11, color: 'var(--ink-2)', marginTop: 5 }}>
+                                    {PAGOS.filter(([k]) => c.pago[k].monto > 0).map(([k, l, col]) => (
+                                      <span key={k}><b style={{ color: col }}>●</b> {l} {pc(c.pago[k].monto, c.cobrado)}% · {currency(c.pago[k].monto)} ({c.pago[k].n})</span>
+                                    ))}
+                                  </div>
+                                </>
+                              ) : <div style={{ fontSize: 11.5, color: 'var(--mut)' }}>Todavía no hay cobros.</div>)}
+                              {sec('Facturas y empresas', (
+                                <>
+                                  {fila('Pidieron factura', `${c.factura.n} · ${c.factura.pct}%`, antes(cp && cp.factura.pct))}
+                                  {fila('Peso en los ingresos', `${c.factura.pctIngresos}%`)}
+                                  {fila('De empresa', `${c.empresas.n} · ${c.empresas.pct}%`)}
+                                  {c.empresas.top.length > 0 && (
+                                    <div style={{ fontSize: 11, color: 'var(--mut)', marginTop: -1 }}>{c.empresas.top.map(([k, v]) => `${k} (${v})`).join(' · ')}</div>
+                                  )}
+                                </>
+                              ))}
+                              {sec('Extras', (
+                                <>
+                                  {fila('Late check-out', `${c.late.n} · ${c.late.pct}% · ${currency(c.late.monto)}`, antes(cp && cp.late.pct))}
+                                  {fila('Personas extra', `${c.extra.n} ${c.extra.n === 1 ? 'reserva' : 'reservas'} · ${currency(c.extra.monto)}`)}
+                                  {fila('Extendieron estadía', c.extension.n ? `${c.extension.n} · ${c.extension.noches} ${c.extension.noches === 1 ? 'noche' : 'noches'} · ~${currency(c.extension.monto)}` : 'ninguna')}
+                                </>
+                              ))}
+                              {sec('Quiénes son', (
+                                <>
+                                  {fila('Ya habían venido', `${c.repiten.n} · ${c.repiten.pct}%`, antes(cp && cp.repiten.pct))}
+                                  {fila('Extranjeros', c.procedencia.conDato ? `${c.procedencia.extranjeros} · ${c.procedencia.pctExtranjeros}%` : 'sin datos', c.procedencia.conDato ? antes(cp && cp.procedencia.pctExtranjeros) : null)}
+                                  {c.procedencia.top.length > 0 && (
+                                    <div style={{ fontSize: 11, color: 'var(--mut)', marginTop: -1 }}>{c.procedencia.top.map(([k, v]) => `${k} (${v})`).join(' · ')}</div>
+                                  )}
+                                </>
+                              ))}
+                              {sec('Lo que se perdió', (
+                                <>
+                                  {fila('Cancelaciones', `${c.cancel.n} · ${c.cancel.pct}%${c.cancel.monto ? ' · ' + currency(c.cancel.monto) : ''}`, antes(cp && cp.cancel.pct))}
+                                  {c.cancel.canales.length > 0 && (
+                                    <div style={{ fontSize: 11, color: 'var(--mut)', marginTop: -1 }}>{c.cancel.canales.map(([k, v]) => `${k === 'Directo-Puerta' ? 'Por puerta' : k === 'Directo-Celular' ? 'Por celular' : k} (${v})`).join(' · ')}</div>
+                                  )}
+                                  {fila('Descuentos', currency(c.perdido.descuentos))}
+                                  {fila('Noches gratis', currency(c.perdido.gratis))}
+                                </>
+                              ))}
+                              {(() => {
+                                const t = cobrosReading(c, cp);
+                                return t ? (
+                                  <div style={{ fontSize: 12, color: 'var(--ink)', background: 'var(--card)', borderRadius: 10, padding: '8px 10px', marginTop: 10, lineHeight: 1.45 }}>{t}</div>
+                                ) : null;
+                              })()}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </Collapse>
+                  </div>
+                );
+              })()}
 
               {/* FLUJO DE CAJA (FACTURADO) */}
               <div style={{ borderTop: '1px solid var(--line)', paddingTop: 12 }}>

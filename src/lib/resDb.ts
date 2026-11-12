@@ -53,6 +53,11 @@ export function prepRes(newRes) {
       if (newRes.birthDate) datosLimpios.fecha_nacimiento = newRes.birthDate;
       // Nota para el equipo (supabase/nota_equipo.sql): solo se manda si la reserva ya la conoce (columna creada)
       if (newRes.notaEquipo !== undefined) datosLimpios.nota_equipo = String(newRes.notaEquipo || '').trim() || null;
+      // Extensión de estadía (supabase/mejoras_nov.sql): solo si la reserva ya conoce las columnas
+      if (newRes.extendidaNoches !== undefined) {
+        datosLimpios.extendida_noches = Number(newRes.extendidaNoches) || 0;
+        datosLimpios.checkout_original = newRes.checkoutOriginal || null;
+      }
       if (newRes.grupoId) {
         datosLimpios.grupo_id = newRes.grupoId;
         datosLimpios.grupo_titular = !!newRes.grupoTitular;
