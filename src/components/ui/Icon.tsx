@@ -1,7 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 import {
-  House, CalendarDays, ClipboardList, Building2, Users, CircleDollarSign, Tag, LogIn, LogOut, Pencil, Trash2,
+  House, ShieldCheck, FolderDown, CalendarDays, ClipboardList, Building2, Users, CircleDollarSign, Tag, LogIn, LogOut, Pencil, Trash2,
   MessageCircle, FileText, TriangleAlert, X, Check, CircleCheck, Plus, Calculator, Sun, Repeat, History, Moon,
   Package, Megaphone, Eye, Sparkles, Coffee, Zap, ThumbsUp, Droplet, Smile, Calendar, BedDouble, Key, KeyRound,
   ArrowUpRight, ArrowDownLeft, User, Circle, ChevronRight, ChevronLeft, Link, Cake, Clock, Camera, Gift, Bell, Shuffle, Wallet,
@@ -66,6 +66,8 @@ const ICONS = {
   sun: Sun,
   repeat: Repeat,
   history: History,
+  shield: ShieldCheck,
+  folderDown: FolderDown,
   moon: Moon,
   package: Package,
   megaphone: Megaphone,
