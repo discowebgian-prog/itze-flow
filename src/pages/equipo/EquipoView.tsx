@@ -28,6 +28,7 @@ import { ResForm } from '../../components/reservations/ResForm';
 import { ResDrawer } from '../../components/reservations/ResDrawer';
 import { puede } from '../../lib/roles';
 import { prepRes } from '../../lib/resDb';
+import { extensionDe } from '../../lib/reservations';
 import { PERSON_FIELDS } from '../../lib/groups';
 import { PROPS } from '../../lib/constants';
 import { SAVED } from '../../lib/voice';
@@ -308,7 +309,9 @@ export function EquipoView({ user, who = '', standalone = false, onLogout = null
   }
   async function guardarEdicion(p) {
     const r = editRes;
-    const { datosLimpios } = prepRes(p);
+    // Extensión de estadía (si a una hospedada se le corrió la salida más tarde)
+    const ext = extensionDe(r, p.checkOut);
+    const { datosLimpios } = prepRes(ext ? { ...p, ...ext } : p.extendidaNoches === undefined && r.extendidaNoches !== undefined ? { ...p, extendidaNoches: r.extendidaNoches, checkoutOriginal: r.checkoutOriginal } : p);
     let error;
     if (r.propia) ({ error } = await supabase.from('reservas').update({ ...datosLimpios, modificado_por: myName }).eq('id', r.id));
     else {
