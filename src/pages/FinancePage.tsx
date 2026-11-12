@@ -253,7 +253,7 @@ DATOS QUE FALTAN: Los 3 datos más urgentes a cargar en el sistema para mejorar 
     setPaxAsking(m.key);
     try {
       const mix = (x) => `${paxAvg(x)} personas promedio · solos ${paxPct(x, 'solo')}%, parejas ${paxPct(x, 'pareja')}%, 3 o más ${paxPct(x, 'grupo')}% (${x.n} noches)`;
-      const prompt = `Sos consultor de revenue management de Itzé Hostel Boutique, en Progreso, Yucatán (playa, a 30 min de Mérida). Tiene 6 habitaciones privadas: las 1, 2, 3 y 5 para hasta 5 personas (dos camas queen + sofá cama; la 3, dos matrimoniales + individual), la 4 para 3 (king + sofá cama) y la 6 para 2 (matrimonial). La tarifa incluye 2 personas y cada persona extra paga $200 por noche. Fin de semana = noches de jueves a domingo.
+      const prompt = `Sos consultor de revenue management de Itzé Hostel Boutique, en Progreso, Yucatán (playa, a 30 min de Mérida). Tiene 6 habitaciones privadas: las 1, 2, 3 y 5 para hasta 5 personas (dos camas queen + sofá cama; la 3, dos matrimoniales + individual), la 4 para 3 (king + sofá cama) y la 6 para 2 (matrimonial). La tarifa incluye 2 personas y cada persona extra paga $200 por noche. Fin de semana = noches de jueves a domingo. Contexto del lugar: estadías cortas (no se piden mínimos de noches, no lo sugieras); ya hay tarifas diferenciadas Lun–Mié y Jue–Dom y la de Lun–Mié ya funciona como promo de pareja; ubicar a las parejas en las habitaciones chicas cuando están libres ya se hace. No sugieras lo obvio: buscá ideas que no estén ya en marcha.
 
 QUIÉNES VINIERON EN ${m.label.toUpperCase()} (noches ocupadas hasta hoy):
 - Lun-Mié: ${mix(st.entre)}

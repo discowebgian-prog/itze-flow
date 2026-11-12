@@ -101,27 +101,19 @@ export function paxStrategy(st, { prev = null, prevLabel = '', max = 3 } = {}) {
   let split = false;
   if (ok(entre) && ok(finde) && gF >= 45 && gF - gE >= 20) {
     split = true;
+    // (Gian: asignar parejas a la 4 o la 6 es obvio; mínimo de noches no va con el turismo de acá;
+    //  la tarifa Lun–Mié para parejas ya existe. Lo útil: a quién apuntar cada parte de la semana.)
     out.push({
-      icon: 'users',
-      title: 'Jue–Dom: guardá las habitaciones grandes para grupos',
-      text: `De jueves a domingo el ${gF}% de las noches fueron de grupos de 3 o más. Si escribe una pareja para el finde y está libre la habitación 4 o la 6, ubicala ahí y dejá la 1, 2, 3 y 5 para grupos. A los grupos de viernes y sábado podés pedirles mínimo 2 noches.`,
-    });
-    out.push({
-      icon: 'tag',
-      title: 'Lun–Mié: promo de pareja',
-      text: `Entre semana vienen más que nada parejas y solos (${100 - gE}%). Una promo para 2 personas en las habitaciones grandes, que de lunes a miércoles no tienen grupos, ayuda a llenarlas sin tocar el precio del finde.`,
+      icon: 'megaphone',
+      title: 'Finde de grupos, semana de parejas',
+      text: `De jueves a domingo el ${gF}% de las noches fueron de grupos de 3 o más; de lunes a miércoles, ${100 - gE}% parejas y solos. Las publicaciones y promos del finde conviene apuntarlas a grupos y familias (fotos de las habitaciones grandes, precio por persona) y las de entre semana, a parejas.`,
     });
   } else if (ok(entre) && ok(finde) && gE >= 45 && gE - gF >= 20) {
     split = true;
     out.push({
-      icon: 'users',
-      title: 'Lun–Mié: tarifa para grupos',
-      text: `De lunes a miércoles el ${gE}% de las noches fueron de grupos de 3 o más (trabajo, familias). Una tarifa para grupos entre semana y priorizar las habitaciones grandes esos días puede sumar más reservas así.`,
-    });
-    out.push({
-      icon: 'tag',
-      title: 'Jue–Dom: escapada de pareja',
-      text: `El finde vienen más parejas y solos (${100 - gF}%). Una promo de escapada para 2 de jueves a domingo, vendiendo primero la 4 y la 6, ayuda a no gastar las habitaciones grandes en parejas.`,
+      icon: 'megaphone',
+      title: 'Semana de grupos, finde de parejas',
+      text: `De lunes a miércoles el ${gE}% de las noches fueron de grupos de 3 o más (trabajo, familias); de jueves a domingo, ${100 - gF}% parejas y solos. Las publicaciones de entre semana conviene apuntarlas a grupos (precio por persona) y las del finde, a escapadas de pareja.`,
     });
   }
 
@@ -139,8 +131,8 @@ export function paxStrategy(st, { prev = null, prevLabel = '', max = 3 } = {}) {
       text:
         `Las habitaciones 1, 2, 3 y 5 se vendieron ${bigLow.n} noches a 1 o 2 personas${bigLow.finde ? ` (${bigLow.finde} de jueves a domingo)` : ''}: quedaron unas ${bigLow.beds} camas sin usar. ` +
         (bigLow.finde >= 3
-          ? 'Esas noches de finde son las que más conviene guardar para grupos.'
-          : 'Si se repite, conviene un precio para 2 personas en esas habitaciones entre semana.'),
+          ? 'Hubo lugar para más gente el finde: ahí una promo para grupos o familias tiene dónde entrar.'
+          : 'Es lo esperable con la tarifa de pareja de entre semana; si crece mucho, revisá que esa tarifa siga dejando ganancia.'),
     });
 
   if (ok(global) && paxPct(global, 'solo') >= 35)
