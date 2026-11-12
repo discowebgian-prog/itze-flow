@@ -598,13 +598,42 @@ export function Timeline({
                   style={{
                     width: COL,
                     flexShrink: 0,
-                    padding: '5px 2px',
+                    // Hoy un poco más alto: la fila de días crece unos píxeles para que entre el recuadro grande
+                    padding: it ? '10px 2px' : '5px 2px',
                     textAlign: 'center',
                     borderRight: '1px solid var(--line)',
                     background: it ? 'var(--c-DBEAFE)' : getCellBg(d),
                     pointerEvents: 'none',
+                    position: it ? 'relative' : undefined,
+                    zIndex: it ? 2 : undefined,
                   }}
                 >
+                  {/* Hoy: un recuadro más grande que pisa un poco los días de al lado, para ubicarlo de un vistazo */}
+                  {it && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 3,
+                        bottom: 3,
+                        left: -7,
+                        right: -7,
+                        borderRadius: 12,
+                        background: 'var(--c-DBEAFE)',
+                        border: '1px solid var(--acc)',
+                        boxShadow: '0 4px 12px rgba(37,99,235,.25)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'var(--acc)',
+                        lineHeight: 1.15,
+                      }}
+                    >
+                      <div style={{ fontSize: 9.5, fontWeight: 800, textTransform: 'uppercase' }}>{DAYS[dow]}</div>
+                      <div style={{ fontSize: 17, fontWeight: 800 }}>{d.getDate()}</div>
+                      <div style={{ fontSize: 9.5, fontWeight: 800, textTransform: 'uppercase' }}>{MONTHS[d.getMonth()]}</div>
+                    </div>
+                  )}
                   <div
                     style={{
                       fontSize: 9,
