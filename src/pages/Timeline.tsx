@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { flushSync } from 'react-dom';
 import { ROOMS, srcShort, RS, PS, BLOCK_COLORS, ALERTS, getAlerts } from '../lib/constants';
 import { TODAY, fmt, fmtD, addDays, diffDays, parseD, currency, MONTHS, DAYS } from '../lib/dates';
@@ -86,7 +86,7 @@ export function Timeline({
   setOffset,
   highlightStatus,
 }) {
-  const NCOLS = isMobile ? 21 : 45,
+  const NCOLS = isMobile ? 42 : 70,
     COL = 60,
     ROW = 62,
     LABEL = 70,
@@ -111,6 +111,59 @@ export function Timeline({
   const auto = useRef({ v: 0, raf: 0, x: 0, y: 0 }); // desplazamiento solo cerca de los bordes
   const fn = useRef({}); // funciones del arrastre con los datos de este render
   const navAnim = useRef(0); // animación de los botones 7d
+
+  // ── Deslizar sin límite, hacia atrás y hacia adelante ──
+  // La grilla dibuja PAD días antes del día que se quiere ver, así siempre hay lugar para
+  // deslizar hacia atrás. Cerca de un borde se corre la ventana de días (STEP) y se compensa
+  // el desplazamiento: no se nota y se puede seguir deslizando sin tope.
+  const PAD = 14,
+    STEP = 14,
+    EDGE = COL * 3;
+  const ownOff = useRef(null); // último offset que puso el calendario (lo distinto viene de afuera: Hoy, Inicio, guardar)
+  const pendLeft = useRef(null); // desplazamiento a aplicar cuando se dibuje la ventana nueva
+  const lastX = useRef(0); // para saber hacia qué lado se desliza
+  const lastView = useRef(calView);
+  const quietUntil = useRef(0); // mientras se anima por código, no correr la ventana
+  const setOff = (v) =>
+    setOffset((o) => {
+      const n = typeof v === 'function' ? v(o) : v;
+      ownOff.current = n;
+      return n;
+    });
+  useLayoutEffect(() => {
+    if (ownOff.current !== offset) {
+      // Pedido de afuera: ese día queda a la izquierda, con PAD días antes para volver
+      ownOff.current = offset - PAD;
+      pendLeft.current = PAD * COL;
+      setOffset(offset - PAD);
+      return;
+    }
+    const sc = scrollRef.current;
+    // Volver de Lista a Timeline: la grilla nueva arranca en 0; dejarla en el mismo día con lugar atrás
+    if (sc && pendLeft.current == null && lastView.current !== calView && sc.scrollLeft === 0) pendLeft.current = PAD * COL;
+    lastView.current = calView;
+    if (sc && pendLeft.current != null) {
+      sc.scrollLeft = pendLeft.current;
+      lastX.current = sc.scrollLeft;
+      pendLeft.current = null;
+    }
+  }, [offset, calView]);
+  const onGridScroll = () => {
+    const sc = scrollRef.current;
+    if (!sc) return;
+    const x = sc.scrollLeft,
+      prev = lastX.current;
+    lastX.current = x;
+    if (dragRef.current || performance.now() < quietUntil.current) return;
+    const max = sc.scrollWidth - sc.clientWidth;
+    let n = 0;
+    if (x < EDGE && x < prev) n = -STEP;
+    else if (x > max - EDGE && x > prev) n = STEP;
+    if (!n) return;
+    flushSync(() => setOff((o) => o + n));
+    sc.scrollLeft = x - n * COL;
+    lastX.current = sc.scrollLeft;
+  };
 
   useEffect(() => {
     if (!gridEl) return;
@@ -416,7 +469,7 @@ export function Timeline({
     const sc = scrollRef.current;
     const quiet = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!sc || quiet) {
-      setOffset((o) => o + n);
+      setOff((o) => o + n);
       return;
     }
     cancelAnimationFrame(navAnim.current);
@@ -424,12 +477,13 @@ export function Timeline({
     const max = () => sc.scrollWidth - sc.clientWidth;
     let from = sc.scrollLeft;
     if (from + dist < 0 || from + dist > max()) {
-      flushSync(() => setOffset((o) => o + n));
+      flushSync(() => setOff((o) => o + n));
       sc.scrollLeft = from - dist;
       from = sc.scrollLeft;
     }
     const to = Math.max(0, Math.min(max(), from + dist));
     const T = 520;
+    quietUntil.current = performance.now() + T + 120;
     const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
     const t0 = performance.now();
     const step = (now) => {
@@ -445,7 +499,7 @@ export function Timeline({
     if (!hdrDrag) return;
     const cx = e.touches ? e.touches[0].clientX : e.clientX;
     const dd = -Math.round((cx - hdrDrag.startX) / COL);
-    setOffset(Math.max(-730, Math.min(730, hdrDrag.startOffset + dd)));
+    setOff(hdrDrag.startOffset + dd);
   };
   const endPan = () => setHdrDrag(null);
 
@@ -536,8 +590,11 @@ export function Timeline({
             </button>
             <button
               onClick={() => {
-                setOffset(-2);
-                document.getElementById('calendario-scroll')?.scrollTo({ left: 0, behavior: 'smooth' });
+                // Hoy queda a la izquierda (con 2 días antes), y se puede seguir yendo hacia atrás
+                cancelAnimationFrame(navAnim.current);
+                flushSync(() => setOff(-2 - PAD));
+                quietUntil.current = performance.now() + 900;
+                scrollRef.current?.scrollTo({ left: PAD * COL, behavior: 'smooth' });
               }}
               style={{ ...NAV_BTN, background: 'var(--card)', color: 'var(--acc)', fontWeight: 700, boxShadow: '0 1px 3px rgba(0,0,0,.12)' }}
             >
@@ -563,6 +620,7 @@ export function Timeline({
       <div
         id="calendario-scroll"
         ref={scrollRef}
+        onScroll={onGridScroll}
         style={{
           overflowX: 'auto',
           borderRadius: 'var(--r-card)',
