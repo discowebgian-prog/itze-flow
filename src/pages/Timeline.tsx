@@ -86,7 +86,7 @@ export function Timeline({
   setOffset,
   highlightStatus,
 }) {
-  const NCOLS = isMobile ? 75 : 100,
+  const NCOLS = isMobile ? 45 : 70,
     COL = 60,
     ROW = 62,
     LABEL = 70,
@@ -113,19 +113,19 @@ export function Timeline({
   const navAnim = useRef(0); // animación de los botones 7d
 
   // ── Deslizar sin límite, hacia atrás y hacia adelante ──
-  // La grilla dibuja PAD días antes del día que se quiere ver (y bastantes después), así hay
-  // lugar para deslizar a los dos lados. Cuando el calendario queda quieto (sin dedo y sin
-  // envión), se corre la ventana de días para volver a dejar lugar, compensando el
-  // desplazamiento: no se nota. Nunca se corrige mientras se mueve: el iPhone no acepta
-  // cambiar la posición durante el envión y eso hacía saltar semanas y parpadear.
-  const PAD = 30,
-    RECENTER = 7; // días de diferencia con el centro para reacomodar
+  // El recuadro que se desliza mide SPAN días hacia cada lado de hoy (5 años), pero solo se
+  // dibujan NCOLS días (`offset` = primer día dibujado), ubicados en su lugar con un margen.
+  // Al deslizar, cuando lo que se ve se acerca al borde de lo dibujado, se dibujan otros días
+  // en su lugar. La posición del deslizamiento NUNCA se corrige: el iPhone no lo acepta
+  // mientras hay dedo o envión, y eso hacía parpadear y saltar el calendario.
+  const SPAN = 1825,
+    PAD = 14, // días dibujados antes del día pedido desde afuera
+    MARGIN = 8; // días de margen antes de dibujar otros
+  const wrapRef = useRef(null); // el ancho completo (no se mueve cuando cambian los días dibujados)
   const ownOff = useRef(null); // último offset que puso el calendario (lo distinto viene de afuera: Hoy, Inicio, guardar)
-  const pendLeft = useRef(null); // desplazamiento a aplicar cuando se dibuje la ventana nueva
+  const pendLeft = useRef(null); // desplazamiento a aplicar cuando se dibuje
+  const lastLeft = useRef(0); // dónde quedó el deslizamiento (para volver de Lista a Timeline)
   const lastView = useRef(calView);
-  const quietUntil = useRef(0); // mientras se anima por código, no reacomodar
-  const touching = useRef(false); // dedo apoyado en el calendario
-  const idleTimer = useRef(0);
   const setOff = (v) =>
     setOffset((o) => {
       const n = typeof v === 'function' ? v(o) : v;
@@ -134,35 +134,32 @@ export function Timeline({
     });
   useLayoutEffect(() => {
     if (ownOff.current !== offset) {
-      // Pedido de afuera: ese día queda a la izquierda, con PAD días antes para volver
+      // Pedido de afuera: ese día queda a la izquierda
       ownOff.current = offset - PAD;
-      pendLeft.current = PAD * COL;
+      pendLeft.current = (offset + SPAN) * COL;
       setOffset(offset - PAD);
       return;
     }
     const sc = scrollRef.current;
-    // Volver de Lista a Timeline: la grilla nueva arranca en 0; dejarla en el mismo día con lugar atrás
-    if (sc && pendLeft.current == null && lastView.current !== calView && sc.scrollLeft === 0) pendLeft.current = PAD * COL;
+    // Volver de Lista a Timeline: la grilla nueva arranca en 0; dejarla donde estaba
+    if (sc && pendLeft.current == null && lastView.current !== calView && sc.scrollLeft === 0) pendLeft.current = lastLeft.current;
     lastView.current = calView;
     if (sc && pendLeft.current != null) {
       sc.scrollLeft = pendLeft.current;
+      lastLeft.current = pendLeft.current;
       pendLeft.current = null;
     }
   }, [offset, calView]);
-  useEffect(() => () => clearTimeout(idleTimer.current), []);
-  const recenter = () => {
+  const onGridScroll = () => {
     const sc = scrollRef.current;
-    if (!sc || touching.current || dragRef.current) return;
-    if (performance.now() < quietUntil.current) return schedRecenter();
-    const x = sc.scrollLeft;
-    const d = Math.round(x / COL) - PAD;
-    if (Math.abs(d) < RECENTER) return;
-    flushSync(() => setOff((o) => o + d));
-    sc.scrollLeft = x - d * COL;
-  };
-  const schedRecenter = () => {
-    clearTimeout(idleTimer.current);
-    idleTimer.current = setTimeout(recenter, 220);
+    if (!sc || pendLeft.current != null) return;
+    lastLeft.current = sc.scrollLeft;
+    const v = Math.floor(sc.scrollLeft / COL) - SPAN; // primer día a la vista
+    const vis = Math.ceil((sc.clientWidth - LABEL) / COL);
+    const o = ownOff.current;
+    if (v >= o + MARGIN && v + vis <= o + NCOLS - MARGIN) return;
+    const n = v - Math.max(MARGIN, Math.floor((NCOLS - vis) / 2));
+    if (n !== o) flushSync(() => setOff(n));
   };
   useEffect(() => {
     if (!gridEl) return;
@@ -304,8 +301,8 @@ export function Timeline({
 
   // Levanta la barra: desde acá la reserva sigue al dedo (o al mouse)
   const beginDrag = (cx, cy, r, row) => {
-    if (!gridEl) return;
-    const rect = gridEl.getBoundingClientRect();
+    if (!gridEl || !wrapRef.current) return;
+    const rect = wrapRef.current.getBoundingClientRect();
     const room = row.type === 'room' ? row.room.id : '';
     const d = {
       id: r.id,
@@ -313,8 +310,6 @@ export function Timeline({
       status: r.status,
       orig: { checkIn: r.checkIn, checkOut: r.checkOut, propId: row.prop.id, room },
       nights: diffDays(r.checkIn, r.checkOut),
-      // columna de la entrada (negativa si empieza antes de lo que se ve)
-      colIn: diffDays(fmt(addDays(TODAY, offset)), r.checkIn),
       // dónde se agarró, medido dentro de la grilla (así no importa si se desliza el calendario)
       startGX: cx - rect.left,
       startCX: cx,
@@ -352,7 +347,8 @@ export function Timeline({
     auto.current.y = cy;
     placePill(cx, cy);
     const rect = gridEl.getBoundingClientRect();
-    const delta = Math.round((cx - rect.left - d.startGX) / COL);
+    const wl = wrapRef.current ? wrapRef.current.getBoundingClientRect().left : rect.left;
+    const delta = Math.round((cx - wl - d.startGX) / COL);
     const top = rect.top + (headRef.current ? headRef.current.offsetHeight : 36);
     const ri = Math.max(0, Math.min(rows.length - 1, Math.floor((cy - top) / ROW)));
     autoScroll(cx, d.startCX);
@@ -409,7 +405,6 @@ export function Timeline({
     const d = dragRef.current;
     dragRef.current = null;
     auto.current.v = 0;
-    schedRecenter();
     cancelAnimationFrame(auto.current.raf);
     auto.current.raf = 0;
     setDrag(null);
@@ -463,28 +458,17 @@ export function Timeline({
   };
 
   // Botones 7d: el calendario se desliza (arranca suave, acelera y frena de a poco) en vez de saltar.
-  // Si no hay días dibujados hacia ese lado, primero se corre la ventana de días sin que se note
-  // (cambia `offset` y se compensa el desplazamiento) y después se anima.
   const slideDays = (n) => {
     const sc = scrollRef.current;
-    const quiet = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!sc || quiet) {
-      setOff((o) => o + n);
-      schedRecenter();
+    if (!sc) return;
+    cancelAnimationFrame(navAnim.current);
+    const from = sc.scrollLeft,
+      to = from + n * COL;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      sc.scrollLeft = to;
       return;
     }
-    cancelAnimationFrame(navAnim.current);
-    const dist = n * COL;
-    const max = () => sc.scrollWidth - sc.clientWidth;
-    let from = sc.scrollLeft;
-    if (from + dist < 0 || from + dist > max()) {
-      flushSync(() => setOff((o) => o + n));
-      sc.scrollLeft = from - dist;
-      from = sc.scrollLeft;
-    }
-    const to = Math.max(0, Math.min(max(), from + dist));
     const T = 520;
-    quietUntil.current = performance.now() + T + 120;
     const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
     const t0 = performance.now();
     const step = (now) => {
@@ -499,8 +483,7 @@ export function Timeline({
   const onMove = (e) => {
     if (!hdrDrag) return;
     const cx = e.touches ? e.touches[0].clientX : e.clientX;
-    const dd = -Math.round((cx - hdrDrag.startX) / COL);
-    setOff(hdrDrag.startOffset + dd);
+    if (scrollRef.current) scrollRef.current.scrollLeft = hdrDrag.startLeft - (cx - hdrDrag.startX);
   };
   const endPan = () => setHdrDrag(null);
 
@@ -591,11 +574,18 @@ export function Timeline({
             </button>
             <button
               onClick={() => {
-                // Hoy queda a la izquierda (con 2 días antes), y se puede seguir yendo hacia atrás
+                // Hoy queda a la izquierda (con 2 días antes); si está lejos, va directo
+                const sc = scrollRef.current;
+                if (!sc) return;
                 cancelAnimationFrame(navAnim.current);
-                flushSync(() => setOff(-2 - PAD));
-                quietUntil.current = performance.now() + 900;
-                scrollRef.current?.scrollTo({ left: PAD * COL, behavior: 'smooth' });
+                const left = (SPAN - 2) * COL;
+                // Si venía con envión, primero se frena (si no, el iPhone sigue de largo)
+                sc.style.overflowX = 'hidden';
+                setTimeout(() => {
+                  sc.style.overflowX = 'auto';
+                  if (Math.abs(sc.scrollLeft - left) > 30 * COL) sc.scrollLeft = left;
+                  else sc.scrollTo({ left, behavior: 'smooth' });
+                }, 80);
               }}
               style={{ ...NAV_BTN, background: 'var(--card)', color: 'var(--acc)', fontWeight: 700, boxShadow: '0 1px 3px rgba(0,0,0,.12)' }}
             >
@@ -621,19 +611,7 @@ export function Timeline({
       <div
         id="calendario-scroll"
         ref={scrollRef}
-        onScroll={schedRecenter}
-        onTouchStart={() => {
-          touching.current = true;
-          clearTimeout(idleTimer.current);
-        }}
-        onTouchEnd={() => {
-          touching.current = false;
-          schedRecenter();
-        }}
-        onTouchCancel={() => {
-          touching.current = false;
-          schedRecenter();
-        }}
+        onScroll={onGridScroll}
         style={{
           overflowX: 'auto',
           borderRadius: 'var(--r-card)',
@@ -642,13 +620,14 @@ export function Timeline({
           cursor: drag ? 'grabbing' : hdrDrag ? 'grabbing' : 'grab',
         }}
       >
+        <div ref={wrapRef} style={{ width: LABEL + COL * SPAN * 2 }}>
         <div
           ref={(el) => setGridEl(el)}
-          style={{ minWidth: LABEL + COL * NCOLS, position: 'relative' }}
+          style={{ width: LABEL + COL * NCOLS, marginLeft: (offset + SPAN) * COL, position: 'relative' }}
           onMouseDown={(e) => {
             e.preventDefault();
             const cx = e.touches ? e.touches[0].clientX : e.clientX;
-            setHdrDrag({ startX: cx, startOffset: offset });
+            setHdrDrag({ startX: cx, startLeft: scrollRef.current ? scrollRef.current.scrollLeft : 0 });
           }}
           onTouchStart={(e) => {
             // Con el dedo, la grilla se desliza sola (nativo); solo se anota dónde empezó el toque
@@ -660,7 +639,7 @@ export function Timeline({
             ref={headRef}
             onTouchStart={(e) => {
               const cx = e.touches[0].clientX;
-              setHdrDrag({ startX: cx, startOffset: offset });
+              setHdrDrag({ startX: cx, startLeft: scrollRef.current ? scrollRef.current.scrollLeft : 0 });
             }}
             style={{
               display: 'flex',
@@ -912,7 +891,7 @@ export function Timeline({
                 ))}
                 {ghost && (() => {
                   // Dónde cae: misma cuenta que las barras (entra a mitad del día, sale a mitad del día)
-                  const ci = ghost.colIn + ghost.delta;
+                  const ci = diffDays(fmt(addDays(TODAY, offset)), ghost.orig.checkIn) + ghost.delta;
                   const co = ci + ghost.nights;
                   const cs = Math.max(0, ci),
                     ce = Math.min(NCOLS, co);
@@ -1162,6 +1141,7 @@ export function Timeline({
               </div>
             );
           })}
+        </div>
         </div>
       </div>
       <div
