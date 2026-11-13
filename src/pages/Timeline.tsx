@@ -86,7 +86,7 @@ export function Timeline({
   setOffset,
   highlightStatus,
 }) {
-  const NCOLS = isMobile ? 42 : 70,
+  const NCOLS = isMobile ? 75 : 100,
     COL = 60,
     ROW = 62,
     LABEL = 70,
@@ -113,17 +113,19 @@ export function Timeline({
   const navAnim = useRef(0); // animación de los botones 7d
 
   // ── Deslizar sin límite, hacia atrás y hacia adelante ──
-  // La grilla dibuja PAD días antes del día que se quiere ver, así siempre hay lugar para
-  // deslizar hacia atrás. Cerca de un borde se corre la ventana de días (STEP) y se compensa
-  // el desplazamiento: no se nota y se puede seguir deslizando sin tope.
-  const PAD = 14,
-    STEP = 14,
-    EDGE = COL * 3;
+  // La grilla dibuja PAD días antes del día que se quiere ver (y bastantes después), así hay
+  // lugar para deslizar a los dos lados. Cuando el calendario queda quieto (sin dedo y sin
+  // envión), se corre la ventana de días para volver a dejar lugar, compensando el
+  // desplazamiento: no se nota. Nunca se corrige mientras se mueve: el iPhone no acepta
+  // cambiar la posición durante el envión y eso hacía saltar semanas y parpadear.
+  const PAD = 30,
+    RECENTER = 7; // días de diferencia con el centro para reacomodar
   const ownOff = useRef(null); // último offset que puso el calendario (lo distinto viene de afuera: Hoy, Inicio, guardar)
   const pendLeft = useRef(null); // desplazamiento a aplicar cuando se dibuje la ventana nueva
-  const lastX = useRef(0); // para saber hacia qué lado se desliza
   const lastView = useRef(calView);
-  const quietUntil = useRef(0); // mientras se anima por código, no correr la ventana
+  const quietUntil = useRef(0); // mientras se anima por código, no reacomodar
+  const touching = useRef(false); // dedo apoyado en el calendario
+  const idleTimer = useRef(0);
   const setOff = (v) =>
     setOffset((o) => {
       const n = typeof v === 'function' ? v(o) : v;
@@ -144,27 +146,24 @@ export function Timeline({
     lastView.current = calView;
     if (sc && pendLeft.current != null) {
       sc.scrollLeft = pendLeft.current;
-      lastX.current = sc.scrollLeft;
       pendLeft.current = null;
     }
   }, [offset, calView]);
-  const onGridScroll = () => {
+  useEffect(() => () => clearTimeout(idleTimer.current), []);
+  const recenter = () => {
     const sc = scrollRef.current;
-    if (!sc) return;
-    const x = sc.scrollLeft,
-      prev = lastX.current;
-    lastX.current = x;
-    if (dragRef.current || performance.now() < quietUntil.current) return;
-    const max = sc.scrollWidth - sc.clientWidth;
-    let n = 0;
-    if (x < EDGE && x < prev) n = -STEP;
-    else if (x > max - EDGE && x > prev) n = STEP;
-    if (!n) return;
-    flushSync(() => setOff((o) => o + n));
-    sc.scrollLeft = x - n * COL;
-    lastX.current = sc.scrollLeft;
+    if (!sc || touching.current || dragRef.current) return;
+    if (performance.now() < quietUntil.current) return schedRecenter();
+    const x = sc.scrollLeft;
+    const d = Math.round(x / COL) - PAD;
+    if (Math.abs(d) < RECENTER) return;
+    flushSync(() => setOff((o) => o + d));
+    sc.scrollLeft = x - d * COL;
   };
-
+  const schedRecenter = () => {
+    clearTimeout(idleTimer.current);
+    idleTimer.current = setTimeout(recenter, 220);
+  };
   useEffect(() => {
     if (!gridEl) return;
     // Escuchas propias (no pasivas): así el arrastre puede frenar el desplazamiento de la página.
@@ -410,6 +409,7 @@ export function Timeline({
     const d = dragRef.current;
     dragRef.current = null;
     auto.current.v = 0;
+    schedRecenter();
     cancelAnimationFrame(auto.current.raf);
     auto.current.raf = 0;
     setDrag(null);
@@ -470,6 +470,7 @@ export function Timeline({
     const quiet = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!sc || quiet) {
       setOff((o) => o + n);
+      schedRecenter();
       return;
     }
     cancelAnimationFrame(navAnim.current);
@@ -620,7 +621,19 @@ export function Timeline({
       <div
         id="calendario-scroll"
         ref={scrollRef}
-        onScroll={onGridScroll}
+        onScroll={schedRecenter}
+        onTouchStart={() => {
+          touching.current = true;
+          clearTimeout(idleTimer.current);
+        }}
+        onTouchEnd={() => {
+          touching.current = false;
+          schedRecenter();
+        }}
+        onTouchCancel={() => {
+          touching.current = false;
+          schedRecenter();
+        }}
         style={{
           overflowX: 'auto',
           borderRadius: 'var(--r-card)',
