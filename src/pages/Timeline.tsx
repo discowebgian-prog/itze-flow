@@ -5,7 +5,7 @@ import { flushSync } from 'react-dom';
 import { ROOMS, srcShort, RS, PS, BLOCK_COLORS, ALERTS, getAlerts } from '../lib/constants';
 import { TODAY, fmt, fmtD, addDays, diffDays, parseD, currency, MONTHS, DAYS } from '../lib/dates';
 import { findConflicts, lateHour } from '../lib/reservations';
-import { nightsText, listY } from '../lib/availability';
+import { oneDay, dayRange, listY } from '../lib/availability';
 import { groupOf } from '../lib/groups';
 import { Icon, ic } from '../components/ui/Icon';
 import { TimelineMobile } from './TimelineMobile';
@@ -666,10 +666,10 @@ export function Timeline({
       </div>
       {/* Qué está libre esas noches, en palabras */}
       <div className="tl-libres">
-        <span className="tl-libres-dot" />
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="tl-libres-top">
+          <span className="tl-libres-dot" />
           <div key={selKey} className="tl-libres-txt">
-            <b>{sel ? cap1(nightsText(nightsSel)) : 'Esta noche'}</b>
+            <b>{!sel ? 'Esta noche' : sel.a === sel.b ? `La noche del ${oneDay(sel.a)}` : `${cap1(dayRange(sel.a, sel.b))} inclusive`}</b>
             {' · '}
             {freeNames.length
               ? freeNames.length === rows.length
@@ -679,18 +679,28 @@ export function Timeline({
               ? 'ninguna habitación libre todas esas noches'
               : 'todo ocupado'}
           </div>
-          {!sel && <div className="tl-libres-hint">Tocá los días de arriba para ver otras fechas.</div>}
         </div>
-        {sel && onQuoteDates && freeNames.length > 0 && (
-          <button className="tl-libres-btn" onClick={() => onQuoteDates(n0, nEnd)}>
-            {ic('calculator', 14)}Cotizar
-          </button>
-        )}
-        {sel && (
-          <button className="tl-libres-x" aria-label="Volver a esta noche" onClick={() => setSel(null)}>
-            <Icon name="close" size={14} strokeWidth={2.5} />
-          </button>
-        )}
+        {/* Abajo siempre el mismo alto: la grilla no se mueve al tocar días */}
+        <div className="tl-libres-bottom">
+          <div className="tl-libres-hint">
+            {!sel
+              ? 'Tocá los días de arriba para ver otras fechas.'
+              : sel.a === sel.b
+              ? 'Tocá otro día para sumar.'
+              : 'Tocá un día para reiniciar.'}
+          </div>
+          {sel && onQuoteDates && freeNames.length > 0 && (
+            <button className="tl-libres-btn" onClick={() => onQuoteDates(n0, nEnd)}>
+              {ic('calculator', 13)}Cotizar
+            </button>
+          )}
+          {sel && (
+            <button className="tl-libres-x" aria-label="Volver a esta noche" onClick={() => setSel(null)}>
+              <Icon name="close" size={12} strokeWidth={2.5} />
+              Hoy
+            </button>
+          )}
+        </div>
       </div>
       <div
         id="calendario-scroll"
@@ -790,7 +800,8 @@ export function Timeline({
                     padding: it ? '10px 2px' : '5px 2px',
                     textAlign: 'center',
                     borderRight: '1px solid var(--line)',
-                    background: it ? 'var(--c-DBEAFE)' : getCellBg(d),
+                    background: it ? 'var(--c-DBEAFE)' : on ? 'var(--c-DCFCE7)' : getCellBg(d),
+                    transition: 'background-color .3s ease',
                     pointerEvents: 'none',
                     position: it || on ? 'relative' : undefined,
                     zIndex: it ? 2 : undefined,
@@ -1003,8 +1014,15 @@ export function Timeline({
                       flexShrink: 0,
                       height: '100%',
                       borderRight: '1px solid var(--line)',
+                      // Días tocados: la columna se pinta de verde suave (hoy queda azul)
                       background:
-                        fmt(d) === fmt(TODAY) ? 'var(--c-DBEAFE)' : getCellBg(d),
+                        sel && fmt(d) >= sel.a && fmt(d) <= sel.b
+                          ? 'var(--c-DCFCE7)'
+                          : fmt(d) === fmt(TODAY)
+                          ? 'var(--c-DBEAFE)'
+                          : getCellBg(d),
+                      transition: 'background-color .3s ease',
+                      transitionDelay: sel && fmt(d) >= sel.a && fmt(d) <= sel.b ? `${diffDays(sel.a, fmt(d)) * 35}ms` : '0ms',
                       cursor: hdrDrag ? 'grabbing' : 'cell',
                     }}
                     onDoubleClick={() => {
