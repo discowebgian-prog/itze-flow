@@ -180,6 +180,11 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows 
           const isCO = s === checkOut;
           const isEnd = isCI || isCO;
           const isAsk = ask?.s === s;
+          // Tramo que cambia si se dice que sí: días que se suman (extender/adelantar) o que se sacan (acortar)
+          const addSpan =
+            ask && !isEnd && !isAsk &&
+            ((ask.kind === 'ext' && s > checkOut && s < ask.s) || (ask.kind === 'early' && s > ask.s && s < checkIn));
+          const cutSpan = ask && ask.kind === 'short' && !isEnd && !isAsk && s > ask.s && s < checkOut;
           const isToday = s === fmt(TODAY);
           let inRange = false;
           if (checkIn && checkOut) inRange = s > checkIn && s < checkOut;
@@ -219,6 +224,10 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows 
                 cursor: isDisabled ? 'not-allowed' : 'pointer',
                 position: 'relative',
                 ...(isToday && !isEnd ? { color: 'var(--acc)', fontWeight: 800 } : {}),
+                ...(addSpan
+                  ? { background: 'var(--acc-soft)', outline: '1.5px dashed var(--acc)', outlineOffset: -2, color: 'var(--acc)', borderRadius: 10, fontWeight: 700 }
+                  : {}),
+                ...(cutSpan ? { background: 'var(--fill)', color: 'var(--mut)', textDecoration: 'line-through', borderRadius: 10 } : {}),
                 ...(isAsk ? { boxShadow: 'inset 0 0 0 2px var(--acc)', borderRadius: '50%', fontWeight: 800 } : {}),
               }}
             >
