@@ -669,7 +669,7 @@ export function Timeline({
         <div className="tl-libres-top">
           <span className="tl-libres-dot" />
           <div key={selKey} className="tl-libres-txt">
-            <b>{!sel ? 'Esta noche' : sel.a === sel.b ? `La noche del ${oneDay(sel.a)}` : `${cap1(dayRange(sel.a, sel.b))} inclusive`}</b>
+            <b>{!sel ? 'Esta noche' : sel.a === sel.b ? cap1(oneDay(sel.a)) : `${cap1(dayRange(sel.a, sel.b))} inclusive`}</b>
             {' · '}
             {freeNames.length
               ? freeNames.length === rows.length
