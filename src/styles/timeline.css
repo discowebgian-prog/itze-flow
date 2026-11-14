@@ -8,3 +8,61 @@
           50% { box-shadow: 0 4px 16px rgba(16,185,129,0.4); border-color: var(--c-10B981); background-color: var(--c-ECFDF5); }
         }
       
+/* ── Libres esas noches (columna de las habitaciones) ── */
+.tl-free {
+  position: absolute;
+  top: 6px; bottom: 6px; left: 4px; right: 4px;
+  border-radius: 12px;
+  background: var(--c-DCFCE7);
+  border: 1px solid var(--c-16A34A);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, .25);
+  opacity: 0;
+  transform: scale(.8);
+  transition: opacity .22s ease, transform .34s cubic-bezier(.34, 1.56, .64, 1);
+  pointer-events: none;
+  z-index: 0;
+}
+.tl-free.on { opacity: 1; transform: scale(1); }
+.tl-free-txt {
+  display: flex; align-items: center;
+  font-size: 9.5px; font-weight: 800; letter-spacing: .2px;
+  color: var(--c-15803D); text-transform: uppercase; margin-top: 2px;
+  animation: tlFadeUp .3s ease backwards;
+}
+@keyframes tlFadeUp { from { opacity: 0; transform: translateY(3px); } }
+
+/* Día tocado: franja verde abajo del día */
+.tl-sel {
+  position: absolute; bottom: 0; height: 4px; z-index: 3;
+  background: var(--c-16A34A);
+  transform-origin: left center;
+  animation: tlSelIn .28s ease-out backwards;
+}
+@keyframes tlSelIn { from { transform: scaleX(0); opacity: 0; } }
+
+/* Línea en palabras arriba de la grilla */
+.tl-libres {
+  background: var(--card); border-radius: var(--r-item); box-shadow: var(--shadow);
+  padding: 9px 10px 8px 14px; margin-bottom: 10px;
+}
+.tl-libres-top { display: flex; align-items: baseline; gap: 9px; min-height: 18px; }
+.tl-libres-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c-16A34A); flex-shrink: 0; position: relative; top: -1px; }
+.tl-libres-txt { flex: 1; min-width: 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.35; animation: tlFadeUp .25s ease; }
+.tl-libres-txt b { color: var(--ink); font-weight: 700; }
+.tl-libres-bottom { display: flex; align-items: center; gap: 6px; margin-top: 4px; padding-left: 18px; height: 28px; }
+.tl-libres-hint { flex: 1; min-width: 0; font-size: 12px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tl-libres-btn, .tl-libres-x {
+  display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; height: 28px;
+  border: none; font: inherit; font-size: 12.5px; font-weight: 700; padding: 0 10px; border-radius: 9px; cursor: pointer;
+}
+.tl-libres-btn { background: var(--acc-soft); color: var(--acc); }
+.tl-libres-x { background: var(--fill); color: var(--ink-2); }
+@media (max-width: 768px) {
+  /* Dos renglones fijos para el texto: al tocar días no salta la grilla */
+  .tl-libres-top { min-height: 37px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tl-free { transition: opacity .2s ease; transform: none; }
+  .tl-sel, .tl-free-txt, .tl-libres-txt { animation: none; }
+}

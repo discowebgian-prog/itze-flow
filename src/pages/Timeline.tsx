@@ -5,6 +5,7 @@ import { flushSync } from 'react-dom';
 import { ROOMS, srcShort, RS, PS, BLOCK_COLORS, ALERTS, getAlerts } from '../lib/constants';
 import { TODAY, fmt, fmtD, addDays, diffDays, parseD, currency, MONTHS, DAYS } from '../lib/dates';
 import { findConflicts, lateHour } from '../lib/reservations';
+import { oneDay, dayRange, listY } from '../lib/availability';
 import { groupOf } from '../lib/groups';
 import { Icon, ic } from '../components/ui/Icon';
 import { TimelineMobile } from './TimelineMobile';
@@ -34,6 +35,8 @@ function roundedShape(pts) {
 // ── TIMELINE DESKTOP ──────────────────────────────────────────────────────────
 // "vie 13 nov"
 const dayShort = (d) => parseD(d).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '').replace(',', '').replace(' de ', ' ');
+
+const cap1 = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 
 // ── PIEZAS DEL ENCABEZADO (estilo Limpieza) ──
 const TITLE = { margin: 0, fontSize: 30, fontWeight: 'var(--w-title)', color: 'var(--ink)', letterSpacing: 'var(--ls-title)' };
@@ -78,6 +81,7 @@ export function Timeline({
   onClickRes,
   onAddRes,
   onQuote,
+  onQuoteDates,
   onUpdateRes,
   isMobile,
   calView,
@@ -97,6 +101,11 @@ export function Timeline({
   const [tooltip, setTooltip] = useState(null);
   const [hdrDrag, setHdrDrag] = useState(null);
   const [gridEl, setGridEl] = useState(null);
+  // Días tocados en la fila de arriba: { a, b } (noches, incluidas). Sin tocar = esta noche.
+  // Las habitaciones libres TODAS esas noches se resaltan en la columna de la izquierda.
+  const [sel, setSel] = useState(null);
+  const hdrTap = useRef(null);
+  const lastTouch = useRef(0); // último toque con el dedo (para ignorar el clic de mouse que llega después) // dónde empezó el toque en la fila de los días (toque vs. deslizar)
 
   // ── Arrastre de reservas ──
   // En el celular: mantener apretada la barra (350 ms) la "levanta"; recién ahí se arrastra.
@@ -263,6 +272,53 @@ export function Timeline({
       ROOMS.forEach((r) => rows.push({ type: 'room', prop: p, room: r }));
     else rows.push({ type: 'prop', prop: p });
   });
+
+  // ── Libres esas noches ──
+  const nightsSel = [];
+  if (sel) for (let d = sel.a; d <= sel.b; d = fmt(addDays(parseD(d), 1))) nightsSel.push(d);
+  else nightsSel.push(fmt(TODAY));
+  const n0 = nightsSel[0],
+    nEnd = fmt(addDays(parseD(nightsSel[nightsSel.length - 1]), 1)); // día de salida
+  const rowRes = (row) =>
+    reservations.filter(
+      (r) =>
+        r.propertyId === row.prop.id &&
+        (row.type !== 'room' || r.room === row.room.id) &&
+        r.status !== 'cancelada' &&
+        r.deleted !== true
+    );
+  const freeInfo = rows.map((row) => {
+    const rs = rowRes(row);
+    const free = !rs.some((r) => r.checkIn < nEnd && r.checkOut > n0);
+    // Alguien sale esa mañana con late check-out: libre desde esa hora
+    const lt = free ? rs.find((r) => r.checkOut === n0 && lateHour(r)) : null;
+    return { free, late: lt ? lateHour(lt) : '' };
+  });
+  const freeRows = rows.filter((_, i) => freeInfo[i].free);
+  const freeNames = freeRows.map((r) => (r.type === 'room' ? r.room.name : r.prop.name));
+  const freeCap = freeRows.reduce((t, r) => t + (r.type === 'room' ? r.room.maxGuests : 0), 0);
+  const selKey = sel ? `${sel.a}_${sel.b}` : 'hoy';
+  // Tocar días: uno = esa noche; otro = de una a otra; otro más = empieza de nuevo; el mismo = vuelve a hoy
+  const tapDay = (s) =>
+    setSel((p) => {
+      if (!p) return { a: s, b: s };
+      if (p.a === p.b) {
+        if (s === p.a) return null;
+        return s < p.a ? { a: s, b: p.a } : { a: p.a, b: s };
+      }
+      return { a: s, b: s };
+    });
+  const dayAtX = (cx) => {
+    const sc = scrollRef.current;
+    if (!gridEl || !sc) return null;
+    if (cx < sc.getBoundingClientRect().left + LABEL) return null; // la columna de las habitaciones
+    const i = Math.floor((cx - gridEl.getBoundingClientRect().left - LABEL) / COL);
+    return i >= 0 && i < NCOLS ? fmt(addDays(TODAY, offset + i)) : null;
+  };
+  const tapAt = (cx) => {
+    const d = dayAtX(cx);
+    if (d) tapDay(d);
+  };
 
   const getBlocks = (row) => {
     const pid = row.prop.id;
@@ -608,6 +664,44 @@ export function Timeline({
             </button>
         </div>
       </div>
+      {/* Qué está libre esas noches, en palabras */}
+      <div className="tl-libres">
+        <div className="tl-libres-top">
+          <span className="tl-libres-dot" />
+          <div key={selKey} className="tl-libres-txt">
+            <b>{!sel ? 'Esta noche' : sel.a === sel.b ? cap1(oneDay(sel.a)) : `${cap1(dayRange(sel.a, sel.b))} inclusive`}</b>
+            {' · '}
+            {freeNames.length
+              ? freeNames.length === rows.length
+                ? `todo libre (lugar para ${freeCap})`
+                : `${freeNames.length === 1 ? 'libre' : 'libres'}: ${listY(freeNames)} (lugar para ${freeCap})`
+              : sel && nightsSel.length > 1
+              ? 'ninguna habitación libre todas esas noches'
+              : 'todo ocupado'}
+          </div>
+        </div>
+        {/* Abajo siempre el mismo alto: la grilla no se mueve al tocar días */}
+        <div className="tl-libres-bottom">
+          <div className="tl-libres-hint">
+            {!sel
+              ? 'Tocá los días de arriba para ver otras fechas.'
+              : sel.a === sel.b
+              ? 'Tocá otro día para sumar.'
+              : 'Tocá un día para reiniciar.'}
+          </div>
+          {sel && onQuoteDates && freeNames.length > 0 && (
+            <button className="tl-libres-btn" onClick={() => onQuoteDates(n0, nEnd)}>
+              {ic('calculator', 13)}Cotizar
+            </button>
+          )}
+          {sel && (
+            <button className="tl-libres-x" aria-label="Volver a esta noche" onClick={() => setSel(null)}>
+              <Icon name="close" size={12} strokeWidth={2.5} />
+              Hoy
+            </button>
+          )}
+        </div>
+      </div>
       <div
         id="calendario-scroll"
         ref={scrollRef}
@@ -639,7 +733,23 @@ export function Timeline({
             ref={headRef}
             onTouchStart={(e) => {
               const cx = e.touches[0].clientX;
+              hdrTap.current = { x: cx, y: e.touches[0].clientY };
               setHdrDrag({ startX: cx, startLeft: scrollRef.current ? scrollRef.current.scrollLeft : 0 });
+            }}
+            onTouchEnd={(e) => {
+              // Toque (sin deslizar) en un día: elige esa noche
+              const t = e.changedTouches[0],
+                s0 = hdrTap.current;
+              hdrTap.current = null;
+              lastTouch.current = Date.now();
+              if (t && s0 && Math.hypot(t.clientX - s0.x, t.clientY - s0.y) < 8) {
+                if (e.cancelable) e.preventDefault(); // sin el clic de mouse que el celular manda después
+                tapAt(t.clientX);
+              }
+            }}
+            onMouseUp={(e) => {
+              if (Date.now() - lastTouch.current < 800) return; // ya lo atendió el toque
+              if (hdrDrag && Math.abs(e.clientX - hdrDrag.startX) < 5) tapAt(e.clientX);
             }}
             style={{
               display: 'flex',
@@ -675,7 +785,11 @@ export function Timeline({
               const it = fmt(d) === fmt(TODAY),
                 dow = d.getDay();
               const isPast = parseD(fmt(d)) < parseD(fmt(TODAY)); 
-              
+              const ds = fmt(d);
+              const on = !!sel && ds >= sel.a && ds <= sel.b; // día tocado
+              const first = on && ds === sel.a,
+                last = on && ds === sel.b;
+
               return (
                 <div
                   key={i}
@@ -686,12 +800,29 @@ export function Timeline({
                     padding: it ? '10px 2px' : '5px 2px',
                     textAlign: 'center',
                     borderRight: '1px solid var(--line)',
-                    background: it ? 'var(--c-DBEAFE)' : getCellBg(d),
+                    background: it ? 'var(--c-DBEAFE)' : on ? 'var(--c-DCFCE7)' : getCellBg(d),
+                    transition: 'background-color .3s ease',
                     pointerEvents: 'none',
-                    position: it ? 'relative' : undefined,
+                    position: it || on ? 'relative' : undefined,
                     zIndex: it ? 2 : undefined,
                   }}
                 >
+                  {/* Día tocado: franja verde abajo (no pinta la columna, para no confundirlo con hoy) */}
+                  {on && (
+                    <div
+                      key={selKey}
+                      className="tl-sel"
+                      style={{
+                        left: first ? 6 : 0,
+                        right: last ? 6 : 0,
+                        borderTopLeftRadius: first ? 3 : 0,
+                        borderBottomLeftRadius: first ? 3 : 0,
+                        borderTopRightRadius: last ? 3 : 0,
+                        borderBottomRightRadius: last ? 3 : 0,
+                        animationDelay: `${diffDays(sel.a, ds) * 35}ms`,
+                      }}
+                    />
+                  )}
                   {/* Hoy: un recuadro más grande que pisa un poco los días de al lado, para ubicarlo de un vistazo */}
                   {it && (
                     <div
@@ -731,9 +862,11 @@ export function Timeline({
                   <div
                     style={{
                       fontSize: 13,
-                      fontWeight: it ? 800 : 500,
+                      fontWeight: it || on ? 800 : 500,
                       color: it
                     ? 'var(--acc)'
+                    : on
+                    ? 'var(--c-15803D)'
                     : isPast
                     ? 'var(--mut)'
                     : dow === 0 || dow === 6
@@ -795,8 +928,13 @@ export function Timeline({
                     borderLeft: `3px solid ${row.prop.color}`,
                   }}
                 >
+                  {/* Libre esas noches: recuadro verde, como el de hoy pero propio de cada habitación */}
+                  <div
+                    className={'tl-free' + (freeInfo[ri].free ? ' on' : '')}
+                    style={{ transitionDelay: `${ri * 45}ms` }}
+                  />
                   {row.type === 'room' ? (
-                    <div style={{ width: '100%' }}>
+                    <div style={{ width: '100%', position: 'relative', zIndex: 1 }}>
                       <div
                         style={{
                           display: 'flex',
@@ -808,7 +946,8 @@ export function Timeline({
                           style={{
                             fontSize: 13,
                             fontWeight: 800,
-                            color: 'var(--ink)',
+                            color: freeInfo[ri].free ? 'var(--c-15803D)' : 'var(--ink)',
+                            transition: 'color .25s',
                           }}
                         >
                           {row.room.name}
@@ -823,9 +962,25 @@ export function Timeline({
                           ≤{row.room.maxGuests}p
                         </span>
                       </div>
+                      {freeInfo[ri].free && (
+                        <div
+                          key={selKey}
+                          className="tl-free-txt"
+                          style={{ animationDelay: `${ri * 45 + 120}ms` }}
+                        >
+                          {freeInfo[ri].late ? (
+                            <>
+                              {ic('clock', 9)}
+                              {freeInfo[ri].late}
+                            </>
+                          ) : (
+                            'libre'
+                          )}
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <div>
+                    <div style={{ position: 'relative', zIndex: 1 }}>
                       <div
                         style={{
                           fontSize: 12,
@@ -859,8 +1014,15 @@ export function Timeline({
                       flexShrink: 0,
                       height: '100%',
                       borderRight: '1px solid var(--line)',
+                      // Días tocados: la columna se pinta de verde suave (hoy queda azul)
                       background:
-                        fmt(d) === fmt(TODAY) ? 'var(--c-DBEAFE)' : getCellBg(d),
+                        sel && fmt(d) >= sel.a && fmt(d) <= sel.b
+                          ? 'var(--c-DCFCE7)'
+                          : fmt(d) === fmt(TODAY)
+                          ? 'var(--c-DBEAFE)'
+                          : getCellBg(d),
+                      transition: 'background-color .3s ease',
+                      transitionDelay: sel && fmt(d) >= sel.a && fmt(d) <= sel.b ? `${diffDays(sel.a, fmt(d)) * 35}ms` : '0ms',
                       cursor: hdrDrag ? 'grabbing' : 'cell',
                     }}
                     onDoubleClick={() => {
