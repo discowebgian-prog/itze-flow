@@ -128,10 +128,12 @@ export function Step({ num, title, done = false, glow = false, boxRef = undefine
   );
 }
 
-export function Quoter({ allRes = [], tarifas = [], onReserve, onClose, initialIn = '' }) {
+export function Quoter({ allRes = [], tarifas = [], onReserve, onClose, initialIn = '', initialOut = '' }) {
   // Arranca sin fechas: Personas aparece recién al elegir entrada y salida
-  const [checkIn, setCheckIn] = useState('');
-  const [checkOut, setCheckOut] = useState('');
+  // (desde los días tocados del calendario llega con entrada y salida: va directo a Personas)
+  const full0 = !!(initialIn && initialOut);
+  const [checkIn, setCheckIn] = useState(full0 ? initialIn : '');
+  const [checkOut, setCheckOut] = useState(full0 ? initialOut : '');
   const [guests, setGuests] = useState(0); // 0 = todavía no eligieron (las habitaciones aparecen al elegir)
   const [share, setShare] = useState(null); // ¿pueden compartir cama? null = sin responder
   const [sofa, setSofa] = useState(null); // ¿quieren usar el sofá cama? null = sin responder
@@ -144,10 +146,10 @@ export function Quoter({ allRes = [], tarifas = [], onReserve, onClose, initialI
   const [calKey, setCalKey] = useState(0); // para que el almanaque salte al mes de las fechas sugeridas
   // Entrada tocada, esperando la salida: lo de abajo sigue con las fechas anteriores (atenuado) para que nada salte
   // initialIn (Equipo, desde Libres hoy): arranca con la entrada elegida, falta tocar la salida
-  const [draftIn, setDraftIn] = useState(initialIn || null);
+  const [draftIn, setDraftIn] = useState(!full0 && initialIn ? initialIn : null);
   const picking = draftIn !== null;
   // Recorrido guiado: fechas → Personas (resaltado) → habitaciones → cotización
-  const [glowKey, setGlowKey] = useState(0); // sube al elegir fechas: Personas entra con resaltado
+  const [glowKey, setGlowKey] = useState(full0 ? 1 : 0); // sube al elegir fechas: Personas entra con resaltado
   const personasRef = useRef(null);
   const planRef = useRef(null);
   const quoteRef = useRef(null);

@@ -353,6 +353,7 @@ export default function AppMejorada() {
   // 1. Verificación de Login
   // Cotizar (antes del "if (!user)": los useState no pueden ir después de un return)
   const [quoterOpen, setQuoterOpen] = useState(false);
+  const [quoteDates, setQuoteDates] = useState(null); // { ci, co } al cotizar desde los días tocados del calendario
   // Sin conexión: franja ámbar arriba (y cartelito al volver)
   const online = useOnline();
   // Quién usa este aparato (Gian / Marce): se pregunta la primera vez y se recuerda acá
@@ -490,7 +491,14 @@ export default function AppMejorada() {
     setModal('new');
   };
   // Cotizar: ventana sin crear reserva; "Reservar" abre el formulario ya cargado
-  const openQuote = () => setQuoterOpen(true);
+  const openQuote = () => {
+    setQuoteDates(null);
+    setQuoterOpen(true);
+  };
+  const openQuoteDates = (ci, co) => {
+    setQuoteDates({ ci, co });
+    setQuoterOpen(true);
+  };
   const goTo = (newTab, data) => {
     if (newTab === 'abrir_reserva') {
       setDrawer(data);
@@ -1205,6 +1213,7 @@ const toggleBlacklist = async (id, currentStatus) => {
               onClickRes={(r) => setDrawer(r)}
               onAddRes={openAdd}
               onQuote={openQuote}
+              onQuoteDates={openQuoteDates}
               onUpdateRes={updateRes}
               isMobile={isMobile}
               calView={effectiveCalView}
@@ -1490,6 +1499,8 @@ const toggleBlacklist = async (id, currentStatus) => {
           <Quoter
             allRes={res}
             tarifas={tarifas}
+            initialIn={quoteDates?.ci || ''}
+            initialOut={quoteDates?.co || ''}
             onClose={() => setQuoterOpen(false)}
             onReserve={({ queue }) => {
               setQuoterOpen(false);

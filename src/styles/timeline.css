@@ -8,3 +8,60 @@
           50% { box-shadow: 0 4px 16px rgba(16,185,129,0.4); border-color: var(--c-10B981); background-color: var(--c-ECFDF5); }
         }
       
+/* ── Libres esas noches (columna de las habitaciones) ── */
+.tl-free {
+  position: absolute;
+  top: 6px; bottom: 6px; left: 4px; right: 4px;
+  border-radius: 12px;
+  background: var(--c-DCFCE7);
+  border: 1px solid var(--c-16A34A);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, .25);
+  opacity: 0;
+  transform: scale(.8);
+  transition: opacity .22s ease, transform .34s cubic-bezier(.34, 1.56, .64, 1);
+  pointer-events: none;
+  z-index: 0;
+}
+.tl-free.on { opacity: 1; transform: scale(1); }
+.tl-free-txt {
+  display: flex; align-items: center;
+  font-size: 9.5px; font-weight: 800; letter-spacing: .2px;
+  color: var(--c-15803D); text-transform: uppercase; margin-top: 2px;
+  animation: tlFadeUp .3s ease backwards;
+}
+@keyframes tlFadeUp { from { opacity: 0; transform: translateY(3px); } }
+
+/* Día tocado: franja verde abajo del día */
+.tl-sel {
+  position: absolute; bottom: 0; height: 4px; z-index: 3;
+  background: var(--c-16A34A);
+  transform-origin: left center;
+  animation: tlSelIn .28s ease-out backwards;
+}
+@keyframes tlSelIn { from { transform: scaleX(0); opacity: 0; } }
+
+/* Línea en palabras arriba de la grilla */
+.tl-libres {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--card); border-radius: var(--r-item); box-shadow: var(--shadow);
+  padding: 9px 10px 9px 14px; margin-bottom: 10px; min-height: 44px; box-sizing: border-box;
+}
+.tl-libres-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c-16A34A); flex-shrink: 0; }
+.tl-libres-txt { font-size: 13.5px; color: var(--ink-2); line-height: 1.35; animation: tlFadeUp .25s ease; }
+.tl-libres-txt b { color: var(--ink); font-weight: 700; }
+.tl-libres-hint { font-size: 12px; color: var(--mut); margin-top: 1px; }
+.tl-libres-btn {
+  display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
+  border: none; background: var(--acc-soft); color: var(--acc);
+  font: inherit; font-size: 13px; font-weight: 700; padding: 7px 12px; border-radius: 10px; cursor: pointer;
+}
+.tl-libres-x {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 30px; height: 30px; border-radius: 50%; border: none;
+  background: var(--fill); color: var(--ink-2); cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tl-free { transition: opacity .2s ease; transform: none; }
+  .tl-sel, .tl-free-txt, .tl-libres-txt { animation: none; }
+}
