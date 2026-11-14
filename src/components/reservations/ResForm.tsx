@@ -731,6 +731,7 @@ export function ResForm({
         checkIn={f.checkIn}
         checkOut={f.checkOut}
         minDate={minDatePermitida}
+        askChange={!isNew}
         onChange={(ci, co) => {
           sv('checkIn', ci);
           sv('checkOut', co);
