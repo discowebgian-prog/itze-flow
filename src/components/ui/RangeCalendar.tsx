@@ -12,11 +12,11 @@ const dayTxt = (d) =>
 // fixedRows: siempre 6 semanas, así el almanaque no cambia de alto al pasar de mes (lo usa Cotizar)
 // askChange (al editar una reserva): con las dos fechas puestas, tocar un día después de la salida
 // pregunta si extender la estadía hasta ahí, y uno entre la entrada y la salida, si acortarla.
-// "No, elegir fechas nuevas" arranca de cero como siempre. Un día antes de la entrada, de cero.
+// Un día antes de la entrada pregunta si adelantar la llegada. "No, elegir fechas nuevas" arranca de cero.
 export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows = false, askChange = false }) {
   const [base, setBase] = useState(checkIn ? parseD(checkIn) : TODAY);
   const [hover, setHover] = useState(null);
-  const [ask, setAsk] = useState(null); // { s, kind: 'ext' | 'short' }
+  const [ask, setAsk] = useState(null); // { s, kind: 'ext' | 'short' | 'early' }
   // Con entrada y sin salida (Cotizar desde Libres hoy) el próximo toque elige la salida
   const [step, setStep] = useState(checkIn && checkOut ? 2 : checkIn ? 1 : 0);
 
@@ -38,9 +38,9 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows 
     
     // El nuevo estándar: Si ya hay un rango completo (step 2) y tocás cualquier fecha,
     // se limpia la selección previa y esa fecha se convierte en tu nuevo Check-In.
-    if (step === 2 && askChange && checkIn && checkOut && s > checkIn) {
-      if (s === checkOut) return setAsk(null);
-      setAsk({ s, kind: s > checkOut ? 'ext' : 'short' });
+    if (step === 2 && askChange && checkIn && checkOut) {
+      if (s === checkIn || s === checkOut) return setAsk(null);
+      setAsk({ s, kind: s > checkOut ? 'ext' : s < checkIn ? 'early' : 'short' });
       return;
     }
     setAsk(null);
@@ -61,7 +61,8 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows 
   };
 
   const askYes = () => {
-    onChange(checkIn, ask.s);
+    if (ask.kind === 'early') onChange(ask.s, checkOut);
+    else onChange(checkIn, ask.s);
     setAsk(null);
   };
   const askNo = () => {
@@ -69,7 +70,9 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows 
     setStep(1);
     setAsk(null);
   };
-  const askDiff = ask ? Math.abs(Math.round((parseD(ask.s) - parseD(checkOut)) / 86400000)) : 0;
+  const askDiff = ask
+    ? Math.abs(Math.round((parseD(ask.s) - parseD(ask.kind === 'early' ? checkIn : checkOut)) / 86400000))
+    : 0;
 
   let nights = 0;
   if (checkIn && checkOut) {
@@ -242,11 +245,13 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows 
           <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.35 }}>
             {ask.kind === 'ext'
               ? `¿Extender la estadía hasta el ${dayTxt(ask.s)}?`
-              : `¿Acortar la estadía, con salida el ${dayTxt(ask.s)}?`}
+              : ask.kind === 'early'
+                ? `¿Adelantar la llegada al ${dayTxt(ask.s)}?`
+                : `¿Acortar la estadía, con salida el ${dayTxt(ask.s)}?`}
           </div>
           <div style={{ fontSize: 12.5, color: 'var(--ink-2)', marginTop: 2 }}>
-            {ask.kind === 'ext' ? `${askDiff} noche${askDiff !== 1 ? 's' : ''} más` : `${askDiff} noche${askDiff !== 1 ? 's' : ''} menos`}
-            {' · '}la entrada sigue el {dayTxt(checkIn)}
+            {`${askDiff} noche${askDiff !== 1 ? 's' : ''} ${ask.kind === 'short' ? 'menos' : 'más'}`}
+            {ask.kind === 'early' ? ` · la salida sigue el ${dayTxt(checkOut)}` : ` · la entrada sigue el ${dayTxt(checkIn)}`}
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <button
@@ -254,7 +259,7 @@ export function RangeCalendar({ checkIn, checkOut, onChange, minDate, fixedRows 
               onClick={askYes}
               style={{ flex: 1, minHeight: 40, border: 'none', borderRadius: 12, background: 'var(--acc)', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}
             >
-              {ask.kind === 'ext' ? 'Sí, extender' : 'Sí, acortar'}
+              {ask.kind === 'ext' ? 'Sí, extender' : ask.kind === 'early' ? 'Sí, adelantar' : 'Sí, acortar'}
             </button>
             <button
               type="button"
