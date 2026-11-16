@@ -205,9 +205,6 @@ export const CONTAME = {
   go: 'Completar',
   reading: 'Leyendo…',
   again: 'Completar de nuevo',
-  // filled: lista de lo que se completó ('fechas', 'habitación'…)
-  done: (filled) =>
-    filled.length ? `Listo, completé ${listaY(filled)}. Revisá y tocá Guardar.` : 'Leí el texto pero no encontré datos de la reserva.',
   nothing: 'No encontré datos de una reserva en ese texto. Probá con fechas, habitación o nombre.',
   failed: (err) => {
     const k = errorKind(err);
@@ -215,12 +212,33 @@ export const CONTAME = {
     return `No pude leer el texto: ${MOTIVO[k]}`;
   },
   undo: 'Deshacer',
-  // Precio que se habló con el huésped vs. lo que da el formulario
-  agreed: (acordado, total) => `En la charla quedó en ${money$(acordado)} y el tarifario da ${money$(total)}.`,
-  useAgreed: (acordado) => `Usar ${money$(acordado)}`,
+  // Resumen de una línea: "Ana López · P2 · vie 20 → dom 22 nov · 2 personas · pagó $1,100"
+  dates: (ci, co) => {
+    const a = new Date(ci + 'T12:00:00');
+    const b = new Date(co + 'T12:00:00');
+    const d = (x) => `${DIAS3[x.getDay()]} ${x.getDate()}`;
+    const m = (x) => MESES3[x.getMonth()];
+    return a.getMonth() === b.getMonth() ? `${d(a)} → ${d(b)} ${m(b)}` : `${d(a)} ${m(a)} → ${d(b)} ${m(b)}`;
+  },
+  people: (n) => (n === 1 ? '1 persona' : `${n} personas`),
+  paid: (n) => `pagó ${money$(n)}`,
+  unpaid: 'sin pagar',
+  // Preguntas con botones
+  askDates: '¿Qué fechas?',
+  askPeople: '¿Cuántas personas?',
+  askRoom: '¿Qué habitación? Estas están libres:',
+  roomBusy: (room) => `${room} está ocupada esas fechas. Estas están libres:`,
+  noRoom: (n) => `No queda ninguna habitación libre para ${n === 1 ? '1 persona' : `${n} personas`} esas fechas.`,
+  askPaid: '¿Pagaron algo?',
+  no: 'No',
+  all: 'Todo',
+  // Precio especial de la charla (en vez del tarifario)
+  special: (total) => `Precio especial: ${money$(total)} en total`,
+  useRates: 'Usar tarifario',
 };
+const DIAS3 = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+const MESES3 = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const money$ = (n) => '$' + Math.round(Number(n) || 0).toLocaleString('es-MX');
-const listaY = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} y ${xs[xs.length - 1]}`);
 
 // ── ETAPA 2: INICIO QUE HABLA ─────────────────────────────────────────────────
 // Hora de Progreso (Mérida), sin depender de la zona del aparato

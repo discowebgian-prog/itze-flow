@@ -637,7 +637,9 @@ export function ResForm({
   // queda todo a la vista para revisar y tocar Guardar. "Deshacer" vuelve a como estaba.
   const [ctTexto, setCtTexto] = useState('');
   const [ctBusy, setCtBusy] = useState(false);
-  const [ctRes, setCtRes] = useState(null); // { msg, doubts, agreedTotal, multi }
+  const [ctRes, setCtRes] = useState(null); // { empty, dateOptions, guestOptions, askGuests, special, specialGroup }
+  const [ctDone, setCtDone] = useState({}); // preguntas ya respondidas con un toque
+  const [ctPay, setCtPay] = useState(null); // 'half' | 'all': se completa cuando el total está calculado
   const ctPrev = useRef(null);
   const leerTexto = async () => {
     if (ctBusy || !ctTexto.trim()) return;
@@ -645,24 +647,21 @@ export function ResForm({
     try {
       const d = await leerReserva(ctTexto);
       if (!d) {
-        setCtRes({ msg: CONTAME.nothing, doubts: [], empty: true });
+        setCtRes({ empty: true });
         return;
       }
       ctPrev.current = { f, multi, selRooms, alloc, titularRoom, rateAuto };
-      const filled = [];
       const todayS = fmt(nowMerida());
       const ci = d.checkIn || f.checkIn;
+      const co = d.checkOut || f.checkOut;
       const rooms = isHostel ? d.rooms : [];
       const asGroup = rooms.length > 1;
       const cap = (id) => (ROOMS.find((r) => r.id === id) || {}).maxGuests || 1;
       const comps = (n, names = []) =>
         Array.from({ length: Math.max(0, n - 1) }, (_, i) => ({ name: names[i] || '', phone: '' }));
-      if (d.checkIn) filled.push('las fechas');
-      if (rooms.length) filled.push(asGroup ? 'las habitaciones' : 'la habitación');
-      if (d.guestName || d.guestPhone) filled.push('el huésped');
-      if (d.totalGuests || rooms.some((r) => r.guests > 1)) filled.push('las personas');
-      if (d.paid !== undefined) filled.push('el pago');
-      if (!fixedSource && d.source) filled.push('el canal');
+      // Precio especial (una habitación): tarifa por noche cerrada para que el total dé eso
+      const nts = ci && co ? diffDays(ci, co) : 0;
+      const special = canPrice && !asGroup && d.specialTotal && nts > 0 ? d.specialTotal : null;
 
       setF((x) => {
         const n = { ...x };
@@ -695,8 +694,25 @@ export function ResForm({
             n.companions = comps(g, d.companions);
           }
         }
+        if (special) {
+          n.pricing = {
+            ...x.pricing,
+            ratePerNight: Math.round((special / nts) * 100) / 100,
+            discountType: 'ninguno',
+            discountValue: '',
+            additionals: Array.from({ length: Math.max(0, (n.totalGuests || 1) - 2) }, () => ({ ratePerNight: 0, bonificada: false })),
+          };
+        }
+        // Precio especial de un grupo: queda anotado (cada habitación sigue con el tarifario)
+        if (d.specialTotal && !special) {
+          const line = `Precio especial acordado: $${d.specialTotal.toLocaleString('es-MX')} en total`;
+          n.notes = n.notes ? `${n.notes}\n${line}` : line;
+        }
         return n;
       });
+      if (special) setRateAuto(false);
+      setCtPay(d.paidAll ? 'all' : d.paidHalf ? 'half' : null);
+      setCtDone({});
 
       if (asGroup && isNew) {
         const a = {};
@@ -718,7 +734,13 @@ export function ResForm({
         setSugDismissed(false);
         setPicked(null);
       }
-      setCtRes({ msg: CONTAME.done(filled), doubts: d.doubts, agreedTotal: d.agreedTotal || null, group: asGroup });
+      setCtRes({
+        dateOptions: d.dateOptions,
+        guestOptions: d.guestOptions,
+        // Sin ningún dato de personas: se pregunta con botones (en grupo, cada tarjeta ya tiene las suyas)
+        askGuests: !asGroup && !d.totalGuests && !d.companions.length && !(rooms[0]?.guests > 1),
+        special,
+      });
     } catch (err) {
       notify(CONTAME.failed(err), 'error');
     } finally {
@@ -736,16 +758,38 @@ export function ResForm({
     setRateAuto(p.rateAuto);
     ctPrev.current = null;
     setCtRes(null);
+    setCtPay(null);
+    setCtDone({});
   };
-  // Precio que se habló con el huésped: tarifa por noche para que el total dé eso (una habitación)
-  const usarAcordado = () => {
-    const total = ctRes?.agreedTotal;
-    if (!total || !nights) return;
-    const extras = (f.pricing.additionals || []).reduce((s, a) => s + (a.bonificada ? 0 : Number(a.ratePerNight) || 0), 0);
-    const late = f.lateCheckout ? Number(f.lateCost) || 0 : 0;
-    const rate = Math.max(0, Math.round(((total - late) / nights - extras) * 100) / 100);
-    setRateAuto(false);
-    setF((x) => ({ ...x, pricing: { ...x.pricing, ratePerNight: rate, discountType: 'ninguno', discountValue: '' } }));
+  // "Pagó la mitad" / "pagó todo" sin monto: se completa cuando el tarifario ya dio el total
+  useEffect(() => {
+    if (!ctPay) return;
+    const t = Number(f.totalAmount) || 0;
+    if (t <= 0) return;
+    sv('paid', ctPay === 'all' ? t : Math.round(t / 2));
+    setCtPay(null);
+  }, [ctPay, f.totalAmount]);
+  // Preguntas con botones (solo lo que cambia la reserva; lo demás lo pide el formulario)
+  const ctAnswer = (k) => setCtDone((x) => ({ ...x, [k]: true }));
+  const ctCap = (id) => (ROOMS.find((r) => r.id === id) || {}).maxGuests || 1;
+  const ctGuests = (n) => {
+    const g = f.room ? Math.min(n, ctCap(f.room)) : n;
+    setF((x) => ({
+      ...x,
+      totalGuests: g,
+      companions: Array.from({ length: Math.max(0, g - 1) }, (_, i) => (x.companions || [])[i] || { name: '', phone: '' }),
+    }));
+    ctAnswer('personas');
+  };
+  const ctFreeRooms = () =>
+    ROOMS.filter(
+      (r) => r.maxGuests >= (f.totalGuests || 1) && findConflicts(allRes, f.propertyId, r.id, f.checkIn, f.checkOut, null).length === 0
+    ).map((r) => r.id);
+  const ctPickRoom = (id) => {
+    setF((x) => {
+      const g = Math.min(x.totalGuests || 1, ctCap(id));
+      return { ...x, room: id, totalGuests: g, companions: (x.companions || []).slice(0, Math.max(0, g - 1)) };
+    });
   };
 
   // ── PASO A PASO (como Cotizar) ──
@@ -896,67 +940,143 @@ export function ResForm({
             {ctBusy ? CONTAME.reading : ctRes && !ctRes.empty ? CONTAME.again : CONTAME.go}
           </button>
 
-          {ctRes && (
-            <div className="pop-in" style={{ marginTop: 10, display: 'grid', gap: 6 }}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  gap: 8,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  lineHeight: 1.4,
-                  padding: '9px 12px',
-                  borderRadius: 'var(--r-field)',
-                  background: ctRes.empty ? 'var(--inset)' : 'var(--c-D1FAE5)',
-                  color: ctRes.empty ? 'var(--ink-2)' : 'var(--c-065F46)',
-                }}
-              >
-                <span>
-                  {!ctRes.empty && ic('tick', 14)}
-                  {ctRes.msg}
-                </span>
-                {ctPrev.current && (
-                  <button
-                    type="button"
-                    onClick={deshacerTexto}
-                    style={{ background: 'none', border: 'none', padding: 0, color: 'inherit', fontSize: 12.5, fontWeight: 700, textDecoration: 'underline', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
-                  >
-                    {CONTAME.undo}
-                  </button>
-                )}
-              </div>
-              {ctRes.doubts.map((t, i) => (
+          {ctRes?.empty && (
+            <div className="pop-in" style={{ marginTop: 10, fontSize: 13, fontWeight: 600, lineHeight: 1.4, padding: '9px 12px', borderRadius: 'var(--r-field)', background: 'var(--inset)', color: 'var(--ink-2)' }}>
+              {CONTAME.nothing}
+            </div>
+          )}
+          {ctRes && !ctRes.empty && (() => {
+            // Resumen de una línea con lo que quedó en el formulario (se actualiza si se cambia algo abajo)
+            const guests = multiOn ? groupGuests : f.totalGuests || 1;
+            const roomsTxt = multiOn ? listY(selRooms) : f.room;
+            const paidN = f.paid === '' || f.paid === null || f.paid === undefined ? null : Number(f.paid) || 0;
+            const parts = [
+              (f.guestName || '').trim(),
+              roomsTxt,
+              nights > 0 && CONTAME.dates(f.checkIn, f.checkOut),
+              CONTAME.people(guests),
+              paidN === null ? '' : paidN > 0 ? CONTAME.paid(paidN) : CONTAME.unpaid,
+            ].filter(Boolean);
+            // Preguntas: solo dudas que cambian la reserva; un toque las resuelve
+            const qs = [];
+            if (ctRes.dateOptions.length && !ctDone.fechas)
+              qs.push({
+                k: 'fechas',
+                text: CONTAME.askDates,
+                opts: ctRes.dateOptions.map((o) => ({
+                  label: CONTAME.dates(o.checkIn, o.checkOut),
+                  on: f.checkIn === o.checkIn && f.checkOut === o.checkOut,
+                  go: () => {
+                    setF((x) => ({ ...x, checkIn: o.checkIn, checkOut: o.checkOut }));
+                    ctAnswer('fechas');
+                  },
+                })),
+              });
+            if (!multiOn && !ctDone.personas && (ctRes.guestOptions.length || ctRes.askGuests)) {
+              const top = f.room ? ctCap(f.room) : 5;
+              const ns = ctRes.guestOptions.length ? ctRes.guestOptions : Array.from({ length: Math.min(top, 5) }, (_, i) => i + 1);
+              qs.push({ k: 'personas', text: CONTAME.askPeople, opts: ns.map((n) => ({ label: String(n), go: () => ctGuests(n) })) });
+            }
+            if (isHostel && !multiOn && nights > 0 && (!f.room || conflicts.length > 0)) {
+              const free = ctFreeRooms();
+              qs.push({
+                k: 'hab',
+                text: f.room ? CONTAME.roomBusy(f.room) : CONTAME.askRoom,
+                empty: free.length ? '' : CONTAME.noRoom(f.totalGuests || 1),
+                opts: free.map((id) => ({ label: id, go: () => ctPickRoom(id) })),
+              });
+            }
+            const tot = Number(f.totalAmount) || 0;
+            if (!ctPay && paidN === null && f.source !== 'Booking' && ratesOk && tot > 0)
+              qs.push({
+                k: 'pago',
+                text: CONTAME.askPaid,
+                opts: [
+                  { label: CONTAME.no, go: () => sv('paid', 0) },
+                  { label: `50% · ${money(Math.round(tot / 2))}`, go: () => sv('paid', Math.round(tot / 2)) },
+                  { label: `${CONTAME.all} · ${money(tot)}`, go: () => sv('paid', tot) },
+                ],
+              });
+            return (
+              <div className="pop-in" style={{ marginTop: 10, display: 'grid', gap: 8 }}>
                 <div
-                  key={i}
-                  style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4, padding: '9px 12px', borderRadius: 'var(--r-field)', background: 'var(--c-FFFBEB)', color: 'var(--c-92400E)' }}
-                >
-                  {ic('warning', 14)}
-                  {t}
-                </div>
-              ))}
-              {ctRes.agreedTotal && ratesOk && Math.abs(ctRes.agreedTotal - (Number(f.totalAmount) || 0)) >= 1 && (
-                <div
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 13, fontWeight: 600, lineHeight: 1.4, padding: '9px 12px', borderRadius: 'var(--r-field)', background: 'var(--c-FFFBEB)', color: 'var(--c-92400E)' }}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    gap: 8,
+                    fontSize: 13.5,
+                    fontWeight: 600,
+                    lineHeight: 1.45,
+                    padding: '9px 12px',
+                    borderRadius: 'var(--r-field)',
+                    background: 'var(--c-D1FAE5)',
+                    color: 'var(--c-065F46)',
+                  }}
                 >
                   <span>
-                    {ic('calculator', 14)}
-                    {CONTAME.agreed(ctRes.agreedTotal, Number(f.totalAmount) || 0)}
+                    {ic('tick', 14)}
+                    {parts.join(' · ')}
                   </span>
-                  {!multiOn && nights > 0 && (
+                  {ctPrev.current && (
                     <button
                       type="button"
-                      onClick={usarAcordado}
-                      style={{ flexShrink: 0, padding: '5px 12px', background: 'var(--card)', border: '1.5px solid var(--c-D97706)', color: 'var(--c-B45309)', borderRadius: 8, fontWeight: 800, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit' }}
+                      onClick={deshacerTexto}
+                      style={{ background: 'none', border: 'none', padding: 0, color: 'inherit', fontSize: 12.5, fontWeight: 700, textDecoration: 'underline', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
                     >
-                      {CONTAME.useAgreed(ctRes.agreedTotal)}
+                      {CONTAME.undo}
                     </button>
                   )}
                 </div>
-              )}
-            </div>
-          )}
+                {qs.map((q) => (
+                  <div key={q.k} className="pop-in" style={{ padding: '10px 12px', borderRadius: 'var(--r-field)', background: 'var(--inset)' }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>{q.text}</div>
+                    {q.empty && <div style={{ fontSize: 13, color: 'var(--mut)' }}>{q.empty}</div>}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {q.opts.map((o) => (
+                        <button
+                          key={o.label}
+                          type="button"
+                          className="tap"
+                          onClick={o.go}
+                          style={{
+                            minHeight: 38,
+                            padding: '0 14px',
+                            border: 'none',
+                            borderRadius: 999,
+                            background: o.on ? 'var(--acc)' : 'var(--card)',
+                            color: o.on ? '#fff' : 'var(--acc)',
+                            boxShadow: o.on ? 'none' : 'inset 0 0 0 1.5px var(--acc)',
+                            fontSize: 14,
+                            fontWeight: 700,
+                            fontFamily: 'inherit',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {ctRes.special && !rateAuto && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 13, fontWeight: 600, lineHeight: 1.4, padding: '9px 12px', borderRadius: 'var(--r-field)', background: 'var(--acc-soft)', color: 'var(--acc)' }}>
+                    <span>
+                      {ic('tag', 14)}
+                      {CONTAME.special(ctRes.special)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setRateAuto(true)}
+                      style={{ background: 'none', border: 'none', padding: 0, color: 'inherit', fontSize: 12.5, fontWeight: 700, textDecoration: 'underline', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
+                    >
+                      {CONTAME.useRates}
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </section>
       )}
 
