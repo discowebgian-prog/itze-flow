@@ -197,6 +197,49 @@ export const SCAN = {
   uploading: 'Subiendo…',
 };
 
+// ── CONTAME LA RESERVA (texto libre → formulario) ─────────────────────────────
+export const CONTAME = {
+  title: 'Contame la reserva',
+  help: 'Pegá el resumen de WhatsApp, escribilo como te salga o dictalo con el micrófono del teclado.',
+  placeholder: 'Ej.: Ana López, P2, viernes a domingo, 2 personas, pagó 1100 por transferencia',
+  go: 'Completar',
+  reading: 'Leyendo…',
+  again: 'Completar de nuevo',
+  nothing: 'No encontré datos de una reserva en ese texto. Probá con fechas, habitación o nombre.',
+  failed: (err) => {
+    const k = errorKind(err);
+    if (k === 'otro') return 'No pude leer el texto esta vez. Probá de nuevo o cargá los datos a mano.';
+    return `No pude leer el texto: ${MOTIVO[k]}`;
+  },
+  undo: 'Deshacer',
+  // Resumen de una línea: "Ana López · P2 · vie 20 → dom 22 nov · 2 personas · pagó $1,100"
+  dates: (ci, co) => {
+    const a = new Date(ci + 'T12:00:00');
+    const b = new Date(co + 'T12:00:00');
+    const d = (x) => `${DIAS3[x.getDay()]} ${x.getDate()}`;
+    const m = (x) => MESES3[x.getMonth()];
+    return a.getMonth() === b.getMonth() ? `${d(a)} → ${d(b)} ${m(b)}` : `${d(a)} ${m(a)} → ${d(b)} ${m(b)}`;
+  },
+  people: (n) => (n === 1 ? '1 persona' : `${n} personas`),
+  paid: (n) => `pagó ${money$(n)}`,
+  unpaid: 'sin pagar',
+  // Preguntas con botones
+  askDates: '¿Qué fechas?',
+  askPeople: '¿Cuántas personas?',
+  askRoom: '¿Qué habitación? Estas están libres:',
+  roomBusy: (room) => `${room} está ocupada esas fechas. Estas están libres:`,
+  noRoom: (n) => `No queda ninguna habitación libre para ${n === 1 ? '1 persona' : `${n} personas`} esas fechas.`,
+  askPaid: '¿Pagaron algo?',
+  no: 'No',
+  all: 'Todo',
+  // Precio especial de la charla (en vez del tarifario)
+  special: (total) => `Precio especial: ${money$(total)} en total`,
+  useRates: 'Usar tarifario',
+};
+const DIAS3 = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+const MESES3 = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const money$ = (n) => '$' + Math.round(Number(n) || 0).toLocaleString('es-MX');
+
 // ── ETAPA 2: INICIO QUE HABLA ─────────────────────────────────────────────────
 // Hora de Progreso (Mérida), sin depender de la zona del aparato
 export const nowMerida = () => new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Merida' }));
