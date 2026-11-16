@@ -11,6 +11,7 @@ var addDays = (d, n) => {
   r.setDate(r.getDate() + n);
   return r;
 };
+var diffDays = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
 var parseD = (s) => {
   const [y, m, d] = s.split("-");
   return new Date(y, m - 1, d);
@@ -18,6 +19,15 @@ var parseD = (s) => {
 var currency = (n) => "$ " + Number(n).toLocaleString("es-MX");
 
 // src/lib/constants.ts
+var ROOMS = [
+  { id: "P1", name: "P1", maxGuests: 5 },
+  { id: "P2", name: "P2", maxGuests: 5 },
+  { id: "P3", name: "P3", maxGuests: 5 },
+  // 2 matrimoniales + 1 individual (pasa a 6 con 3 matrimoniales)
+  { id: "P4", name: "P4", maxGuests: 3 },
+  { id: "P5", name: "P5", maxGuests: 5 },
+  { id: "P6", name: "P6", maxGuests: 2 }
+];
 var INIT_RES = [
   {
     id: "r1",
@@ -51,6 +61,38 @@ function groupBooker(members) {
 }
 var groupName = (members) => groupBooker(members)?.name || "";
 
+// src/lib/rates.ts
+var ROOM_TYPES = [
+  { id: "privada", label: "Habitaciones 1, 2, 3 y 5", rooms: ["P1", "P2", "P3", "P5"], extra: true },
+  { id: "king", label: "Habitaci\xF3n 4", rooms: ["P4"], extra: true },
+  { id: "matrimonial", label: "Habitaci\xF3n 6", rooms: ["P6"], extra: false }
+];
+var BASE_GUESTS = 2;
+var roomTypeOf = (roomId) => ROOM_TYPES.find((t) => t.rooms.includes(roomId)) || null;
+var isFindeDow = (d) => d === 0 || d >= 4;
+var isNormal = (p) => !p.desde && !p.hasta;
+var periodNights = (p) => isNormal(p) ? Infinity : diffDays(p.desde, p.hasta) + 1;
+function periodFor(dateStr, periods = []) {
+  const cands = periods.filter((p) => !isNormal(p) && p.desde <= dateStr && dateStr <= p.hasta);
+  if (cands.length) {
+    return [...cands].sort(
+      (a, b) => periodNights(a) - periodNights(b) || String(b.creado_en || "").localeCompare(String(a.creado_en || ""))
+    )[0];
+  }
+  return periods.find(isNormal) || null;
+}
+function nightPrice(dateStr, typeId, periods = []) {
+  const period = periodFor(dateStr, periods);
+  const finde = isFindeDow(parseD(dateStr).getDay());
+  const p = (period?.precios || {})[typeId] || {};
+  return {
+    period,
+    finde,
+    price: Number(finde ? p.finde : p.entre) || 0,
+    extra: Number(p.extra) || 0
+  };
+}
+
 // src/lib/availability.ts
 var listY = (a) => a.length <= 1 ? a.join("") : `${a.slice(0, -1).join(", ")} y ${a[a.length - 1]}`;
 
@@ -58,6 +100,7 @@ var listY = (a) => a.length <= 1 ? a.join("") : `${a.slice(0, -1).join(", ")} y 
 var roomsText = (rooms) => listY(rooms.filter(Boolean));
 var debe = (list) => list.reduce((s, r) => s + Math.max(0, (Number(r.totalAmount) || 0) - (Number(r.paid) || 0)), 0);
 var whoOf = (r) => String(r?.guestName || "").trim();
+var money$ = (n) => "$" + Math.round(Number(n) || 0).toLocaleString("es-MX");
 var nowMerida = () => new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Merida" }));
 function greeting(name, now = nowMerida()) {
   const h = now.getHours();
@@ -160,8 +203,52 @@ function daySummary(reservations, now = nowMerida()) {
   }
   return lines;
 }
+function freeRooms(reservations, night) {
+  const all = reservations.filter(live).filter((r) => !r.propertyId || r.propertyId === "hostel");
+  return ROOMS.filter((room) => !all.some((r) => r.room === room.id && r.checkIn <= night && night < r.checkOut)).map((room) => {
+    const lt = all.find((r) => r.room === room.id && r.checkOut === night && r.lateCheckout);
+    return { ...room, late: lt ? String(lt.lateCheckout).slice(0, 5) : "" };
+  });
+}
+function freePriceLine(free, night, tarifas) {
+  const items = free.map((f) => {
+    const t = roomTypeOf(f.id);
+    const p = t && tarifas.length ? nightPrice(night, t.id, tarifas).price : 0;
+    return { n: f.id.replace(/^P/i, ""), price: p, late: f.late };
+  });
+  const groups = [];
+  items.forEach((it) => {
+    const g = !it.late && groups.find((x) => !x.late && x.price === it.price);
+    if (g) g.n.push(it.n);
+    else groups.push({ n: [it.n], price: it.price, late: it.late });
+  });
+  return groups.map((g) => `Hab ${listY(g.n)}${g.price ? `: ${money$(g.price)}` : ""}${g.late ? ` (libre desde las ${g.late})` : ""}`).join(" \xB7 ");
+}
+function libresAviso(reservations, tarifas = [], now = nowMerida(), cuando = "mediodia") {
+  const hoy = fmt(now);
+  const man = fmt(addDays(parseD(hoy), 1));
+  const free = freeRooms(reservations, hoy);
+  const cap = free.reduce((t, f) => t + (f.maxGuests || 0), 0);
+  const lines = [];
+  let title;
+  if (free.length) {
+    title = free.length === ROOMS.length ? "Todo el hostel libre esta noche" : `${free.length === 1 ? "Queda 1 libre" : `Quedan ${free.length} libres`} para esta noche`;
+    lines.push(freePriceLine(free, hoy, tarifas));
+    lines.push(`Lugar para ${cap} personas${tarifas.length ? ` \xB7 precio por noche para ${BASE_GUESTS}` : ""}`);
+  } else {
+    title = "Esta noche estamos completos \u{1F389}";
+  }
+  if (cuando === "tarde") {
+    const fm = freeRooms(reservations, man);
+    if (!free.length && !fm.length) return null;
+    lines.push(fm.length ? `Ma\xF1ana: ${fm.length === ROOMS.length ? "todo libre" : `Hab ${listY(fm.map((f) => f.id.replace(/^P/i, "")))} ${fm.length === 1 ? "libre" : "libres"}`}` : "Ma\xF1ana estamos completos");
+  } else if (!free.length && cuando === "mediodia") return null;
+  if (cuando === "manana" && free.length) lines.push("Ojo: una reserva de Booking sin cargar en Flow figura libre.");
+  return { title, body: lines.join("\n") };
+}
 export {
   daySummary,
   greeting,
+  libresAviso,
   nowMerida
 };

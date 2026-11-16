@@ -8,6 +8,9 @@
 //   POST /api/push → manda el aviso
 //   POST /api/push con encabezado x-flow-clave → "Buen día" de las 8:00 (lo dispara Supabase, ver
 //        supabase/buen_dia.sql): a cada celular, su nombre y el día en palabras de Inicio.
+//   POST /api/push con x-flow-clave y { tipo: 'libres', cuando: 'mediodia' | 'tarde' } → habitaciones libres
+//        para esta noche con el precio de hoy, a los dueños (13:00 y 18:00, ver supabase/libres.sql).
+//        A las 8:00 lo mismo va dentro del Buen día.
 //   POST /api/push con x-flow-clave y { tipo: 'equipo' } → aviso de Equipo (lo disparan las tablas
 //        equipo_*, ver supabase/equipo_avisos.sql): a los dueños o al equipo, como Itzé Limpieza.
 // Cada aparato tiene su rol (push_subs.rol): los avisos de reservas y el Buen día van solo a los dueños.
@@ -18,7 +21,7 @@
 // - Las suscripciones vencidas (el celular las borró) se eliminan solas.
 import webpush from 'web-push';
 import crypto from 'node:crypto';
-import { daySummary, greeting, nowMerida } from './_voz.mjs';
+import { daySummary, greeting, nowMerida, libresAviso } from './_voz.mjs';
 
 export function vapidKeys() {
   if (process.env.VAPID_PRIVATE_KEY && process.env.VITE_VAPID_PUBLIC_KEY) {
@@ -52,6 +55,7 @@ export default async function handler(req, res) {
 
   if (req.headers['x-flow-clave']) {
     if ((req.body || {}).tipo === 'equipo') return equipoAviso(req, res, { url, anonKey, keys });
+    if ((req.body || {}).tipo === 'libres') return libres(req, res, { url, anonKey, keys });
     return buenDia(req, res, { url, anonKey, keys });
   }
 
@@ -107,6 +111,7 @@ const toRes = (r) => ({
   grupoId: r.grupo_id || null,
   grupoTitular: r.grupo_titular === true,
   grupoReservante: r.grupo_reservante || null,
+  propertyId: r.propiedad || 'hostel',
 });
 
 // "Buen día, Marce ☀️" + el día en palabras, a cada celular con avisos activos.
@@ -130,7 +135,13 @@ async function buenDia(req, res, { url, anonKey, keys }) {
 
   const now = nowMerida();
   const lines = daySummary((data.reservas || []).map(toRes), now);
-  const body = lines.join('\n') || 'Día tranquilo: nadie entra ni sale hoy.';
+  let body = lines.join('\n') || 'Día tranquilo: nadie entra ni sale hoy.';
+  // Libres para esta noche con el precio de hoy (si falta correr supabase/libres.sql, va sin esto)
+  const lib = await leerLibres(url, anonKey, String(req.headers['x-flow-clave']));
+  if (lib) {
+    const a = libresAviso(lib.reservas, lib.tarifas, now, 'manana');
+    if (a) body += '\n\n' + (a.body ? `${a.title}:\n${a.body}` : a.title);
+  }
   webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'https://itze-flow.vercel.app', keys.pub, keys.priv);
   let sent = 0;
   await Promise.all(
@@ -147,6 +158,52 @@ async function buenDia(req, res, { url, anonKey, keys }) {
     })
   );
   return res.status(200).json({ sent, lines: lines.length });
+}
+
+// ── Libres para esta noche (13:00 y 18:00) ────────────────────────────────────
+// La base (flow_libres, con la clave de flow_secreto) devuelve las reservas de hoy y mañana y el tarifario.
+async function leerLibres(url, anonKey, clave) {
+  const r = await fetch(`${url}/rest/v1/rpc/flow_libres`, {
+    method: 'POST',
+    headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_clave: clave }),
+  }).catch(() => null);
+  if (!r || !r.ok) return null;
+  const d = await r.json();
+  if (!d) return null;
+  return { reservas: (d.reservas || []).map(toRes), tarifas: d.tarifas || [] };
+}
+
+async function libres(req, res, { url, anonKey, keys }) {
+  const clave = String(req.headers['x-flow-clave']);
+  const lib = await leerLibres(url, anonKey, clave);
+  if (!lib) return res.status(502).json({ error: 'No se pudieron leer las reservas (¿falta correr supabase/libres.sql?).' });
+  const cuando = (req.body || {}).cuando === 'tarde' ? 'tarde' : 'mediodia';
+  const now = nowMerida();
+  const msg = libresAviso(lib.reservas, lib.tarifas, now, cuando);
+  if (!msg) return res.status(200).json({ sent: 0, skip: 'completos' });
+  const subs = await subsConRol(url, anonKey, clave);
+  if (!subs) return res.status(401).json({ error: 'Clave no válida.' });
+  const to = subs.filter((s) => (s.rol || 'dueno') === 'dueno');
+  webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'https://itze-flow.vercel.app', keys.pub, keys.priv);
+  // tag fijo: el de las 18:00 reemplaza al de las 13:00. Tocarlo abre Cotizar con la entrada de hoy.
+  const hoy = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const payload = JSON.stringify({ title: msg.title.slice(0, 80), body: msg.body.slice(0, 300), url: `/?cotizar=${hoy}`, tag: 'itze-flow-libres' });
+  let sent = 0;
+  const gone = [];
+  await Promise.all(
+    to.map(async (s) => {
+      try {
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 3 * 3600 });
+        sent++;
+      } catch (e) {
+        if (e && (e.statusCode === 404 || e.statusCode === 410)) gone.push(s.endpoint);
+        else console.error('Aviso de libres no enviado', e && e.statusCode);
+      }
+    })
+  );
+  if (gone.length) await subsConRol(url, anonKey, clave, gone);
+  return res.status(200).json({ sent, removed: gone.length });
 }
 
 // ── Avisos de Equipo (paso 7) ─────────────────────────────────────────────────
