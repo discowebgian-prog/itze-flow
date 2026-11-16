@@ -635,6 +635,7 @@ export function ResForm({
   // ── CONTAME LA RESERVA (texto libre → formulario; solo reservas nuevas) ──
   // Claude lee lo pegado, escrito o dictado y llena lo que encuentra. Nada se guarda solo:
   // queda todo a la vista para revisar y tocar Guardar. "Deshacer" vuelve a como estaba.
+  const [ctOpen, setCtOpen] = useState(false); // arranca como botón; al tocarlo se despliega
   const [ctTexto, setCtTexto] = useState('');
   const [ctBusy, setCtBusy] = useState(false);
   const [ctRes, setCtRes] = useState(null); // { empty, dateOptions, guestOptions, askGuests, special, specialGroup }
@@ -886,17 +887,55 @@ export function ResForm({
       )}
 
       {/* Contame la reserva: texto libre (pegado, escrito o dictado) → completa el formulario */}
-      {isNew && !soloDatos && (
+      {isNew && !soloDatos && !ctOpen && (
+        <button
+          type="button"
+          className="tap qt-in"
+          onClick={() => setCtOpen(true)}
+          style={{
+            width: '100%',
+            minHeight: 50,
+            marginBottom: 10,
+            border: 'none',
+            borderRadius: 'var(--r-item)',
+            background: 'var(--acc-soft)',
+            color: 'var(--acc)',
+            fontSize: 15.5,
+            fontWeight: 700,
+            fontFamily: 'inherit',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+          }}
+        >
+          <Icon name="sparkles" size={18} color="var(--acc)" />
+          {CONTAME.title}
+        </button>
+      )}
+      {isNew && !soloDatos && ctOpen && (
         <section
-          className="qt-in"
+          className="qt-in pop-in"
           style={{ background: 'var(--card)', borderRadius: 20, padding: '14px 15px 15px', marginBottom: 10, boxShadow: 'var(--shadow)' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 'var(--w-title)', color: 'var(--ink)' }}>
             <Icon name="sparkles" size={18} color="var(--acc)" />
-            {CONTAME.title}
+            <span style={{ flex: 1 }}>{CONTAME.title}</span>
+            {!ctRes && !ctTexto.trim() && (
+              <button
+                type="button"
+                aria-label="Cerrar"
+                onClick={() => setCtOpen(false)}
+                style={{ width: 30, height: 30, borderRadius: '50%', border: 'none', background: 'var(--fill)', color: 'var(--mut)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <Icon name="close" size={15} />
+              </button>
+            )}
           </div>
           <div style={{ fontSize: 12.5, color: 'var(--mut)', margin: '4px 0 10px', lineHeight: 1.4 }}>{CONTAME.help}</div>
           <textarea
+            autoFocus
             value={ctTexto}
             onChange={(e) => setCtTexto(e.target.value)}
             placeholder={CONTAME.placeholder}
