@@ -1518,6 +1518,7 @@ const toggleBlacklist = async (id, currentStatus) => {
           tall
         >
           <ResForm
+            contame={isAdmin}
             key={prefill.key}
             visibleProps={visProps}
             onSave={async (p, o) => {
@@ -1552,6 +1553,7 @@ const toggleBlacklist = async (id, currentStatus) => {
           isMobile={isMobile}
         >
           <ResForm
+            contame={isAdmin}
             initial={modal.data}
             focusDoc={modal.focusDoc}
             visibleProps={visProps}
