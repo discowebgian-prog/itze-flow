@@ -12,7 +12,8 @@ import { ROOMS, SOURCES, RS, COUNTRIES, findCountry } from '../../lib/constants'
 import { TODAY, fmt, fmtD, addDays, diffDays, currency, parseD } from '../../lib/dates';
 import { lastVisitText, birthdayInStay, birthdayText, cleanBirthDate } from '../../lib/guestMessages';
 import { findConflicts, calcStayTotal, lateCostOf } from '../../lib/reservations';
-import { freeStayText, nowMerida, pastStartText } from '../../lib/voice';
+import { freeStayText, nowMerida, pastStartText, CONTAME, notify } from '../../lib/voice';
+import { leerReserva } from '../../lib/reservaTexto';
 import { quoteRoom, pricingMatches, applyQuote } from '../../lib/rates';
 import { QuoteInfo, money } from './QuoteInfo';
 import { listY, Step, QT_CSS, scrollToStep } from '../Quoter';
@@ -631,6 +632,122 @@ export function ResForm({
     proceed(newBooker ? { ...f, grupoReservante: newBooker } : f, also.length ? { also } : undefined);
   };
 
+  // ── CONTAME LA RESERVA (texto libre → formulario; solo reservas nuevas) ──
+  // Claude lee lo pegado, escrito o dictado y llena lo que encuentra. Nada se guarda solo:
+  // queda todo a la vista para revisar y tocar Guardar. "Deshacer" vuelve a como estaba.
+  const [ctTexto, setCtTexto] = useState('');
+  const [ctBusy, setCtBusy] = useState(false);
+  const [ctRes, setCtRes] = useState(null); // { msg, doubts, agreedTotal, multi }
+  const ctPrev = useRef(null);
+  const leerTexto = async () => {
+    if (ctBusy || !ctTexto.trim()) return;
+    setCtBusy(true);
+    try {
+      const d = await leerReserva(ctTexto);
+      if (!d) {
+        setCtRes({ msg: CONTAME.nothing, doubts: [], empty: true });
+        return;
+      }
+      ctPrev.current = { f, multi, selRooms, alloc, titularRoom, rateAuto };
+      const filled = [];
+      const todayS = fmt(nowMerida());
+      const ci = d.checkIn || f.checkIn;
+      const rooms = isHostel ? d.rooms : [];
+      const asGroup = rooms.length > 1;
+      const cap = (id) => (ROOMS.find((r) => r.id === id) || {}).maxGuests || 1;
+      const comps = (n, names = []) =>
+        Array.from({ length: Math.max(0, n - 1) }, (_, i) => ({ name: names[i] || '', phone: '' }));
+      if (d.checkIn) filled.push('las fechas');
+      if (rooms.length) filled.push(asGroup ? 'las habitaciones' : 'la habitación');
+      if (d.guestName || d.guestPhone) filled.push('el huésped');
+      if (d.totalGuests || rooms.some((r) => r.guests > 1)) filled.push('las personas');
+      if (d.paid !== undefined) filled.push('el pago');
+      if (!fixedSource && d.source) filled.push('el canal');
+
+      setF((x) => {
+        const n = { ...x };
+        if (d.checkIn) {
+          n.checkIn = d.checkIn;
+          n.checkOut = d.checkOut;
+        }
+        if (!fixedSource && d.source) n.source = d.source;
+        // Estado: "Hospedado" solo si lo dice; "Por llegar" si la entrada es después de hoy
+        if (d.status === 'hospedado') n.status = 'hospedado';
+        else if (d.status === 'por_llegar' && ci > todayS) n.status = 'por_llegar';
+        if (d.guestName) n.guestName = d.guestName;
+        if (d.nationality) n.guestNationality = d.nationality.code;
+        if (d.guestPhone) n.guestPhone = d.guestPhone;
+        if (d.phonePrefix) n.guestPhonePrefix = d.phonePrefix;
+        else if (d.nationality && !x.guestPhone) n.guestPhonePrefix = d.nationality.prefix;
+        if (d.guestEmail) n.guestEmail = d.guestEmail;
+        if (d.paid !== undefined) n.paid = d.paid;
+        if (d.paymentMethod) n.paymentMethod = d.paymentMethod;
+        if (d.requiresInvoice) n.requiresInvoice = true;
+        if (d.company && d.requiresInvoice) n.company = d.company;
+        if (d.notes) n.notes = x.notes ? `${x.notes}\n${d.notes}` : d.notes;
+        if (!asGroup) {
+          const room = rooms[0]?.room || (isHostel ? x.room : '');
+          if (rooms[0]) n.room = room;
+          const want = d.totalGuests || rooms[0]?.guests;
+          if (want || d.companions.length) {
+            const g = Math.min(Math.max(want || d.companions.length + 1, 1), room ? cap(room) : isHostel ? 1 : 6);
+            n.totalGuests = g;
+            n.companions = comps(g, d.companions);
+          }
+        }
+        return n;
+      });
+
+      if (asGroup && isNew) {
+        const a = {};
+        rooms.forEach((r) => {
+          const g = Math.min(r.guests, cap(r.room));
+          a[r.room] = { ...blankAlloc(), guests: g, companions: comps(g) };
+        });
+        setMulti(true);
+        setSelRooms(rooms.map((r) => r.room));
+        setAlloc(a);
+        setTitularRoom('');
+      } else if (rooms.length === 1 && multi) {
+        setMulti(false);
+        setSelRooms([]);
+        setSplitPay(false);
+      }
+      if (d.guestName) {
+        setNameTyped(true);
+        setSugDismissed(false);
+        setPicked(null);
+      }
+      setCtRes({ msg: CONTAME.done(filled), doubts: d.doubts, agreedTotal: d.agreedTotal || null, group: asGroup });
+    } catch (err) {
+      notify(CONTAME.failed(err), 'error');
+    } finally {
+      setCtBusy(false);
+    }
+  };
+  const deshacerTexto = () => {
+    const p = ctPrev.current;
+    if (!p) return;
+    setF(p.f);
+    setMulti(p.multi);
+    setSelRooms(p.selRooms);
+    setAlloc(p.alloc);
+    setTitularRoom(p.titularRoom);
+    setRateAuto(p.rateAuto);
+    ctPrev.current = null;
+    setCtRes(null);
+  };
+  // Precio que se habló con el huésped: tarifa por noche para que el total dé eso (una habitación)
+  const usarAcordado = () => {
+    const total = ctRes?.agreedTotal;
+    if (!total || !nights) return;
+    const extras = (f.pricing.additionals || []).reduce((s, a) => s + (a.bonificada ? 0 : Number(a.ratePerNight) || 0), 0);
+    const late = f.lateCheckout ? Number(f.lateCost) || 0 : 0;
+    const rate = Math.max(0, Math.round(((total - late) / nights - extras) * 100) / 100);
+    setRateAuto(false);
+    setF((x) => ({ ...x, pricing: { ...x.pricing, ratePerNight: rate, discountType: 'ninguno', discountValue: '' } }));
+  };
+
   // ── PASO A PASO (como Cotizar) ──
   // Reserva nueva: primero fechas y habitación; al elegirlas aparecen Estado y canal; al tocar el canal,
   // el resto (empezando por las fotos del documento, que completan casi todo). Lo que ya apareció no
@@ -722,6 +839,125 @@ export function ResForm({
             )}
           </div>
         </div>
+      )}
+
+      {/* Contame la reserva: texto libre (pegado, escrito o dictado) → completa el formulario */}
+      {isNew && !soloDatos && (
+        <section
+          className="qt-in"
+          style={{ background: 'var(--card)', borderRadius: 20, padding: '14px 15px 15px', marginBottom: 10, boxShadow: 'var(--shadow)' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 'var(--w-title)', color: 'var(--ink)' }}>
+            <Icon name="sparkles" size={18} color="var(--acc)" />
+            {CONTAME.title}
+          </div>
+          <div style={{ fontSize: 12.5, color: 'var(--mut)', margin: '4px 0 10px', lineHeight: 1.4 }}>{CONTAME.help}</div>
+          <textarea
+            value={ctTexto}
+            onChange={(e) => setCtTexto(e.target.value)}
+            placeholder={CONTAME.placeholder}
+            rows={ctTexto.length > 120 ? 5 : 3}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: '10px 12px',
+              border: '1px solid var(--line)',
+              borderRadius: 'var(--r-field)',
+              background: 'var(--card)',
+              color: 'var(--ink)',
+              fontSize: 16,
+              fontFamily: 'inherit',
+              lineHeight: 1.4,
+              resize: 'vertical',
+              outline: 'none',
+            }}
+          />
+          <button
+            type="button"
+            className="tap"
+            onClick={leerTexto}
+            disabled={ctBusy || !ctTexto.trim()}
+            style={{
+              width: '100%',
+              marginTop: 8,
+              minHeight: 44,
+              border: 'none',
+              borderRadius: 'var(--r-item)',
+              background: ctTexto.trim() ? 'var(--acc)' : 'var(--fill)',
+              color: ctTexto.trim() ? '#fff' : 'var(--mut)',
+              fontSize: 15,
+              fontWeight: 700,
+              fontFamily: 'inherit',
+              cursor: ctBusy || !ctTexto.trim() ? 'default' : 'pointer',
+              opacity: ctBusy ? 0.7 : 1,
+            }}
+          >
+            {ic('wand', 16)}
+            {ctBusy ? CONTAME.reading : ctRes && !ctRes.empty ? CONTAME.again : CONTAME.go}
+          </button>
+
+          {ctRes && (
+            <div className="pop-in" style={{ marginTop: 10, display: 'grid', gap: 6 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  gap: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  lineHeight: 1.4,
+                  padding: '9px 12px',
+                  borderRadius: 'var(--r-field)',
+                  background: ctRes.empty ? 'var(--inset)' : 'var(--c-D1FAE5)',
+                  color: ctRes.empty ? 'var(--ink-2)' : 'var(--c-065F46)',
+                }}
+              >
+                <span>
+                  {!ctRes.empty && ic('tick', 14)}
+                  {ctRes.msg}
+                </span>
+                {ctPrev.current && (
+                  <button
+                    type="button"
+                    onClick={deshacerTexto}
+                    style={{ background: 'none', border: 'none', padding: 0, color: 'inherit', fontSize: 12.5, fontWeight: 700, textDecoration: 'underline', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
+                  >
+                    {CONTAME.undo}
+                  </button>
+                )}
+              </div>
+              {ctRes.doubts.map((t, i) => (
+                <div
+                  key={i}
+                  style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4, padding: '9px 12px', borderRadius: 'var(--r-field)', background: 'var(--c-FFFBEB)', color: 'var(--c-92400E)' }}
+                >
+                  {ic('warning', 14)}
+                  {t}
+                </div>
+              ))}
+              {ctRes.agreedTotal && ratesOk && Math.abs(ctRes.agreedTotal - (Number(f.totalAmount) || 0)) >= 1 && (
+                <div
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 13, fontWeight: 600, lineHeight: 1.4, padding: '9px 12px', borderRadius: 'var(--r-field)', background: 'var(--c-FFFBEB)', color: 'var(--c-92400E)' }}
+                >
+                  <span>
+                    {ic('calculator', 14)}
+                    {CONTAME.agreed(ctRes.agreedTotal, Number(f.totalAmount) || 0)}
+                  </span>
+                  {!multiOn && nights > 0 && (
+                    <button
+                      type="button"
+                      onClick={usarAcordado}
+                      style={{ flexShrink: 0, padding: '5px 12px', background: 'var(--card)', border: '1.5px solid var(--c-D97706)', color: 'var(--c-B45309)', borderRadius: 8, fontWeight: 800, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      {CONTAME.useAgreed(ctRes.agreedTotal)}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </section>
       )}
 
       {!soloDatos && (<>

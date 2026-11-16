@@ -197,6 +197,31 @@ export const SCAN = {
   uploading: 'Subiendo…',
 };
 
+// ── CONTAME LA RESERVA (texto libre → formulario) ─────────────────────────────
+export const CONTAME = {
+  title: 'Contame la reserva',
+  help: 'Pegá el resumen de WhatsApp, escribilo como te salga o dictalo con el micrófono del teclado.',
+  placeholder: 'Ej.: Ana López, P2, viernes a domingo, 2 personas, pagó 1100 por transferencia',
+  go: 'Completar',
+  reading: 'Leyendo…',
+  again: 'Completar de nuevo',
+  // filled: lista de lo que se completó ('fechas', 'habitación'…)
+  done: (filled) =>
+    filled.length ? `Listo, completé ${listaY(filled)}. Revisá y tocá Guardar.` : 'Leí el texto pero no encontré datos de la reserva.',
+  nothing: 'No encontré datos de una reserva en ese texto. Probá con fechas, habitación o nombre.',
+  failed: (err) => {
+    const k = errorKind(err);
+    if (k === 'otro') return 'No pude leer el texto esta vez. Probá de nuevo o cargá los datos a mano.';
+    return `No pude leer el texto: ${MOTIVO[k]}`;
+  },
+  undo: 'Deshacer',
+  // Precio que se habló con el huésped vs. lo que da el formulario
+  agreed: (acordado, total) => `En la charla quedó en ${money$(acordado)} y el tarifario da ${money$(total)}.`,
+  useAgreed: (acordado) => `Usar ${money$(acordado)}`,
+};
+const money$ = (n) => '$' + Math.round(Number(n) || 0).toLocaleString('es-MX');
+const listaY = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} y ${xs[xs.length - 1]}`);
+
 // ── ETAPA 2: INICIO QUE HABLA ─────────────────────────────────────────────────
 // Hora de Progreso (Mérida), sin depender de la zona del aparato
 export const nowMerida = () => new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Merida' }));
