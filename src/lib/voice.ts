@@ -1,8 +1,9 @@
 /* eslint-disable */
 // @ts-nocheck
-import { COUNTRIES, findCountry } from './constants';
+import { COUNTRIES, findCountry, ROOMS } from './constants';
 import { currency, fmt, addDays, parseD } from './dates';
 import { groupName } from './groups';
+import { roomTypeOf, nightPrice, BASE_GUESTS } from './rates';
 import { dayNum, mes, dayRange, listY } from './availability';
 
 // ── LA VOZ DE FLOW ────────────────────────────────────────────────────────────
@@ -375,6 +376,64 @@ export function daySummary(reservations, now = nowMerida()) {
     lines.push(man.length ? `Mañana ${man.join(' y ')}.` : 'Mañana no hay entradas ni salidas.');
   }
   return lines;
+}
+
+// ── LIBRES: avisos de las 8:00, 13:00 y 18:00 (solo dueños) ──────────────────
+// Habitaciones libres una noche ('YYYY-MM-DD'): ninguna reserva viva la ocupa esa noche.
+// late: si alguien sale ese día con late check-out, libre desde esa hora.
+export function freeRooms(reservations, night) {
+  const all = reservations.filter(live).filter((r) => !r.propertyId || r.propertyId === 'hostel');
+  return ROOMS.filter((room) => !all.some((r) => r.room === room.id && r.checkIn <= night && night < r.checkOut)).map((room) => {
+    const lt = all.find((r) => r.room === room.id && r.checkOut === night && r.lateCheckout);
+    return { ...room, late: lt ? String(lt.lateCheckout).slice(0, 5) : '' };
+  });
+}
+
+// "Hab 1, 2 y 5: $990 · Hab 6: $790" (las del mismo precio juntas; con late check-out, aparte)
+function freePriceLine(free, night, tarifas) {
+  const items = free.map((f) => {
+    const t = roomTypeOf(f.id);
+    const p = t && tarifas.length ? nightPrice(night, t.id, tarifas).price : 0;
+    return { n: f.id.replace(/^P/i, ''), price: p, late: f.late };
+  });
+  const groups = [];
+  items.forEach((it) => {
+    const g = !it.late && groups.find((x) => !x.late && x.price === it.price);
+    if (g) g.n.push(it.n);
+    else groups.push({ n: [it.n], price: it.price, late: it.late });
+  });
+  return groups
+    .map((g) => `Hab ${listY(g.n)}${g.price ? `: ${money$(g.price)}` : ''}${g.late ? ` (libre desde las ${g.late})` : ''}`)
+    .join(' · ');
+}
+
+// { title, body } para el aviso de libres, o null si no hace falta mandarlo.
+// cuando: 'manana' (8:00, va dentro del Buen día), 'mediodia' (13:00) o 'tarde' (18:00, suma mañana).
+// Si está todo lleno: a la mañana se festeja; al mediodía y a la tarde no se avisa
+// (a la tarde sí, si mañana queda algo libre).
+export function libresAviso(reservations, tarifas = [], now = nowMerida(), cuando = 'mediodia') {
+  const hoy = fmt(now);
+  const man = fmt(addDays(parseD(hoy), 1));
+  const free = freeRooms(reservations, hoy);
+  const cap = free.reduce((t, f) => t + (f.maxGuests || 0), 0);
+  const lines = [];
+  let title;
+  if (free.length) {
+    title = free.length === ROOMS.length
+      ? 'Todo el hostel libre esta noche'
+      : `${free.length === 1 ? 'Queda 1 libre' : `Quedan ${free.length} libres`} para esta noche`;
+    lines.push(freePriceLine(free, hoy, tarifas));
+    lines.push(`Lugar para ${cap} personas${tarifas.length ? ` · precio por noche para ${BASE_GUESTS}` : ''}`);
+  } else {
+    title = 'Esta noche estamos completos 🎉';
+  }
+  if (cuando === 'tarde') {
+    const fm = freeRooms(reservations, man);
+    if (!free.length && !fm.length) return null;
+    lines.push(fm.length ? `Mañana: ${fm.length === ROOMS.length ? 'todo libre' : `Hab ${listY(fm.map((f) => f.id.replace(/^P/i, '')))} ${fm.length === 1 ? 'libre' : 'libres'}`}` : 'Mañana estamos completos');
+  } else if (!free.length && cuando === 'mediodia') return null;
+  if (cuando === 'manana' && free.length) lines.push('Ojo: una reserva de Booking sin cargar en Flow figura libre.');
+  return { title, body: lines.join('\n') };
 }
 
 // ── CARTELITOS ÚTILES DEL EQUIPO ──────────────────────────────────────────────

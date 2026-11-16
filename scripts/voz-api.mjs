@@ -5,7 +5,7 @@ import { build } from 'esbuild';
 
 await build({
   stdin: {
-    contents: "export { daySummary, greeting, nowMerida } from './src/lib/voice.ts';",
+    contents: "export { daySummary, greeting, nowMerida, libresAviso } from './src/lib/voice.ts';",
     resolveDir: process.cwd(),
     loader: 'ts',
   },

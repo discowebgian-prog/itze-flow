@@ -40,13 +40,20 @@ self.addEventListener('push', (e) => {
   })());
 });
 
-// Tocar el aviso abre (o trae al frente) la app
+// Tocar el aviso abre (o trae al frente) la app. Si el aviso lleva una dirección con algo que hacer
+// (ej. /?cotizar=2026-11-16, libres para esta noche), a la app abierta se le pasa con un mensaje.
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || '/';
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-      for (const c of list) if ('focus' in c) return c.focus();
-      return self.clients.openWindow((e.notification.data && e.notification.data.url) || '/');
+      for (const c of list) {
+        if ('focus' in c) {
+          if (url !== '/') c.postMessage({ flowAbrir: url });
+          return c.focus();
+        }
+      }
+      return self.clients.openWindow(url);
     })
   );
 });

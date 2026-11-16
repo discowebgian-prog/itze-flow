@@ -366,6 +366,25 @@ export default function AppMejorada() {
     // Por ahora solo los dueños reciben avisos (los del equipo llegan en el paso 7)
     if (user?.id && esDueno(user) && deviceName) syncPush(deviceName);
   }, [user?.id, deviceName]);
+  // Aviso de libres (13:00 y 18:00): tocarlo abre Cotizar con la entrada de ese día (falta tocar la salida).
+  // Llega como /?cotizar=AAAA-MM-DD si la app estaba cerrada, o como mensaje del service worker si estaba abierta.
+  useEffect(() => {
+    if (!user?.id || !esDueno(user)) return;
+    const abrir = (url) => {
+      const m = /[?&]cotizar=(\d{4}-\d{2}-\d{2})/.exec(String(url || ''));
+      if (!m) return;
+      setQuoteDates({ ci: m[1], co: '' });
+      setQuoterOpen(true);
+    };
+    if (/[?&]cotizar=/.test(window.location.search)) {
+      abrir(window.location.search);
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+    const onMsg = (e) => e.data && e.data.flowAbrir && abrir(e.data.flowAbrir);
+    const sw = 'serviceWorker' in navigator ? navigator.serviceWorker : null;
+    sw?.addEventListener('message', onMsg);
+    return () => sw?.removeEventListener('message', onMsg);
+  }, [user?.id]);
   // Respaldo en la carpeta de la compu (si la eligieron en Finanzas › Respaldos): guarda el nuevo al abrir
   useEffect(() => {
     if (user?.id && esDueno(user)) autoGuardarLocal();
