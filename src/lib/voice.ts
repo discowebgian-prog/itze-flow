@@ -230,6 +230,13 @@ export const CONTAME = {
   roomBusy: (room) => `${room} está ocupada esas fechas. Estas están libres:`,
   noRoom: (n) => `No queda ninguna habitación libre para ${n === 1 ? '1 persona' : `${n} personas`} esas fechas.`,
   askPaid: '¿Pagaron algo?',
+  askStatus: '¿Ya están en el hostel?',
+  arrived: 'Sí, ya llegaron',
+  notYet: 'No, llegan después',
+  askTitular: '¿En qué habitación duerme quien reserva?',
+  none: 'Ninguna',
+  autoHint: 'Tocá las opciones y se guarda sola.',
+  reviewHint: 'Revisá abajo lo que falta y tocá Guardar.',
   no: 'No',
   all: 'Todo',
   // Precio especial de la charla (en vez del tarifario)
