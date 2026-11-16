@@ -53,6 +53,7 @@ export function ResForm({
   initialRooms = null, // desde Cotizar: [{ room, guests }] → con 2 o más arranca como grupo
   fixedSource = '', // Equipo (paso 9): canal fijo ('Directo-Puerta'); solo se muestra ese
   soloDatos = false, // Equipo (paso 9), reserva que no cargó: solo huésped, documento y acompañantes
+  contame = false, // "Contame la reserva": por ahora solo Gian y Marce (dueños)
   canPrice = true, // Equipo sin permiso "precio": tarifa, descuento y total quedan como el tarifario
 }) {
   const blank = {
@@ -995,7 +996,7 @@ export function ResForm({
       )}
 
       {/* Contame la reserva: texto libre (pegado, escrito o dictado) → completa el formulario */}
-      {isNew && !soloDatos && !ctOpen && (
+      {contame && isNew && !soloDatos && !ctOpen && (
         <button
           type="button"
           className="tap qt-in"
@@ -1022,7 +1023,7 @@ export function ResForm({
           {CONTAME.title}
         </button>
       )}
-      {isNew && !soloDatos && ctOpen && (
+      {contame && isNew && !soloDatos && ctOpen && (
         <section
           className="qt-in pop-in"
           style={{ background: 'var(--card)', borderRadius: 20, padding: '14px 15px 15px', marginBottom: 10, boxShadow: 'var(--shadow)' }}
